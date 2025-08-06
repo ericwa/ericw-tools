@@ -523,7 +523,8 @@ qbsp_settings::qbsp_settings()
       objexport{
           this, "objexport", false, &debugging_group, "export the map file as .OBJ models during various CSG phases"},
       noextendedsurfflags{this, "noextendedsurfflags", false, &debugging_group, "suppress writing a .texinfo file"},
-      noextendedcontentflags{this, "noextendedcontentflags", false, &debugging_group, "suppress writing a .content.json file"},
+      noextendedcontentflags{
+          this, "noextendedcontentflags", false, &debugging_group, "suppress writing a .content.json file"},
       wrbrushes{this, {"wrbrushes", "bspx"}, false, &common_format_group,
           "includes a list of brushes for brush-based collision"},
       wrbrushesonly{this, {"wrbrushesonly", "bspxonly"}, {&wrbrushes, &noclip}, &common_format_group,
@@ -567,8 +568,7 @@ qbsp_settings::qbsp_settings()
       logbmodels{this, {"logbmodels"}, false, &logging_group, "print log output for bmodels"},
       debug_missing_portal_sides{this, {"debug_missing_portal_sides"}, false, &logging_group,
           "output debug .prt files for missing portal sides"},
-      fixupdetailfence{this, {"fixupdetailfence"}, true, &debugging_group,
-          "fixup detail fence"}
+      fixupdetailfence{this, {"fixupdetailfence"}, true, &debugging_group, "fixup detail fence"}
 {
 }
 
@@ -1404,7 +1404,7 @@ static bspxbrushes_permodel BSPX_Brushes_AddModel(int modelnum, const std::vecto
             case CONTENTS_SLIME:
             case CONTENTS_LAVA:
             case CONTENTS_SKY:
-                if (contents.is_clip(qbsp_options.target_game)) {
+                if (contents.is_clip()) {
                     perbrush.contents = BSPXBRUSHES_CONTENTS_CLIP;
                 } else {
                     perbrush.contents = native;
@@ -1414,7 +1414,7 @@ static bspxbrushes_permodel BSPX_Brushes_AddModel(int modelnum, const std::vecto
             //                      perbrush.contents = -16;
             //                      break;
             default: {
-                if (contents.is_clip(qbsp_options.target_game)) {
+                if (contents.is_clip()) {
                     perbrush.contents = BSPXBRUSHES_CONTENTS_CLIP;
                 } else {
                     logging::print("WARNING: Unknown contents: {}. Translating to solid.\n", contents.to_string());

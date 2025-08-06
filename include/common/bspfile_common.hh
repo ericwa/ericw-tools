@@ -61,35 +61,36 @@ using contents_int_t = uint64_t;
 enum contents_t : contents_int_t
 {
     EWT_VISCONTENTS_EMPTY = 0,
-    EWT_VISCONTENTS_SOLID = nth_bit<uint64_t>(0), // an eye is never valid in a solid
+    /** an eye is never valid in a solid */
+    EWT_VISCONTENTS_SOLID = nth_bit<uint64_t>(0),
     EWT_VISCONTENTS_SKY = nth_bit<uint64_t>(1),
+    /** eye never valid inside. always detail, doesn't split other faces. (func_detail_wall) */
     EWT_VISCONTENTS_DETAIL_WALL = nth_bit<uint64_t>(2),
-    EWT_VISCONTENTS_WINDOW = nth_bit<uint64_t>(3), // translucent, but not watery (detail fence)
-    /**
-     * Visblocking mist, but doesn't merge with mist/aux
-     */
+    /** translucent, but not watery. eye valid inside. (func_detail_fence) */
+    EWT_VISCONTENTS_WINDOW = nth_bit<uint64_t>(3),
+    /** Visblocking mist, but doesn't merge with mist/aux. (func_illusionary_visblocker) */
     EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER = nth_bit<uint64_t>(4),
-    /**
-     * Mist but not mirrored by default. Doesn't merge with mist. Never visblocking / always detail.
-     */
+    /** Mist but not mirrored by default. Doesn't merge with mist. Never visblocking / always detail. */
     EWT_VISCONTENTS_AUX = nth_bit<uint64_t>(5),
     EWT_VISCONTENTS_LAVA = nth_bit<uint64_t>(6),
     EWT_VISCONTENTS_SLIME = nth_bit<uint64_t>(7),
     EWT_VISCONTENTS_WATER = nth_bit<uint64_t>(8),
-    /**
-     * Never visblocking / always detail.
-     */
+    /** Never visblocking / always detail. (func_detail_illusionary). */
     EWT_VISCONTENTS_MIST = nth_bit<uint64_t>(9),
 
     EWT_LAST_VISIBLE_CONTENTS_INDEX = 9,
     EWT_LAST_VISIBLE_CONTENTS = EWT_VISCONTENTS_MIST,
 
-    EWT_INVISCONTENTS_ORIGIN = nth_bit<uint64_t>(10), // removed before bsping an entity
-    EWT_INVISCONTENTS_PLAYERCLIP = nth_bit<uint64_t>(11), // Q1 clip
+    /** removed before bsping an entity */
+    EWT_INVISCONTENTS_ORIGIN = nth_bit<uint64_t>(10),
+    /** Q1 clip */
+    EWT_INVISCONTENTS_PLAYERCLIP = nth_bit<uint64_t>(11),
     EWT_INVISCONTENTS_MONSTERCLIP = nth_bit<uint64_t>(12),
     EWT_INVISCONTENTS_AREAPORTAL = nth_bit<uint64_t>(13),
-    EWT_INVISCONTENTS_NO_WATERJUMP = nth_bit<uint64_t>(14), // re-release
-    EWT_INVISCONTENTS_PROJECTILECLIP = nth_bit<uint64_t>(15), // re-release
+    /** re-release */
+    EWT_INVISCONTENTS_NO_WATERJUMP = nth_bit<uint64_t>(14),
+    /** re-release */
+    EWT_INVISCONTENTS_PROJECTILECLIP = nth_bit<uint64_t>(15),
 
     EWT_CFLAG_MIRROR_INSIDE = nth_bit<uint64_t>(16),
     EWT_CFLAG_MIRROR_INSIDE_SET = nth_bit<uint64_t>(17),
@@ -101,11 +102,15 @@ enum contents_t : contents_int_t
     EWT_CFLAG_CURRENT_270 = nth_bit<uint64_t>(22),
     EWT_CFLAG_CURRENT_UP = nth_bit<uint64_t>(23),
     EWT_CFLAG_CURRENT_DOWN = nth_bit<uint64_t>(24),
-    EWT_CFLAG_TRANSLUCENT = nth_bit<uint64_t>(25), // auto set if any surface has trans,
+    /** auto set if any surface has trans, */
+    EWT_CFLAG_TRANSLUCENT = nth_bit<uint64_t>(25),
     EWT_CFLAG_LADDER = nth_bit<uint64_t>(26),
-    EWT_CFLAG_MONSTER = nth_bit<uint64_t>(27), // disallowed in maps, only for gamecode use
-    EWT_CFLAG_DEADMONSTER = nth_bit<uint64_t>(28), // disallowed in maps, only for gamecode use
-    EWT_CFLAG_DETAIL = nth_bit<uint64_t>(29), // brushes to be added after vis leafs
+    /** disallowed in maps, only for gamecode use */
+    EWT_CFLAG_MONSTER = nth_bit<uint64_t>(27),
+    /** disallowed in maps, only for gamecode use */
+    EWT_CFLAG_DEADMONSTER = nth_bit<uint64_t>(28),
+    /** brushes to be added after vis leafs */
+    EWT_CFLAG_DETAIL = nth_bit<uint64_t>(29),
 
     // unused Q2 contents bits - just present here so we can roundtrip all 32-bit Q2 contents
     EWT_CFLAG_Q2_UNUSED_7 = nth_bit<uint64_t>(30),
@@ -140,8 +145,9 @@ struct contentflags_t
     bool equals(const gamedef_t *game, contentflags_t other) const;
 
     // is any kind of detail? (solid, liquid, etc.)
-    bool is_any_detail(const gamedef_t *game) const;
-    bool is_detail_solid(const gamedef_t *game) const;
+    bool is_any_detail() const;
+    // is detail and is solid
+    bool is_detail_solid() const;
     bool is_detail_wall(const gamedef_t *game) const;
     bool is_detail_fence(const gamedef_t *game) const;
     bool is_detail_illusionary(const gamedef_t *game) const;
@@ -167,15 +173,17 @@ struct contentflags_t
     contentflags_t &set_clips_same_type(const std::optional<bool> &clips_same_type_value);
 
     bool is_empty(const gamedef_t *game) const;
-    bool is_any_solid(const gamedef_t *game) const;
-    // solid, not detail or any other extended content types
-    bool is_solid(const gamedef_t *game) const;
+    bool is_any_solid() const;
+    // solid, not detail
+    bool is_solid() const;
     bool has_structural_solid() const { return (flags & EWT_VISCONTENTS_SOLID) && !(flags & EWT_CFLAG_DETAIL); }
-    bool is_sky(const gamedef_t *game) const;
+    // FIXME: checks for "sky" bit, but sky might not be the visible contents so "is_sky()" is a misonomer
+    bool is_sky() const;
     bool is_liquid(const gamedef_t *game) const;
     bool is_valid(const gamedef_t *game, bool strict = true) const;
-    bool is_clip(const gamedef_t *game) const;
-    bool is_origin(const gamedef_t *game) const;
+    // FIXME: checks for "clip" bits (player or monster), but is_clip() makes it sound like an exclusive check.
+    bool is_clip() const;
+    bool is_origin() const;
 
     void make_valid(const gamedef_t *game);
 
@@ -194,6 +202,8 @@ struct contentflags_t
     // whether this should chop (if so, only lower priority content brushes get chopped)
     // should return true only for solid / opaque content types
     bool chops(const gamedef_t *game) const;
+
+    contentflags_t cluster_contents(contentflags_t other) const;
 
     std::string to_string() const;
 
@@ -230,6 +240,8 @@ struct contentflags_t
         }
         return contentflags_t::make(EWT_VISCONTENTS_EMPTY);
     }
+
+    bool seals_map() const { return is_solid() || is_sky(); }
 
     auto operator<=>(const contentflags_t &other) const = default;
 };
@@ -421,34 +433,21 @@ struct gamedef_t
     virtual bool texinfo_is_hintskip(const surfflags_t &flags, const std::string &name) const = 0;
     virtual contentflags_t create_contents_from_native(int32_t native) const = 0;
     virtual int32_t contents_to_native(contentflags_t contents) const = 0;
-    virtual contentflags_t cluster_contents(contentflags_t contents0, contentflags_t contents1) const = 0;
-    virtual contentflags_t create_empty_contents() const = 0;
-    virtual contentflags_t create_solid_contents() const = 0;
     virtual contentflags_t create_detail_illusionary_contents(contentflags_t original) const = 0;
     virtual contentflags_t create_detail_fence_contents(contentflags_t original) const = 0;
     virtual contentflags_t create_detail_wall_contents(contentflags_t original) const = 0;
     virtual contentflags_t create_detail_solid_contents(contentflags_t original) const = 0;
-    virtual contentflags_t clear_detail(contentflags_t original) const = 0;
-    virtual contentflags_t set_detail(contentflags_t original) const = 0;
     virtual bool contents_are_type_equal(contentflags_t self, contentflags_t other) const = 0;
     virtual bool contents_are_equal(contentflags_t self, contentflags_t other) const = 0;
-    virtual bool contents_are_any_detail(contentflags_t contents) const = 0;
-    virtual bool contents_are_detail_solid(contentflags_t contents) const = 0;
     virtual bool contents_are_detail_wall(contentflags_t contents) const = 0;
     virtual bool contents_are_detail_fence(contentflags_t contents) const = 0;
     virtual bool contents_are_detail_illusionary(contentflags_t contents) const = 0;
-    virtual bool contents_are_origin(contentflags_t contents) const = 0;
-    virtual bool contents_are_clip(contentflags_t contents) const = 0;
     virtual bool contents_are_empty(contentflags_t contents) const = 0;
     virtual bool contents_clip_same_type(contentflags_t self, contentflags_t other) const = 0;
-    virtual bool contents_are_any_solid(contentflags_t contents) const = 0;
-    virtual bool contents_are_solid(contentflags_t contents) const = 0;
-    virtual bool contents_are_sky(contentflags_t contents) const = 0;
     virtual bool contents_are_liquid(contentflags_t contents) const = 0;
     virtual bool contents_are_valid(contentflags_t contents, bool strict = true) const = 0;
     virtual int32_t contents_from_string(std::string_view str) const = 0;
     virtual bool portal_can_see_through(contentflags_t contents0, contentflags_t contents1, bool transwater) const = 0;
-    virtual bool contents_seals_map(contentflags_t contents) const = 0;
     virtual bool contents_are_opaque(contentflags_t contents, bool transwater) const = 0;
     enum class remap_type_t
     {

@@ -1441,7 +1441,7 @@ Fetch the final contents flag of the given mapbrush.
 static contentflags_t Brush_GetContents(const mapentity_t &entity, const mapbrush_t &mapbrush)
 {
     bool base_contents_set = false;
-    contentflags_t base_contents = qbsp_options.target_game->create_empty_contents();
+    contentflags_t base_contents = contentflags_t::make(EWT_VISCONTENTS_EMPTY);
 
     // validate that all of the sides have valid contents
     for (auto &mapface : mapbrush.faces) {
@@ -1498,7 +1498,7 @@ static contentflags_t Brush_GetContents(const mapentity_t &entity, const mapbrus
     // non-Q2: -transwater implies liquids are detail
     if (qbsp_options.target_game->id != GAME_QUAKE_II && qbsp_options.transwater.value()) {
         if (base_contents.is_liquid(qbsp_options.target_game)) {
-            base_contents = qbsp_options.target_game->set_detail(base_contents);
+            base_contents = contentflags_t::make(base_contents.flags | EWT_CFLAG_DETAIL);
         }
     }
 
@@ -2153,7 +2153,7 @@ void ProcessMapBrushes()
 
                 // origin brushes are removed, and the origin of the entity is overwritten
                 // with its centroid.
-                if (brush.contents.is_origin(qbsp_options.target_game)) {
+                if (brush.contents.is_origin()) {
                     if (map.is_world_entity(entity)) {
                         logging::print("WARNING: Ignoring origin brush in worldspawn\n");
                     } else if (entity.epairs.has("origin")) {

@@ -1130,6 +1130,14 @@ TEST(ltfaceHL, lightBlack)
     }
 }
 
+TEST(ltfaceQ1, litNotGenerated)
+{
+    SCOPED_TRACE("map with no colored lights doesn't generate a .lit");
+    auto [bsp, bspx, lit] = QbspVisLight_Q1("q1_light_skip_shadow.map", {});
+
+    EXPECT_TRUE(std::holds_alternative<lit_none>(lit));
+}
+
 TEST(ltfaceQ1, hdr)
 {
     // center of the room on the floor.
@@ -1255,10 +1263,11 @@ TEST(ltfaceQ1, switchableshadowTarget)
 
 TEST(ltfaceQ1, switchableshadowSelfShadows)
 {
-    SCOPED_TRACE("Siwtchable shadow-casting geometry should always self-shadow as well, even when the world shadow is 'off'");
+    SCOPED_TRACE(
+        "Siwtchable shadow-casting geometry should always self-shadow as well, even when the world shadow is 'off'");
 
     auto [bsp, bspx, lit] = QbspVisLight_Q1("q1_light_switchableshadow_selfshadows.map", {});
-    
+
     const qvec3f selfshadowed_point{720, 1280, 960}; // on the bmodel that toggles
     const qvec3f switching_point{648, 1288, 944}; // on the floor
 

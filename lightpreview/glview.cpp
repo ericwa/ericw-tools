@@ -694,10 +694,7 @@ void GLView::paintGL()
     applyMouseMotion();
     applyFlyMovement(duration_seconds);
 
-    const auto [modelMatrix,
-        viewMatrix,
-        projectionMatrix,
-        MVP] = getMatrices();
+    const auto [modelMatrix, viewMatrix, projectionMatrix, MVP] = getMatrices();
 
     const auto frustum = m_keepCullOrigin && m_keepCullFrustum
                              ? getFrustumPlanes(projectionMatrix * m_cullViewMatrix * modelMatrix)
@@ -1660,8 +1657,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
             int face_num = Face_GetNum(&bsp, facePayload.face);
 
             // FIXME: face offset
-            m_spatialindex->add_poly(Face_Winding(&bsp, facePayload.face),
-                std::make_any<int>(face_num));
+            m_spatialindex->add_poly(Face_Winding(&bsp, facePayload.face), std::make_any<int>(face_num));
         }
     }
     m_spatialindex->commit();
@@ -1956,12 +1952,9 @@ void GLView::clickFace(QMouseEvent *event)
     float y_ndc = mix(1.0f, -1.0f, y_01); // -1 = bottom, 1 = top
     float z_ndc = -1.0f; // near plane
 
-    const auto [modelMatrix,
-        viewMatrix,
-        projectionMatrix,
-        MVP] = getMatrices();
+    const auto [modelMatrix, viewMatrix, projectionMatrix, MVP] = getMatrices();
 
-    QMatrix4x4 MVP_Inverse =  MVP.inverted();
+    QMatrix4x4 MVP_Inverse = MVP.inverted();
 
     QVector4D ws = MVP_Inverse * QVector4D(x_ndc, y_ndc, z_ndc, 1.0f /* ??? */);
     QVector4D ws2 = MVP_Inverse * QVector4D(x_ndc, y_ndc, 1.0f /* far plane */, 1.0f /* ??? */);
@@ -1979,8 +1972,7 @@ void GLView::clickFace(QMouseEvent *event)
     QVector3D ray_dir = (ws2_a - ws_a).normalized();
 
     // trace a ray
-    auto hit = m_spatialindex->trace_ray(qvec3f(ws_a[0], ws_a[1], ws_a[2]),
-        qvec3f(ray_dir[0], ray_dir[1], ray_dir[2]));
+    auto hit = m_spatialindex->trace_ray(qvec3f(ws_a[0], ws_a[1], ws_a[2]), qvec3f(ray_dir[0], ray_dir[1], ray_dir[2]));
 
     if (hit.hit) {
         m_selected_face = *std::any_cast<int>(hit.hitpayload);

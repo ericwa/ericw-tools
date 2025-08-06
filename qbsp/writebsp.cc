@@ -204,7 +204,8 @@ static void ExportLeaf(node_t *node)
 
                 // TODO: move to game specific
                 // always include LIGHT
-                if (qbsp_options.target_game->id != GAME_QUAKE_II || !(face->get_texinfo().flags.native_q2 & Q2_SURF_LIGHT))
+                if (qbsp_options.target_game->id != GAME_QUAKE_II ||
+                    !(face->get_texinfo().flags.native_q2 & Q2_SURF_LIGHT))
                     continue;
             }
 
@@ -260,7 +261,7 @@ static void ExportDrawNodes(node_t *node)
             // children[i] is a leaf
             // In Q2, all leaves must have their own ID even if they share solidity.
             if (qbsp_options.target_game->id != GAME_QUAKE_II &&
-                children_i_leafdata->contents.is_any_solid(qbsp_options.target_game)) {
+                children_i_leafdata->contents.is_any_solid()) {
                 dnode->children[i] = PLANENUM_LEAF;
             } else {
                 int32_t nextLeafIndex = static_cast<int32_t>(map.bsp.dleafs.size());
@@ -340,8 +341,7 @@ void BeginBSPFile()
 
     // Leave room for leaf 0 (must be solid)
     auto &solid_leaf = map.bsp.dleafs.emplace_back();
-    solid_leaf.contents =
-        qbsp_options.target_game->contents_to_native(qbsp_options.target_game->create_solid_contents());
+    solid_leaf.contents = qbsp_options.target_game->contents_to_native(contentflags_t::make(EWT_VISCONTENTS_SOLID));
     solid_leaf.cluster = CLUSTER_INVALID;
     Q_assert(map.bsp.dleafs.size() == 1);
 

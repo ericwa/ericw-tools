@@ -117,7 +117,7 @@ struct prune_stats_t : logging::stat_tracker_t
 static bool IsAnySolidLeaf(const node_t *node)
 {
     auto *leafdata = node->get_leafdata();
-    return leafdata && leafdata->contents.is_any_solid(qbsp_options.target_game);
+    return leafdata && leafdata->contents.is_any_solid();
 }
 
 static void PruneNodes_R(node_t *node, prune_stats_t &stats)
@@ -126,7 +126,7 @@ static void PruneNodes_R(node_t *node, prune_stats_t &stats)
         // remap any contents
         if (qbsp_options.target_game->id != GAME_QUAKE_II &&
             leafdata->contents.is_detail_wall(qbsp_options.target_game)) {
-            leafdata->contents = qbsp_options.target_game->create_solid_contents();
+            leafdata->contents = contentflags_t::make(EWT_VISCONTENTS_SOLID);
         }
         return;
     }

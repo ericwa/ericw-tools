@@ -17,9 +17,10 @@ public:
     void OnEnvironmentsSetUpStart(const testing::UnitTest &unit_test) override { }
     void OnEnvironmentsSetUpEnd(const testing::UnitTest &unit_test) override { }
     void OnTestSuiteStart(const testing::TestSuite &test_suite) override { }
-    void OnTestStart(const testing::TestInfo &test_info) override {
-    fs::clear();
-    img::clear();
+    void OnTestStart(const testing::TestInfo &test_info) override
+    {
+        fs::clear();
+        img::clear();
     }
     void OnTestDisabled(const testing::TestInfo &test_info) override { }
     void OnTestPartResult(const testing::TestPartResult &test_part_result) override { }

@@ -741,11 +741,11 @@ static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hu
         contentflags_t contents = mapbrush.contents;
 
         if (qbsp_options.nodetail.value()) {
-            contents = qbsp_options.target_game->clear_detail(contents);
+            contents = contentflags_t::make(contents.flags & (~EWT_CFLAG_DETAIL));
         }
 
         /* "origin" brushes always discarded beforehand */
-        Q_assert(!contents.is_origin(qbsp_options.target_game));
+        Q_assert(!contents.is_origin());
 
         // per-brush settings
         bool detail = false;
@@ -768,11 +768,11 @@ static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hu
             continue;
         if ((qbsp_options.omitdetail.value() || qbsp_options.omitdetailwall.value()) && detail_wall)
             continue;
-        if (qbsp_options.omitdetail.value() && contents.is_any_detail(qbsp_options.target_game))
+        if (qbsp_options.omitdetail.value() && contents.is_any_detail())
             continue;
 
         /* turn solid brushes into detail, if we're in hull0 */
-        if (!hullnum.value_or(0) && contents.is_any_solid(qbsp_options.target_game)) {
+        if (!hullnum.value_or(0) && contents.is_any_solid()) {
             if (detail_illusionary) {
                 contents = qbsp_options.target_game->create_detail_illusionary_contents(contents);
             } else if (detail_fence) {
@@ -795,7 +795,7 @@ static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hu
          * include them in the model bounds so collision detection works
          * correctly.
          */
-        if (hullnum.has_value() && contents.is_clip(qbsp_options.target_game)) {
+        if (hullnum.has_value() && contents.is_clip()) {
             if (hullnum.value() == 0) {
                 if (auto brush = LoadBrush(src, mapbrush, contents, hullnum, num_clipped)) {
                     dst.bounds += brush->bounds;
@@ -803,7 +803,7 @@ static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hu
                 continue;
                 // for hull1, 2, etc., convert clip to CONTENTS_SOLID
             } else {
-                contents = qbsp_options.target_game->create_solid_contents();
+                contents = contentflags_t::make(EWT_VISCONTENTS_SOLID);
             }
         }
 
@@ -812,7 +812,7 @@ static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hu
             if (hullnum.value_or(0)) {
                 continue;
             }
-            contents = qbsp_options.target_game->create_empty_contents();
+            contents = contentflags_t::make(EWT_VISCONTENTS_EMPTY);
         }
 
         /* entities in some games never use water merging */
@@ -823,19 +823,18 @@ static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hu
             // to allow use of _mirrorinside, we'll set it to detail fence, which will get remapped back
             // to CONTENTS_SOLID at export. (we wouldn't generate inside faces if the content was CONTENTS_SOLID
             // from the start.)
-            contents = qbsp_options.target_game->create_detail_fence_contents(
-                qbsp_options.target_game->create_solid_contents());
+            contents =
+                qbsp_options.target_game->create_detail_fence_contents(contentflags_t::make(EWT_VISCONTENTS_SOLID));
         }
 
         if (hullnum.value_or(0)) {
             /* nonsolid brushes don't show up in clipping hulls */
-            if (!contents.is_any_solid(qbsp_options.target_game) && !contents.is_sky(qbsp_options.target_game) &&
-                !contents.is_fence(qbsp_options.target_game)) {
+            if (!contents.is_any_solid() && !contents.is_sky() && !contents.is_fence(qbsp_options.target_game)) {
                 continue;
             }
 
             /* all used brushes are solid in the collision hulls */
-            contents = qbsp_options.target_game->create_solid_contents();
+            contents = contentflags_t::make(EWT_VISCONTENTS_SOLID);
         }
 
         // fixme-brushbsp: function calls above can override the values below

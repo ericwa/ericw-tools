@@ -693,7 +693,8 @@ static lightsurf_t Lightsurf_Init(const modelinfo_t *modelinfo, const settings::
 
         /* Set up the surface points */
         if (light_options.world_units_per_luxel.is_changed()) {
-            if (bsp->loadversion->game->id == GAME_QUAKE_II && (Face_Texinfo(bsp, face)->flags.native_q2 & Q2_SURF_SKY)) {
+            if (bsp->loadversion->game->id == GAME_QUAKE_II &&
+                (Face_Texinfo(bsp, face)->flags.native_q2 & Q2_SURF_SKY)) {
                 lightsurf.extents = faceextents_t(*face, *bsp, world_units_per_luxel_t{}, 512.f);
             } else if (extended_flags.world_units_per_luxel) {
                 lightsurf.extents =
@@ -1184,8 +1185,7 @@ static bool VisCullEntity(const mbsp_t *bsp, const std::vector<uint8_t> &pvs, co
 
     auto contents = bsp->loadversion->game->create_contents_from_native(entleaf->contents);
 
-    if (bsp->loadversion->game->contents_are_solid(contents) || bsp->loadversion->game->contents_are_sky(contents) ||
-        bsp->loadversion->game->contents_are_liquid(contents)) {
+    if (contents.is_solid() || contents.is_sky() || bsp->loadversion->game->contents_are_liquid(contents)) {
         // the liquid case is because entleaf->contents might be in an opaque liquid,
         // which we typically want light to pass through, but visdata would report that
         // there's no visibility across the opaque liquid. so, skip culling and do the raytracing.

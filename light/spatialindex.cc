@@ -24,32 +24,24 @@ spatialindex_t::~spatialindex_t()
     clear();
 }
 
-spatialindex_t::spatialindex_t()
-{
-}
+spatialindex_t::spatialindex_t() { }
 
 static void FilterFunc(const RTCFilterFunctionNArguments *args)
 {
     constexpr int VALID = -1;
     constexpr int REJECT = 0;
 
-    for (unsigned int i=0; i<args->N; ++i) {
+    for (unsigned int i = 0; i < args->N; ++i) {
         if (args->valid[i] != VALID) {
             continue;
         }
 
         // check geometry normal (unnormalized) and ray normal (unnormalized)
-        qvec3f geom_normal = qvec3f(
-            RTCHitN_Ng_x(args->hit, args->N, i),
-            RTCHitN_Ng_y(args->hit, args->N, i),
-            RTCHitN_Ng_z(args->hit, args->N, i)
-            );
+        qvec3f geom_normal = qvec3f(RTCHitN_Ng_x(args->hit, args->N, i), RTCHitN_Ng_y(args->hit, args->N, i),
+            RTCHitN_Ng_z(args->hit, args->N, i));
 
-        qvec3f ray_normal = qvec3f(
-            RTCRayN_dir_x(args->ray, args->N, i),
-            RTCRayN_dir_y(args->ray, args->N, i),
-            RTCRayN_dir_z(args->ray, args->N, i)
-        );
+        qvec3f ray_normal = qvec3f(RTCRayN_dir_x(args->ray, args->N, i), RTCRayN_dir_y(args->ray, args->N, i),
+            RTCRayN_dir_z(args->ray, args->N, i));
 
         if (qv::dot(geom_normal, ray_normal) > 0) {
             // backface cull
@@ -69,8 +61,10 @@ void spatialindex_t::commit()
 
     // create + populate geometry
     RTCGeometry geom = rtcNewGeometry(device, RTC_GEOMETRY_TYPE_TRIANGLE);
-    rtcSetSharedGeometryBuffer(geom, RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, vertices.data(), 0, 4 * sizeof(float), vertices.size());
-    rtcSetSharedGeometryBuffer(geom, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, indices.data(), 0, sizeof(tri_t), indices.size());
+    rtcSetSharedGeometryBuffer(
+        geom, RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, vertices.data(), 0, 4 * sizeof(float), vertices.size());
+    rtcSetSharedGeometryBuffer(
+        geom, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, indices.data(), 0, sizeof(tri_t), indices.size());
     rtcSetGeometryIntersectFilterFunction(geom, FilterFunc);
     rtcCommitGeometry(geom);
 

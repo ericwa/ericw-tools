@@ -62,14 +62,14 @@ bool contentflags_t::types_equal(contentflags_t other, const gamedef_t *game) co
     return game->contents_are_type_equal(*this, other);
 }
 
-bool contentflags_t::is_any_detail(const gamedef_t *game) const
+bool contentflags_t::is_any_detail() const
 {
-    return game->contents_are_any_detail(*this);
+    return (flags & EWT_CFLAG_DETAIL) != 0;
 }
 
-bool contentflags_t::is_detail_solid(const gamedef_t *game) const
+bool contentflags_t::is_detail_solid() const
 {
-    return game->contents_are_detail_solid(*this);
+    return (flags & EWT_CFLAG_DETAIL) && (flags & EWT_VISCONTENTS_SOLID);
 }
 
 bool contentflags_t::is_detail_wall(const gamedef_t *game) const
@@ -125,19 +125,19 @@ bool contentflags_t::is_empty(const gamedef_t *game) const
     return game->contents_are_empty(*this);
 }
 
-bool contentflags_t::is_any_solid(const gamedef_t *game) const
+bool contentflags_t::is_any_solid() const
 {
-    return game->contents_are_any_solid(*this);
+    return (flags & EWT_VISCONTENTS_SOLID) != 0;
 }
 
-bool contentflags_t::is_solid(const gamedef_t *game) const
+bool contentflags_t::is_solid() const
 {
-    return game->contents_are_solid(*this);
+    return (flags & EWT_VISCONTENTS_SOLID) && !(flags & EWT_CFLAG_DETAIL);
 }
 
-bool contentflags_t::is_sky(const gamedef_t *game) const
+bool contentflags_t::is_sky() const
 {
-    return game->contents_are_sky(*this);
+    return (flags & EWT_VISCONTENTS_SKY) != 0;
 }
 
 bool contentflags_t::is_liquid(const gamedef_t *game) const
@@ -150,14 +150,14 @@ bool contentflags_t::is_valid(const gamedef_t *game, bool strict) const
     return game->contents_are_valid(*this, strict);
 }
 
-bool contentflags_t::is_clip(const gamedef_t *game) const
+bool contentflags_t::is_clip() const
 {
-    return game->contents_are_clip(*this);
+    return (flags & (EWT_INVISCONTENTS_PLAYERCLIP | EWT_INVISCONTENTS_MONSTERCLIP)) != 0;
 }
 
-bool contentflags_t::is_origin(const gamedef_t *game) const
+bool contentflags_t::is_origin() const
 {
-    return game->contents_are_origin(*this);
+    return (flags & EWT_INVISCONTENTS_ORIGIN) != 0;
 }
 
 void contentflags_t::make_valid(const gamedef_t *game)
@@ -169,6 +169,20 @@ bool contentflags_t::is_fence(const gamedef_t *game) const
 {
     return is_detail_fence(game) || is_detail_illusionary(game);
 }
+
+contentflags_t contentflags_t::cluster_contents(contentflags_t other) const
+{
+    contents_int_t combined = this->flags | other.flags;
+
+    // a cluster may include some solid detail areas, but
+    // still be seen into
+    if (!(this->flags & EWT_VISCONTENTS_SOLID) || !(other.flags & EWT_VISCONTENTS_SOLID)) {
+        combined &= ~EWT_VISCONTENTS_SOLID;
+    }
+
+    return contentflags_t::make(combined);
+}
+
 
 std::string contentflags_t::to_string() const
 {

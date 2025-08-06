@@ -53,7 +53,7 @@ static bool ShouldOmitFace(face_t *f)
         return true;
 
     // HACK: to save a few faces, don't output the interior faces of sky brushes
-    if (f->contents.front.is_sky(qbsp_options.target_game)) {
+    if (f->contents.front.is_sky()) {
         return true;
     }
 
@@ -483,7 +483,7 @@ static void FixupMarkFaces_ProcessCluster(node_t *node)
     }
 
     // final part: now that we've identified the storage destinations, actually store there
-    for (auto *storage_leaf: storage_leafs) {
+    for (auto *storage_leaf : storage_leafs) {
         FixupMarkFaces_AddFacesToLeaf(storage_leaf, marfaces_to_propagate);
     }
 }
@@ -748,7 +748,7 @@ static void MakeFaces_r(node_t *node, makefaces_stats_t &stats)
     auto *leafdata = node->get_leafdata();
 
     // solid leafs never have visible faces
-    if (leafdata->contents.is_any_solid(qbsp_options.target_game))
+    if (leafdata->contents.is_any_solid())
         return;
 
     // see which portals are valid

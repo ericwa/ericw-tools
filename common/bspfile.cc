@@ -148,7 +148,7 @@ nlohmann::json get_contents_json(contents_t bits)
 
     for (uint32_t i = 0; i < std::size(bitflag_names); i++) {
         if (bits & nth_bit<contents_int_t>(i)) {
-           result.push_back(bitflag_names[i]);
+            result.push_back(bitflag_names[i]);
         }
     }
 
@@ -278,23 +278,6 @@ public:
         return CONTENTS_EMPTY;
     }
 
-    contentflags_t cluster_contents(contentflags_t contents0, contentflags_t contents1) const override
-    {
-        contents_int_t combined = contents0.flags | contents1.flags;
-
-        // a cluster may include some solid detail areas, but
-        // still be seen into
-        if (!(contents0.flags & EWT_VISCONTENTS_SOLID) || !(contents1.flags & EWT_VISCONTENTS_SOLID)) {
-            combined &= ~EWT_VISCONTENTS_SOLID;
-        }
-
-        return contentflags_t::make(combined);
-    }
-
-    contentflags_t create_empty_contents() const override { return contentflags_t::make(EWT_VISCONTENTS_EMPTY); }
-
-    contentflags_t create_solid_contents() const override { return contentflags_t::make(EWT_VISCONTENTS_SOLID); }
-
     contentflags_t create_detail_illusionary_contents(contentflags_t original) const override
     {
         return contentflags_t::make(EWT_VISCONTENTS_MIST | EWT_CFLAG_DETAIL);
@@ -315,16 +298,6 @@ public:
         return contentflags_t::make(EWT_VISCONTENTS_SOLID | EWT_CFLAG_DETAIL);
     }
 
-    contentflags_t clear_detail(contentflags_t original) const override
-    {
-        return contentflags_t::make(original.flags & (~EWT_CFLAG_DETAIL));
-    }
-
-    contentflags_t set_detail(contentflags_t original) const override
-    {
-        return contentflags_t::make(original.flags | EWT_CFLAG_DETAIL);
-    }
-
     bool contents_are_type_equal(contentflags_t self, contentflags_t other) const override
     {
         // fixme-brushbsp: document what this is supposed to do, remove if unneeded?
@@ -337,17 +310,6 @@ public:
     bool contents_are_equal(contentflags_t self, contentflags_t other) const override
     {
         return self.flags == other.flags;
-    }
-
-    bool contents_are_any_detail(contentflags_t contents) const override
-    {
-        return (contents.flags & EWT_CFLAG_DETAIL) != 0;
-    }
-
-    bool contents_are_detail_solid(contentflags_t contents) const override
-    {
-        // fixme-brushbsp: document whether this is an exclusive test (i.e. what does it return for water|solid|detail)
-        return (contents.flags & EWT_CFLAG_DETAIL) && (contents.flags & EWT_VISCONTENTS_SOLID);
     }
 
     bool contents_are_detail_wall(contentflags_t contents) const override
@@ -366,18 +328,6 @@ public:
     {
         // fixme-brushbsp: document whether this is an exclusive test (i.e. what does it return for water|mist|detail)
         return (contents.flags & EWT_CFLAG_DETAIL) && (contents.flags & EWT_VISCONTENTS_MIST);
-    }
-
-    bool contents_are_origin(contentflags_t contents) const override
-    {
-        // fixme-brushbsp: document whether this is an exclusive test (i.e. what does it return for water|origin)
-        return (contents.flags & EWT_INVISCONTENTS_ORIGIN) != 0;
-    }
-
-    bool contents_are_clip(contentflags_t contents) const override
-    {
-        // fixme-brushbsp: document whether this is an exclusive test (i.e. what does it return for water|clip)
-        return (contents.flags & EWT_INVISCONTENTS_PLAYERCLIP) != 0;
     }
 
     bool contents_clip_same_type(contentflags_t self, contentflags_t other) const override
@@ -401,19 +351,6 @@ public:
             return false;
         return (contents.flags & EWT_ALL_VISIBLE_CONTENTS) == 0;
     }
-
-    bool contents_are_any_solid(contentflags_t contents) const override
-    {
-        return (contents.flags & EWT_VISCONTENTS_SOLID) != 0;
-    }
-
-    // fixme-brushbsp: this is a leftover from q1 tools, and not really used in qbsp3, remove if possible
-    bool contents_are_solid(contentflags_t contents) const override
-    {
-        return (contents.flags & EWT_VISCONTENTS_SOLID) && !(contents.flags & EWT_CFLAG_DETAIL);
-    }
-
-    bool contents_are_sky(contentflags_t contents) const override { return (contents.flags & EWT_VISCONTENTS_SKY); }
 
     bool contents_are_liquid(contentflags_t contents) const override
     {
@@ -461,11 +398,6 @@ public:
         return false;
     }
 
-    bool contents_seals_map(contentflags_t contents) const override
-    {
-        return contents_are_solid(contents) || contents_are_sky(contents);
-    }
-
     bool contents_are_opaque(contentflags_t contents, bool transwater) const override
     {
         auto bits = contents.visible_contents().flags;
@@ -501,7 +433,7 @@ public:
          * Normally solid leafs are not written and just referenced as leaf 0.
          */
         if (contents_are_detail_fence(contents) || contents_are_detail_wall(contents)) {
-            return create_solid_contents();
+            return contentflags_t::make(EWT_VISCONTENTS_SOLID);
         }
 
         if (contents.flags & EWT_VISCONTENTS_MIST) {
@@ -524,10 +456,10 @@ public:
 
         auto result = contentflags_t::make(bits_a | bits_b);
 
-        if (contents_are_solid(a) || contents_are_solid(b)) {
-            return create_solid_contents();
+        if (a.is_solid() || b.is_solid()) {
+            return contentflags_t::make(EWT_VISCONTENTS_SOLID);
         }
-        if (contents_are_sky(a) || contents_are_sky(b)) {
+        if (a.is_sky() || b.is_sky()) {
             return contentflags_t::make(EWT_VISCONTENTS_SKY);
         }
         if ((a.flags & EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER) || (b.flags & EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER)) {
@@ -546,7 +478,7 @@ public:
         // aviods spamming "sides not found" warning on Q1 maps with sky
         if ((bits_a & (EWT_VISCONTENTS_SOLID | EWT_VISCONTENTS_SKY)) &&
             (bits_b & (EWT_VISCONTENTS_SOLID | EWT_VISCONTENTS_SKY)))
-            return create_empty_contents();
+            return contentflags_t::make(EWT_VISCONTENTS_EMPTY);
 
         contents_int_t result;
 
@@ -614,7 +546,7 @@ public:
         if (!Q_strcasecmp(texname.data(), "origin")) {
             return contentflags_t::make(EWT_INVISCONTENTS_ORIGIN);
         } else if (!Q_strcasecmp(texname.data(), "hint") || !Q_strcasecmp(texname.data(), "hintskip")) {
-            return create_empty_contents();
+            return contentflags_t::make(EWT_VISCONTENTS_EMPTY);
         } else if (!Q_strcasecmp(texname.data(), "clip")) {
             return contentflags_t::make(EWT_INVISCONTENTS_PLAYERCLIP);
         } else if (texname[0] == '*') {
@@ -630,7 +562,7 @@ public:
         }
 
         // and anything else is assumed to be a regular solid.
-        return create_solid_contents();
+        return contentflags_t::make(EWT_VISCONTENTS_SOLID);
     }
 
     void init_filesystem(const fs::path &map_or_bsp, const settings::common_settings &options) const override
@@ -1047,27 +979,10 @@ struct gamedef_q2_t : public gamedef_t
         return result;
     }
 
-    contentflags_t cluster_contents(contentflags_t contents0, contentflags_t contents1) const override
-    {
-        contents_int_t combined = contents0.flags | contents1.flags;
-
-        // a cluster may include some solid detail areas, but
-        // still be seen into
-        if (!(contents0.flags & EWT_VISCONTENTS_SOLID) || !(contents1.flags & EWT_VISCONTENTS_SOLID)) {
-            combined &= ~EWT_VISCONTENTS_SOLID;
-        }
-
-        return contentflags_t::make(combined);
-    }
-
     inline int32_t get_content_type(contentflags_t contents) const
     {
         return contents.flags & (EWT_ALL_VISIBLE_CONTENTS | EWT_ALL_INVISCONTENTS);
     }
-
-    contentflags_t create_empty_contents() const override { return contentflags_t::make(EWT_VISCONTENTS_EMPTY); }
-
-    contentflags_t create_solid_contents() const override { return contentflags_t::make(EWT_VISCONTENTS_SOLID); }
 
     contentflags_t create_detail_illusionary_contents(contentflags_t original) const override
     {
@@ -1100,16 +1015,6 @@ struct gamedef_q2_t : public gamedef_t
         return contentflags_t::make(flags);
     }
 
-    contentflags_t clear_detail(contentflags_t original) const override
-    {
-        return contentflags_t::make(original.flags & (~EWT_CFLAG_DETAIL));
-    }
-
-    contentflags_t set_detail(contentflags_t original) const override
-    {
-        return contentflags_t::make(original.flags | EWT_CFLAG_DETAIL);
-    }
-
     bool contents_are_type_equal(contentflags_t self, contentflags_t other) const override
     {
         return get_content_type(self) == get_content_type(other);
@@ -1118,16 +1023,6 @@ struct gamedef_q2_t : public gamedef_t
     bool contents_are_equal(contentflags_t self, contentflags_t other) const override
     {
         return self.flags == other.flags;
-    }
-
-    bool contents_are_any_detail(contentflags_t contents) const override
-    {
-        return (contents.flags & EWT_CFLAG_DETAIL) != 0;
-    }
-
-    bool contents_are_detail_solid(contentflags_t contents) const override
-    {
-        return (contents.flags & EWT_CFLAG_DETAIL) && (contents.flags & EWT_VISCONTENTS_SOLID);
     }
 
     bool contents_are_detail_wall(contentflags_t contents) const override
@@ -1165,16 +1060,6 @@ struct gamedef_q2_t : public gamedef_t
         return ((contents.flags & mist1_type) == mist1_type) || ((contents.flags & mist2_type) == mist2_type);
     }
 
-    bool contents_are_origin(contentflags_t contents) const override
-    {
-        return contents.flags & EWT_INVISCONTENTS_ORIGIN;
-    }
-
-    bool contents_are_clip(contentflags_t contents) const override
-    {
-        return (contents.flags & (EWT_INVISCONTENTS_PLAYERCLIP | EWT_INVISCONTENTS_MONSTERCLIP)) != 0;
-    }
-
     bool contents_clip_same_type(contentflags_t self, contentflags_t other) const override
     {
         if ((self.flags & EWT_ALL_VISIBLE_CONTENTS) != (other.flags & EWT_ALL_VISIBLE_CONTENTS))
@@ -1186,31 +1071,13 @@ struct gamedef_q2_t : public gamedef_t
         return true;
     }
 
-    inline bool contents_has_extended(contentflags_t contents) const { return false; }
-
     bool contents_are_empty(contentflags_t contents) const override
     {
-        return !contents_has_extended(contents) && !get_content_type(contents);
+        return !get_content_type(contents);
     }
-
-    bool contents_are_any_solid(contentflags_t contents) const override
-    {
-        return (contents.flags & EWT_VISCONTENTS_SOLID) != 0;
-    }
-
-    bool contents_are_solid(contentflags_t contents) const override
-    {
-        return !contents_has_extended(contents) && (contents.flags & EWT_VISCONTENTS_SOLID) &&
-               !(contents.flags & EWT_CFLAG_DETAIL);
-    }
-
-    bool contents_are_sky(contentflags_t contents) const override { return false; }
 
     bool contents_are_liquid(contentflags_t contents) const override
     {
-        if (contents_has_extended(contents))
-            return false;
-
         if (contents.flags & EWT_INVISCONTENTS_AREAPORTAL)
             return true; // HACK: treat areaportal as a liquid for the purposes of the CSG code
 
@@ -1291,11 +1158,6 @@ struct gamedef_q2_t : public gamedef_t
         return (((c0 ^ c1) & EWT_ALL_VISIBLE_CONTENTS) == 0);
     }
 
-    bool contents_seals_map(contentflags_t contents) const override
-    {
-        return contents_are_solid(contents) || contents_are_sky(contents);
-    }
-
     bool contents_are_opaque(contentflags_t contents, bool transwater) const override
     {
         int32_t c = contents.flags;
@@ -1337,7 +1199,7 @@ struct gamedef_q2_t : public gamedef_t
         contents_int_t bits_b = b.flags;
 
         // structural solid eats detail flags
-        if (contents_are_solid(a) || contents_are_solid(b)) {
+        if (a.is_solid() || b.is_solid()) {
             bits_a &= ~EWT_CFLAG_DETAIL;
             bits_b &= ~EWT_CFLAG_DETAIL;
         }

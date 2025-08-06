@@ -478,6 +478,7 @@ const modelinfo_t *ModelInfoForFace(const mbsp_t *bsp, int facenum);
 const img::texture *Face_Texture(const mbsp_t *bsp, const mface_t *face);
 const qvec3b &Face_LookupTextureColor(const mbsp_t *bsp, const mface_t *face);
 const qvec3f &Face_LookupTextureBounceColor(const mbsp_t *bsp, const mface_t *face);
+void SetLitNeeded(const bspdata_t &bspdata);
 void light_reset();
 int light_main(int argc, const char **argv);
 int light_main(const std::vector<std::string> &args);
