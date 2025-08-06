@@ -448,9 +448,6 @@ struct gamedef_t
     virtual bool contents_are_clip(contentflags_t contents) const = 0;
     virtual bool contents_are_empty(contentflags_t contents) const = 0;
     virtual bool contents_clip_same_type(contentflags_t self, contentflags_t other) const = 0;
-    bool contents_are_any_solid(contentflags_t contents) const {
-        return (contents.flags & EWT_VISCONTENTS_SOLID) != 0;
-    }
     virtual bool contents_are_solid(contentflags_t contents) const = 0;
     virtual bool contents_are_sky(contentflags_t contents) const = 0;
     virtual bool contents_are_liquid(contentflags_t contents) const = 0;

@@ -52,7 +52,7 @@ static bool LeafSealsForDetailFill(const node_t *node)
     // NOTE: detail-solid is considered sealing for the detail fill,
     // but not the regular fill (LeafSealsMap).
 
-    return qbsp_options.target_game->contents_are_any_solid(leafdata->contents) ||
+    return leafdata->contents.is_any_solid(qbsp_options.target_game) ||
            qbsp_options.target_game->contents_are_sky(leafdata->contents);
 }
 
