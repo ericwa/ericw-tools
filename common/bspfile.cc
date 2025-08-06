@@ -1095,16 +1095,14 @@ struct gamedef_q2_t : public gamedef_t
         return true;
     }
 
-    inline bool contents_has_extended(contentflags_t contents) const { return false; }
-
     bool contents_are_empty(contentflags_t contents) const override
     {
-        return !contents_has_extended(contents) && !get_content_type(contents);
+        return !get_content_type(contents);
     }
 
     bool contents_are_solid(contentflags_t contents) const override
     {
-        return !contents_has_extended(contents) && (contents.flags & EWT_VISCONTENTS_SOLID) &&
+        return (contents.flags & EWT_VISCONTENTS_SOLID) &&
                !(contents.flags & EWT_CFLAG_DETAIL);
     }
 
@@ -1112,9 +1110,6 @@ struct gamedef_q2_t : public gamedef_t
 
     bool contents_are_liquid(contentflags_t contents) const override
     {
-        if (contents_has_extended(contents))
-            return false;
-
         if (contents.flags & EWT_INVISCONTENTS_AREAPORTAL)
             return true; // HACK: treat areaportal as a liquid for the purposes of the CSG code
 
