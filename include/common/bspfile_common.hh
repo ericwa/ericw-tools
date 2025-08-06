@@ -145,7 +145,7 @@ struct contentflags_t
     bool equals(const gamedef_t *game, contentflags_t other) const;
 
     // is any kind of detail? (solid, liquid, etc.)
-    bool is_any_detail(const gamedef_t *game) const;
+    bool is_any_detail() const;
     bool is_detail_solid(const gamedef_t *game) const;
     bool is_detail_wall(const gamedef_t *game) const;
     bool is_detail_fence(const gamedef_t *game) const;
@@ -180,7 +180,7 @@ struct contentflags_t
     bool is_liquid(const gamedef_t *game) const;
     bool is_valid(const gamedef_t *game, bool strict = true) const;
     bool is_clip(const gamedef_t *game) const;
-    bool is_origin(const gamedef_t *game) const;
+    bool is_origin() const;
 
     void make_valid(const gamedef_t *game);
 
@@ -435,16 +435,10 @@ struct gamedef_t
     virtual contentflags_t set_detail(contentflags_t original) const = 0;
     virtual bool contents_are_type_equal(contentflags_t self, contentflags_t other) const = 0;
     virtual bool contents_are_equal(contentflags_t self, contentflags_t other) const = 0;
-    bool contents_are_any_detail(contentflags_t contents) const {
-        return (contents.flags & EWT_CFLAG_DETAIL) != 0;
-    }
     virtual bool contents_are_detail_solid(contentflags_t contents) const = 0;
     virtual bool contents_are_detail_wall(contentflags_t contents) const = 0;
     virtual bool contents_are_detail_fence(contentflags_t contents) const = 0;
     virtual bool contents_are_detail_illusionary(contentflags_t contents) const = 0;
-    bool contents_are_origin(contentflags_t contents) const {
-        return (contents.flags & EWT_INVISCONTENTS_ORIGIN) != 0;
-    }
     virtual bool contents_are_clip(contentflags_t contents) const = 0;
     virtual bool contents_are_empty(contentflags_t contents) const = 0;
     virtual bool contents_clip_same_type(contentflags_t self, contentflags_t other) const = 0;

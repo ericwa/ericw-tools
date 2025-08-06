@@ -41,7 +41,7 @@ TEST(common, q1Contents)
             EXPECT_EQ(game_q1->contents_to_native(combined), CONTENTS_SOLID);
             EXPECT_TRUE(combined.is_solid(game_q1));
 
-            EXPECT_FALSE(combined.is_any_detail(game_q1));
+            EXPECT_FALSE(combined.is_any_detail());
         }
     }
 
@@ -100,7 +100,7 @@ TEST(common, clusterContents)
             // - otherwise, you can see in, and it needs a visportal
             EXPECT_TRUE(solid_empty_cluster.is_empty(game));
             // this is a bit weird...
-            EXPECT_TRUE(solid_empty_cluster.is_any_detail(game));
+            EXPECT_TRUE(solid_empty_cluster.is_any_detail());
 
             // check portal_can_see_through
             EXPECT_FALSE(game->portal_can_see_through(empty, solid_detail, true));
@@ -114,7 +114,7 @@ TEST(common, q1Origin)
 
     auto origin = game->face_get_contents("origin", {}, {});
 
-    EXPECT_TRUE(origin.is_origin(game));
+    EXPECT_TRUE(origin.is_origin());
     EXPECT_FALSE(origin.is_empty(game));
 }
 
@@ -124,7 +124,7 @@ TEST(common, q2Origin)
 
     auto origin = game->face_get_contents("", {}, game->create_contents_from_native(Q2_CONTENTS_ORIGIN));
 
-    EXPECT_TRUE(origin.is_origin(game));
+    EXPECT_TRUE(origin.is_origin());
     EXPECT_FALSE(origin.is_empty(game));
 }
 
@@ -164,11 +164,11 @@ TEST(common, sharedContentFlagTests)
             {
                 SCOPED_TRACE("is_any_detail");
 
-                EXPECT_FALSE(solid.is_any_detail(game));
-                EXPECT_TRUE(detail_solid.is_any_detail(game));
-                EXPECT_TRUE(detail_wall.is_any_detail(game));
-                EXPECT_TRUE(detail_fence.is_any_detail(game));
-                EXPECT_TRUE(detail_illusionary.is_any_detail(game));
+                EXPECT_FALSE(solid.is_any_detail());
+                EXPECT_TRUE(detail_solid.is_any_detail());
+                EXPECT_TRUE(detail_wall.is_any_detail());
+                EXPECT_TRUE(detail_fence.is_any_detail());
+                EXPECT_TRUE(detail_illusionary.is_any_detail());
             }
 
             {
@@ -266,7 +266,7 @@ TEST(common, q2Contents)
 
             EXPECT_EQ(game_q2->contents_to_native(combined), after);
             EXPECT_TRUE(combined.is_solid(game_q2));
-            EXPECT_FALSE(combined.is_any_detail(game_q2));
+            EXPECT_FALSE(combined.is_any_detail());
         }
     }
 

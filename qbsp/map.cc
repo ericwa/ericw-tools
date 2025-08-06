@@ -2153,7 +2153,7 @@ void ProcessMapBrushes()
 
                 // origin brushes are removed, and the origin of the entity is overwritten
                 // with its centroid.
-                if (brush.contents.is_origin(qbsp_options.target_game)) {
+                if (brush.contents.is_origin()) {
                     if (map.is_world_entity(entity)) {
                         logging::print("WARNING: Ignoring origin brush in worldspawn\n");
                     } else if (entity.epairs.has("origin")) {

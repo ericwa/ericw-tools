@@ -876,7 +876,7 @@ static side_t *ChooseMidPlaneFromList(const bspbrush_t::container &brushes, cons
         for (auto &brush : brushes) {
             // FIXME: these conditions need to be kept in sync with SelectSplitPlane
             // ideally, should be deduplicated somehow
-            if ((pass >= 2) != brush->contents.is_any_detail(qbsp_options.target_game))
+            if ((pass >= 2) != brush->contents.is_any_detail())
                 continue;
             for (auto &side : brush->sides) {
                 if (side.bevel)
@@ -999,7 +999,7 @@ static side_t *SelectSplitPlane(
         for (auto &brush : brushes) {
             // FIXME: these conditions need to be kept in sync with ChooseMidPlaneFromList
             // ideally, should be deduplicated somehow
-            if ((pass >= 2) != brush->contents.is_any_detail(qbsp_options.target_game))
+            if ((pass >= 2) != brush->contents.is_any_detail())
                 continue;
             for (auto &side : brush->sides) {
                 if (side.bevel)
@@ -1361,8 +1361,8 @@ inline bool BrushGE(const bspbrush_t &b1, const bspbrush_t &b2)
         return false;
 
     // detail brushes never bite structural brushes
-    if ((b1.contents.is_any_detail(qbsp_options.target_game)) &&
-        !(b2.contents.is_any_detail(qbsp_options.target_game))) {
+    if ((b1.contents.is_any_detail()) &&
+        !(b2.contents.is_any_detail())) {
         return false;
     }
     return b1.contents.is_any_solid() && b2.contents.is_any_solid();

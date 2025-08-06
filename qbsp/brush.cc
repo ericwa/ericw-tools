@@ -745,7 +745,7 @@ static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hu
         }
 
         /* "origin" brushes always discarded beforehand */
-        Q_assert(!contents.is_origin(qbsp_options.target_game));
+        Q_assert(!contents.is_origin());
 
         // per-brush settings
         bool detail = false;
@@ -768,7 +768,7 @@ static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hu
             continue;
         if ((qbsp_options.omitdetail.value() || qbsp_options.omitdetailwall.value()) && detail_wall)
             continue;
-        if (qbsp_options.omitdetail.value() && contents.is_any_detail(qbsp_options.target_game))
+        if (qbsp_options.omitdetail.value() && contents.is_any_detail())
             continue;
 
         /* turn solid brushes into detail, if we're in hull0 */

@@ -62,9 +62,9 @@ bool contentflags_t::types_equal(contentflags_t other, const gamedef_t *game) co
     return game->contents_are_type_equal(*this, other);
 }
 
-bool contentflags_t::is_any_detail(const gamedef_t *game) const
+bool contentflags_t::is_any_detail() const
 {
-    return game->contents_are_any_detail(*this);
+    return (flags & EWT_CFLAG_DETAIL) != 0;
 }
 
 bool contentflags_t::is_detail_solid(const gamedef_t *game) const
@@ -155,9 +155,9 @@ bool contentflags_t::is_clip(const gamedef_t *game) const
     return game->contents_are_clip(*this);
 }
 
-bool contentflags_t::is_origin(const gamedef_t *game) const
+bool contentflags_t::is_origin() const
 {
-    return game->contents_are_origin(*this);
+    return (flags & EWT_INVISCONTENTS_ORIGIN) != 0;
 }
 
 void contentflags_t::make_valid(const gamedef_t *game)
