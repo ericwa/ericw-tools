@@ -387,11 +387,6 @@ public:
         return (contents.flags & EWT_ALL_VISIBLE_CONTENTS) == 0;
     }
 
-    bool contents_are_any_solid(contentflags_t contents) const override
-    {
-        return (contents.flags & EWT_VISCONTENTS_SOLID) != 0;
-    }
-
     // fixme-brushbsp: this is a leftover from q1 tools, and not really used in qbsp3, remove if possible
     bool contents_are_solid(contentflags_t contents) const override
     {
@@ -1162,11 +1157,6 @@ struct gamedef_q2_t : public gamedef_t
     bool contents_are_empty(contentflags_t contents) const override
     {
         return !contents_has_extended(contents) && !get_content_type(contents);
-    }
-
-    bool contents_are_any_solid(contentflags_t contents) const override
-    {
-        return (contents.flags & EWT_VISCONTENTS_SOLID) != 0;
     }
 
     bool contents_are_solid(contentflags_t contents) const override
