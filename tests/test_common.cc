@@ -69,7 +69,7 @@ TEST(common, q1Contents)
         auto combined = game_q1->combine_contents(detail_solid, game_q1->create_contents_from_native(CONTENTS_SKY));
 
         EXPECT_FALSE(combined.is_detail_solid());
-        EXPECT_TRUE(combined.is_sky(game_q1));
+        EXPECT_TRUE(combined.is_sky());
         EXPECT_FALSE(combined.is_solid());
     }
 }

@@ -829,8 +829,7 @@ static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hu
 
         if (hullnum.value_or(0)) {
             /* nonsolid brushes don't show up in clipping hulls */
-            if (!contents.is_any_solid() && !contents.is_sky(qbsp_options.target_game) &&
-                !contents.is_fence(qbsp_options.target_game)) {
+            if (!contents.is_any_solid() && !contents.is_sky() && !contents.is_fence(qbsp_options.target_game)) {
                 continue;
             }
 

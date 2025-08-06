@@ -53,7 +53,7 @@ static bool ShouldOmitFace(face_t *f)
         return true;
 
     // HACK: to save a few faces, don't output the interior faces of sky brushes
-    if (f->contents.front.is_sky(qbsp_options.target_game)) {
+    if (f->contents.front.is_sky()) {
         return true;
     }
 

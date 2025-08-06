@@ -79,7 +79,7 @@ static std::unique_ptr<face_t> TryMerge(const face_t *f1, const face_t *f2)
         return nullptr;
 
     // Q1: don't merge across sky boundary - we delete faces inside sky
-    if (f1->contents[0].is_sky(qbsp_options.target_game) != f2->contents[0].is_sky(qbsp_options.target_game))
+    if (f1->contents[0].is_sky() != f2->contents[0].is_sky())
         return nullptr;
 
     // find a common edge

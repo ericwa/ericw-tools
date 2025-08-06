@@ -135,9 +135,9 @@ bool contentflags_t::is_solid() const
     return (flags & EWT_VISCONTENTS_SOLID) && !(flags & EWT_CFLAG_DETAIL);
 }
 
-bool contentflags_t::is_sky(const gamedef_t *game) const
+bool contentflags_t::is_sky() const
 {
-    return game->contents_are_sky(*this);
+    return (flags & EWT_VISCONTENTS_SKY) != 0;
 }
 
 bool contentflags_t::is_liquid(const gamedef_t *game) const

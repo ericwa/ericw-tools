@@ -406,7 +406,7 @@ public:
 
     bool contents_seals_map(contentflags_t contents) const override
     {
-        return contents.is_solid() || contents_are_sky(contents);
+        return contents.is_solid() || contents.is_sky();
     }
 
     bool contents_are_opaque(contentflags_t contents, bool transwater) const override
@@ -470,7 +470,7 @@ public:
         if (a.is_solid() || b.is_solid()) {
             return contentflags_t::make(EWT_VISCONTENTS_SOLID);
         }
-        if (contents_are_sky(a) || contents_are_sky(b)) {
+        if (a.is_sky() || b.is_sky()) {
             return contentflags_t::make(EWT_VISCONTENTS_SKY);
         }
         if ((a.flags & EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER) || (b.flags & EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER)) {
@@ -1176,7 +1176,7 @@ struct gamedef_q2_t : public gamedef_t
 
     bool contents_seals_map(contentflags_t contents) const override
     {
-        return contents.is_solid() || contents_are_sky(contents);
+        return contents.is_solid() || contents.is_sky();
     }
 
     bool contents_are_opaque(contentflags_t contents, bool transwater) const override
