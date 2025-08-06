@@ -298,16 +298,6 @@ public:
         return contentflags_t::make(EWT_VISCONTENTS_SOLID | EWT_CFLAG_DETAIL);
     }
 
-    contentflags_t clear_detail(contentflags_t original) const override
-    {
-        return contentflags_t::make(original.flags & (~EWT_CFLAG_DETAIL));
-    }
-
-    contentflags_t set_detail(contentflags_t original) const override
-    {
-        return contentflags_t::make(original.flags | EWT_CFLAG_DETAIL);
-    }
-
     bool contents_are_type_equal(contentflags_t self, contentflags_t other) const override
     {
         // fixme-brushbsp: document what this is supposed to do, remove if unneeded?
@@ -1048,16 +1038,6 @@ struct gamedef_q2_t : public gamedef_t
         contents_int_t flags = original.flags;
         flags |= (EWT_VISCONTENTS_SOLID | EWT_CFLAG_DETAIL);
         return contentflags_t::make(flags);
-    }
-
-    contentflags_t clear_detail(contentflags_t original) const override
-    {
-        return contentflags_t::make(original.flags & (~EWT_CFLAG_DETAIL));
-    }
-
-    contentflags_t set_detail(contentflags_t original) const override
-    {
-        return contentflags_t::make(original.flags | EWT_CFLAG_DETAIL);
     }
 
     bool contents_are_type_equal(contentflags_t self, contentflags_t other) const override

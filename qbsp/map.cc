@@ -1498,7 +1498,7 @@ static contentflags_t Brush_GetContents(const mapentity_t &entity, const mapbrus
     // non-Q2: -transwater implies liquids are detail
     if (qbsp_options.target_game->id != GAME_QUAKE_II && qbsp_options.transwater.value()) {
         if (base_contents.is_liquid(qbsp_options.target_game)) {
-            base_contents = qbsp_options.target_game->set_detail(base_contents);
+            base_contents = contentflags_t::make(base_contents.flags | EWT_CFLAG_DETAIL);
         }
     }
 

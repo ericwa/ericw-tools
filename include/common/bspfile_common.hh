@@ -432,8 +432,6 @@ struct gamedef_t
     virtual contentflags_t create_detail_fence_contents(contentflags_t original) const = 0;
     virtual contentflags_t create_detail_wall_contents(contentflags_t original) const = 0;
     virtual contentflags_t create_detail_solid_contents(contentflags_t original) const = 0;
-    virtual contentflags_t clear_detail(contentflags_t original) const = 0;
-    virtual contentflags_t set_detail(contentflags_t original) const = 0;
     virtual bool contents_are_type_equal(contentflags_t self, contentflags_t other) const = 0;
     virtual bool contents_are_equal(contentflags_t self, contentflags_t other) const = 0;
     virtual bool contents_are_detail_solid(contentflags_t contents) const = 0;

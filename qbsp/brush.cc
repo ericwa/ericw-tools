@@ -741,7 +741,7 @@ static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hu
         contentflags_t contents = mapbrush.contents;
 
         if (qbsp_options.nodetail.value()) {
-            contents = qbsp_options.target_game->clear_detail(contents);
+            contents = contentflags_t::make(contents.flags & (~EWT_CFLAG_DETAIL));
         }
 
         /* "origin" brushes always discarded beforehand */
