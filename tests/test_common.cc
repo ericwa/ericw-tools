@@ -88,11 +88,11 @@ TEST(common, clusterContents)
             const auto solid_detail = game->create_detail_solid_contents(solid);
             const auto empty = contentflags_t::make(EWT_VISCONTENTS_EMPTY);
 
-            auto solid_solid_cluster = game->cluster_contents(solid_detail, solid_detail);
+            auto solid_solid_cluster = solid_detail.cluster_contents(solid_detail);
             SCOPED_TRACE(solid_solid_cluster.to_string());
             EXPECT_TRUE(solid_solid_cluster.is_detail_solid(game));
 
-            auto solid_empty_cluster = game->cluster_contents(solid_detail, empty);
+            auto solid_empty_cluster = solid_detail.cluster_contents(empty);
             SCOPED_TRACE(solid_empty_cluster.to_string());
 
             // it's empty because of the rule that:

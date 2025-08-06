@@ -42,8 +42,7 @@ contentflags_t ClusterContents(const node_t *node)
         return leafdata->contents;
 
     auto *nodedata = node->get_nodedata();
-    return qbsp_options.target_game->cluster_contents(
-        ClusterContents(nodedata->children[0]), ClusterContents(nodedata->children[1]));
+    return ClusterContents(nodedata->children[0]).cluster_contents(ClusterContents(nodedata->children[1]));
 }
 
 /*

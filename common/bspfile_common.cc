@@ -170,6 +170,20 @@ bool contentflags_t::is_fence(const gamedef_t *game) const
     return is_detail_fence(game) || is_detail_illusionary(game);
 }
 
+contentflags_t contentflags_t::cluster_contents(contentflags_t other) const
+{
+    contents_int_t combined = this->flags | other.flags;
+
+    // a cluster may include some solid detail areas, but
+    // still be seen into
+    if (!(this->flags & EWT_VISCONTENTS_SOLID) || !(other.flags & EWT_VISCONTENTS_SOLID)) {
+        combined &= ~EWT_VISCONTENTS_SOLID;
+    }
+
+    return contentflags_t::make(combined);
+}
+
+
 std::string contentflags_t::to_string() const
 {
     std::string s = get_contents_display(flags);
@@ -580,19 +594,6 @@ gamedef_t::gamedef_t(const char *friendly_name, const char *default_base_dir)
     : friendly_name(friendly_name),
       default_base_dir(default_base_dir)
 {
-}
-
-contentflags_t gamedef_t::cluster_contents(contentflags_t contents0, contentflags_t contents1) const
-{
-    contents_int_t combined = contents0.flags | contents1.flags;
-
-    // a cluster may include some solid detail areas, but
-    // still be seen into
-    if (!(contents0.flags & EWT_VISCONTENTS_SOLID) || !(contents1.flags & EWT_VISCONTENTS_SOLID)) {
-        combined &= ~EWT_VISCONTENTS_SOLID;
-    }
-
-    return contentflags_t::make(combined);
 }
 
 // texvecf
