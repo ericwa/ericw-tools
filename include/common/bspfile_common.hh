@@ -181,7 +181,8 @@ struct contentflags_t
     bool is_sky() const;
     bool is_liquid(const gamedef_t *game) const;
     bool is_valid(const gamedef_t *game, bool strict = true) const;
-    bool is_clip(const gamedef_t *game) const;
+    // FIXME: checks for "clip" bits (player or monster), but is_clip() makes it sound like an exclusive check.
+    bool is_clip() const;
     bool is_origin() const;
 
     void make_valid(const gamedef_t *game);
@@ -441,7 +442,6 @@ struct gamedef_t
     virtual bool contents_are_detail_wall(contentflags_t contents) const = 0;
     virtual bool contents_are_detail_fence(contentflags_t contents) const = 0;
     virtual bool contents_are_detail_illusionary(contentflags_t contents) const = 0;
-    virtual bool contents_are_clip(contentflags_t contents) const = 0;
     virtual bool contents_are_empty(contentflags_t contents) const = 0;
     virtual bool contents_clip_same_type(contentflags_t self, contentflags_t other) const = 0;
     virtual bool contents_are_liquid(contentflags_t contents) const = 0;

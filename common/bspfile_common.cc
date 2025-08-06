@@ -150,9 +150,9 @@ bool contentflags_t::is_valid(const gamedef_t *game, bool strict) const
     return game->contents_are_valid(*this, strict);
 }
 
-bool contentflags_t::is_clip(const gamedef_t *game) const
+bool contentflags_t::is_clip() const
 {
-    return game->contents_are_clip(*this);
+    return (flags & (EWT_INVISCONTENTS_PLAYERCLIP | EWT_INVISCONTENTS_MONSTERCLIP)) != 0;
 }
 
 bool contentflags_t::is_origin() const

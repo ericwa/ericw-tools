@@ -330,12 +330,6 @@ public:
         return (contents.flags & EWT_CFLAG_DETAIL) && (contents.flags & EWT_VISCONTENTS_MIST);
     }
 
-    bool contents_are_clip(contentflags_t contents) const override
-    {
-        // fixme-brushbsp: document whether this is an exclusive test (i.e. what does it return for water|clip)
-        return (contents.flags & EWT_INVISCONTENTS_PLAYERCLIP) != 0;
-    }
-
     bool contents_clip_same_type(contentflags_t self, contentflags_t other) const override
     {
         if (!self.equals(this, other))
@@ -1064,11 +1058,6 @@ struct gamedef_q2_t : public gamedef_t
         contents_int_t mist2_type = (EWT_CFLAG_DETAIL | EWT_VISCONTENTS_AUX);
 
         return ((contents.flags & mist1_type) == mist1_type) || ((contents.flags & mist2_type) == mist2_type);
-    }
-
-    bool contents_are_clip(contentflags_t contents) const override
-    {
-        return (contents.flags & (EWT_INVISCONTENTS_PLAYERCLIP | EWT_INVISCONTENTS_MONSTERCLIP)) != 0;
     }
 
     bool contents_clip_same_type(contentflags_t self, contentflags_t other) const override

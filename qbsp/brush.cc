@@ -795,7 +795,7 @@ static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hu
          * include them in the model bounds so collision detection works
          * correctly.
          */
-        if (hullnum.has_value() && contents.is_clip(qbsp_options.target_game)) {
+        if (hullnum.has_value() && contents.is_clip()) {
             if (hullnum.value() == 0) {
                 if (auto brush = LoadBrush(src, mapbrush, contents, hullnum, num_clipped)) {
                     dst.bounds += brush->bounds;
