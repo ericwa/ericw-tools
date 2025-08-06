@@ -358,8 +358,6 @@ public:
         return (contents.flags & EWT_ALL_VISIBLE_CONTENTS) == 0;
     }
 
-    bool contents_are_sky(contentflags_t contents) const override { return (contents.flags & EWT_VISCONTENTS_SKY); }
-
     bool contents_are_liquid(contentflags_t contents) const override
     {
         return (contents.visible_contents().flags & EWT_ALL_LIQUIDS) != 0;
@@ -1093,8 +1091,6 @@ struct gamedef_q2_t : public gamedef_t
     {
         return !get_content_type(contents);
     }
-
-    bool contents_are_sky(contentflags_t contents) const override { return false; }
 
     bool contents_are_liquid(contentflags_t contents) const override
     {

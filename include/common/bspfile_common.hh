@@ -441,7 +441,7 @@ struct gamedef_t
     virtual bool contents_are_clip(contentflags_t contents) const = 0;
     virtual bool contents_are_empty(contentflags_t contents) const = 0;
     virtual bool contents_clip_same_type(contentflags_t self, contentflags_t other) const = 0;
-    virtual bool contents_are_sky(contentflags_t contents) const = 0;
+    bool contents_are_sky(contentflags_t contents) const { return (contents.flags & EWT_VISCONTENTS_SKY); }
     virtual bool contents_are_liquid(contentflags_t contents) const = 0;
     virtual bool contents_are_valid(contentflags_t contents, bool strict = true) const = 0;
     virtual int32_t contents_from_string(std::string_view str) const = 0;
