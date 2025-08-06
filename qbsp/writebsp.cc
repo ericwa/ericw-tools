@@ -261,7 +261,7 @@ static void ExportDrawNodes(node_t *node)
             // children[i] is a leaf
             // In Q2, all leaves must have their own ID even if they share solidity.
             if (qbsp_options.target_game->id != GAME_QUAKE_II &&
-                children_i_leafdata->contents.is_any_solid(qbsp_options.target_game)) {
+                children_i_leafdata->contents.is_any_solid()) {
                 dnode->children[i] = PLANENUM_LEAF;
             } else {
                 int32_t nextLeafIndex = static_cast<int32_t>(map.bsp.dleafs.size());

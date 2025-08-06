@@ -117,7 +117,7 @@ struct prune_stats_t : logging::stat_tracker_t
 static bool IsAnySolidLeaf(const node_t *node)
 {
     auto *leafdata = node->get_leafdata();
-    return leafdata && leafdata->contents.is_any_solid(qbsp_options.target_game);
+    return leafdata && leafdata->contents.is_any_solid();
 }
 
 static void PruneNodes_R(node_t *node, prune_stats_t &stats)

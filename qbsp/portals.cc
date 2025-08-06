@@ -688,7 +688,7 @@ static void FindAreas_r(node_t *node)
     if (leafdata->area)
         return; // already got it
 
-    if (leafdata->contents.is_any_solid(qbsp_options.target_game))
+    if (leafdata->contents.is_any_solid())
         return;
 
     if (!leafdata->occupied)

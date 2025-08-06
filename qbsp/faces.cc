@@ -748,7 +748,7 @@ static void MakeFaces_r(node_t *node, makefaces_stats_t &stats)
     auto *leafdata = node->get_leafdata();
 
     // solid leafs never have visible faces
-    if (leafdata->contents.is_any_solid(qbsp_options.target_game))
+    if (leafdata->contents.is_any_solid())
         return;
 
     // see which portals are valid

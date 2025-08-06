@@ -1365,7 +1365,7 @@ inline bool BrushGE(const bspbrush_t &b1, const bspbrush_t &b2)
         !(b2.contents.is_any_detail(qbsp_options.target_game))) {
         return false;
     }
-    return b1.contents.is_any_solid(qbsp_options.target_game) && b2.contents.is_any_solid(qbsp_options.target_game);
+    return b1.contents.is_any_solid() && b2.contents.is_any_solid();
 }
 
 /*

@@ -172,7 +172,7 @@ struct contentflags_t
     contentflags_t &set_clips_same_type(const std::optional<bool> &clips_same_type_value);
 
     bool is_empty(const gamedef_t *game) const;
-    bool is_any_solid(const gamedef_t *game) const;
+    bool is_any_solid() const;
     // solid, not detail or any other extended content types
     bool is_solid(const gamedef_t *game) const;
     bool has_structural_solid() const { return (flags & EWT_VISCONTENTS_SOLID) && !(flags & EWT_CFLAG_DETAIL); }

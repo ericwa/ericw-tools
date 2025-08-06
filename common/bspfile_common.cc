@@ -125,7 +125,7 @@ bool contentflags_t::is_empty(const gamedef_t *game) const
     return game->contents_are_empty(*this);
 }
 
-bool contentflags_t::is_any_solid(const gamedef_t *game) const
+bool contentflags_t::is_any_solid() const
 {
     return (flags & EWT_VISCONTENTS_SOLID) != 0;
 }

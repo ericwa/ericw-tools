@@ -52,7 +52,7 @@ static void WritePortals_r(node_t *node, prtfile_t &portalFile, bool clusters)
         return;
     }
     // at this point, `node` may be a leaf or a cluster
-    if (auto *leafdata = node->get_leafdata(); leafdata && leafdata->contents.is_any_solid(qbsp_options.target_game))
+    if (auto *leafdata = node->get_leafdata(); leafdata && leafdata->contents.is_any_solid())
         return;
 
     for (p = node->portals; p; p = next) {
@@ -106,7 +106,7 @@ static void WritePTR2ClusterMapping_r(node_t *node, prtfile_t &portalFile)
     }
 
     auto *leafdata = node->get_leafdata();
-    if (leafdata->contents.is_any_solid(qbsp_options.target_game))
+    if (leafdata->contents.is_any_solid())
         return;
 
     portalFile.dleafinfos[node->visleafnum + 1].cluster = node->viscluster;
@@ -160,7 +160,7 @@ static void NumberLeafs_r(node_t *node, portal_state_t &state, int cluster)
         return;
     }
 
-    if (auto *leafdata = node->get_leafdata(); leafdata && leafdata->contents.is_any_solid(qbsp_options.target_game)) {
+    if (auto *leafdata = node->get_leafdata(); leafdata && leafdata->contents.is_any_solid()) {
         /* solid block, viewpoint never inside */
         node->visleafnum = -1;
         node->viscluster = -1;

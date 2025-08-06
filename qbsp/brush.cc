@@ -772,7 +772,7 @@ static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hu
             continue;
 
         /* turn solid brushes into detail, if we're in hull0 */
-        if (!hullnum.value_or(0) && contents.is_any_solid(qbsp_options.target_game)) {
+        if (!hullnum.value_or(0) && contents.is_any_solid()) {
             if (detail_illusionary) {
                 contents = qbsp_options.target_game->create_detail_illusionary_contents(contents);
             } else if (detail_fence) {
@@ -829,7 +829,7 @@ static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hu
 
         if (hullnum.value_or(0)) {
             /* nonsolid brushes don't show up in clipping hulls */
-            if (!contents.is_any_solid(qbsp_options.target_game) && !contents.is_sky(qbsp_options.target_game) &&
+            if (!contents.is_any_solid() && !contents.is_sky(qbsp_options.target_game) &&
                 !contents.is_fence(qbsp_options.target_game)) {
                 continue;
             }

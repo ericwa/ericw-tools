@@ -58,7 +58,7 @@ TEST(common, q1Contents)
         SCOPED_TRACE("detail_solid plus water");
         auto combined = game_q1->combine_contents(detail_solid, game_q1->create_contents_from_native(CONTENTS_WATER));
 
-        EXPECT_TRUE(combined.is_any_solid(game_q1));
+        EXPECT_TRUE(combined.is_any_solid());
         EXPECT_TRUE(combined.is_detail_solid(game_q1));
         EXPECT_FALSE(combined.is_liquid(game_q1));
         EXPECT_FALSE(combined.is_solid(game_q1));
@@ -174,11 +174,11 @@ TEST(common, sharedContentFlagTests)
             {
                 SCOPED_TRACE("is_any_solid");
 
-                EXPECT_TRUE(solid.is_any_solid(game));
-                EXPECT_TRUE(detail_solid.is_any_solid(game));
-                EXPECT_FALSE(detail_wall.is_any_solid(game));
-                EXPECT_FALSE(detail_fence.is_any_solid(game));
-                EXPECT_FALSE(detail_illusionary.is_any_solid(game));
+                EXPECT_TRUE(solid.is_any_solid());
+                EXPECT_TRUE(detail_solid.is_any_solid());
+                EXPECT_FALSE(detail_wall.is_any_solid());
+                EXPECT_FALSE(detail_fence.is_any_solid());
+                EXPECT_FALSE(detail_illusionary.is_any_solid());
             }
 
             {
