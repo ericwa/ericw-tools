@@ -404,11 +404,6 @@ public:
         return false;
     }
 
-    bool contents_seals_map(contentflags_t contents) const override
-    {
-        return contents.is_solid() || contents.is_sky();
-    }
-
     bool contents_are_opaque(contentflags_t contents, bool transwater) const override
     {
         auto bits = contents.visible_contents().flags;
@@ -1172,11 +1167,6 @@ struct gamedef_q2_t : public gamedef_t
             return true;
 
         return (((c0 ^ c1) & EWT_ALL_VISIBLE_CONTENTS) == 0);
-    }
-
-    bool contents_seals_map(contentflags_t contents) const override
-    {
-        return contents.is_solid() || contents.is_sky();
     }
 
     bool contents_are_opaque(contentflags_t contents, bool transwater) const override

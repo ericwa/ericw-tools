@@ -240,6 +240,8 @@ struct contentflags_t
         return contentflags_t::make(EWT_VISCONTENTS_EMPTY);
     }
 
+    bool seals_map() const { return is_solid() || is_sky(); }
+
     auto operator<=>(const contentflags_t &other) const = default;
 };
 
@@ -446,7 +448,6 @@ struct gamedef_t
     virtual bool contents_are_valid(contentflags_t contents, bool strict = true) const = 0;
     virtual int32_t contents_from_string(std::string_view str) const = 0;
     virtual bool portal_can_see_through(contentflags_t contents0, contentflags_t contents1, bool transwater) const = 0;
-    virtual bool contents_seals_map(contentflags_t contents) const = 0;
     virtual bool contents_are_opaque(contentflags_t contents, bool transwater) const = 0;
     enum class remap_type_t
     {

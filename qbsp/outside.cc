@@ -41,7 +41,7 @@ static bool LeafSealsMap(const node_t *node)
     auto *leafdata = node->get_leafdata();
     Q_assert(leafdata);
 
-    return qbsp_options.target_game->contents_seals_map(leafdata->contents);
+    return leafdata->contents.seals_map();
 }
 
 static bool LeafSealsForDetailFill(const node_t *node)
@@ -498,7 +498,7 @@ static void OutLeafsToSolid_R(node_t *node, settings::filltype_t filltype, outle
     }
 
     // Don't fill sky, or count solids as outleafs
-    if (qbsp_options.target_game->contents_seals_map(leafdata->contents)) {
+    if (leafdata->contents.seals_map()) {
         return;
     }
 
