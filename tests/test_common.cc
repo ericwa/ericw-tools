@@ -19,10 +19,10 @@ TEST(common, q1Contents)
     auto *game_q1 = bspver_q1.game;
 
     const auto solid = contentflags_t::make(EWT_VISCONTENTS_SOLID);
-    const auto detail_solid = game_q1->create_detail_solid_contents(solid);
-    const auto detail_wall = game_q1->create_detail_wall_contents(solid);
-    const auto detail_fence = game_q1->create_detail_fence_contents(solid);
-    const auto detail_illusionary = game_q1->create_detail_illusionary_contents(solid);
+    const auto detail_solid = contentflags_t::create_detail_solid_contents(solid);
+    const auto detail_wall = contentflags_t::create_detail_wall_contents(solid);
+    const auto detail_fence = contentflags_t::create_detail_fence_contents(solid);
+    const auto detail_illusionary = contentflags_t::create_detail_illusionary_contents(solid);
 
     const std::array test_contents{game_q1->create_contents_from_native(CONTENTS_EMPTY),
         game_q1->create_contents_from_native(CONTENTS_SOLID), game_q1->create_contents_from_native(CONTENTS_WATER),
@@ -85,7 +85,7 @@ TEST(common, clusterContents)
             SCOPED_TRACE(bspver->name);
 
             const auto solid = contentflags_t::make(EWT_VISCONTENTS_SOLID);
-            const auto solid_detail = game->create_detail_solid_contents(solid);
+            const auto solid_detail = contentflags_t::create_detail_solid_contents(solid);
             const auto empty = contentflags_t::make(EWT_VISCONTENTS_EMPTY);
 
             auto solid_solid_cluster = solid_detail.cluster_contents(solid_detail);
@@ -139,10 +139,10 @@ TEST(common, sharedContentFlagTests)
             SCOPED_TRACE(bspver->name);
 
             const auto solid = contentflags_t::make(EWT_VISCONTENTS_SOLID);
-            const auto detail_solid = game->create_detail_solid_contents(solid);
-            const auto detail_wall = game->create_detail_wall_contents(solid);
-            const auto detail_fence = game->create_detail_fence_contents(solid);
-            const auto detail_illusionary = game->create_detail_illusionary_contents(solid);
+            const auto detail_solid = contentflags_t::create_detail_solid_contents(solid);
+            const auto detail_wall = contentflags_t::create_detail_wall_contents(solid);
+            const auto detail_fence = contentflags_t::create_detail_fence_contents(solid);
+            const auto detail_illusionary = contentflags_t::create_detail_illusionary_contents(solid);
 
             SCOPED_TRACE(solid.to_string());
             SCOPED_TRACE(detail_solid.to_string());

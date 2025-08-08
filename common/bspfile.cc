@@ -278,26 +278,6 @@ public:
         return CONTENTS_EMPTY;
     }
 
-    contentflags_t create_detail_illusionary_contents(contentflags_t original) const override
-    {
-        return contentflags_t::make(EWT_VISCONTENTS_MIST | EWT_CFLAG_DETAIL);
-    }
-
-    contentflags_t create_detail_fence_contents(contentflags_t original) const override
-    {
-        return contentflags_t::make(EWT_VISCONTENTS_WINDOW | EWT_CFLAG_DETAIL);
-    }
-
-    contentflags_t create_detail_wall_contents(contentflags_t original) const override
-    {
-        return contentflags_t::make(EWT_VISCONTENTS_DETAIL_WALL | EWT_CFLAG_DETAIL);
-    }
-
-    contentflags_t create_detail_solid_contents(contentflags_t original) const override
-    {
-        return contentflags_t::make(EWT_VISCONTENTS_SOLID | EWT_CFLAG_DETAIL);
-    }
-
     bool contents_are_type_equal(contentflags_t self, contentflags_t other) const override
     {
         // fixme-brushbsp: document what this is supposed to do, remove if unneeded?
@@ -982,37 +962,6 @@ struct gamedef_q2_t : public gamedef_t
     inline int32_t get_content_type(contentflags_t contents) const
     {
         return contents.flags & (EWT_ALL_VISIBLE_CONTENTS | EWT_ALL_INVISCONTENTS);
-    }
-
-    contentflags_t create_detail_illusionary_contents(contentflags_t original) const override
-    {
-        contents_int_t flags = original.flags;
-        flags &= ~EWT_VISCONTENTS_SOLID;
-        flags |= EWT_VISCONTENTS_MIST | EWT_CFLAG_DETAIL;
-        return contentflags_t::make(flags);
-    }
-
-    contentflags_t create_detail_fence_contents(contentflags_t original) const override
-    {
-        contents_int_t flags = original.flags;
-        flags &= ~EWT_VISCONTENTS_SOLID;
-        flags |= (EWT_VISCONTENTS_WINDOW | EWT_CFLAG_TRANSLUCENT | EWT_CFLAG_DETAIL);
-        return contentflags_t::make(flags);
-    }
-
-    contentflags_t create_detail_wall_contents(contentflags_t original) const override
-    {
-        contents_int_t flags = original.flags;
-        flags &= ~EWT_VISCONTENTS_SOLID;
-        flags |= (EWT_VISCONTENTS_DETAIL_WALL | EWT_CFLAG_DETAIL);
-        return contentflags_t::make(flags);
-    }
-
-    contentflags_t create_detail_solid_contents(contentflags_t original) const override
-    {
-        contents_int_t flags = original.flags;
-        flags |= (EWT_VISCONTENTS_SOLID | EWT_CFLAG_DETAIL);
-        return contentflags_t::make(flags);
     }
 
     bool contents_are_type_equal(contentflags_t self, contentflags_t other) const override

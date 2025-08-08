@@ -142,6 +142,38 @@ struct contentflags_t
 
     static contentflags_t make(contents_int_t f) { return contentflags_t{.flags = static_cast<contents_t>(f)}; }
 
+    static contentflags_t create_detail_illusionary_contents(contentflags_t original)
+    {
+        contents_int_t flags = original.flags;
+        flags &= ~EWT_VISCONTENTS_SOLID;
+        flags |= EWT_VISCONTENTS_MIST | EWT_CFLAG_DETAIL;
+        return contentflags_t::make(flags);
+    }
+
+    static contentflags_t create_detail_fence_contents(contentflags_t original)
+    {
+        contents_int_t flags = original.flags;
+        flags &= ~EWT_VISCONTENTS_SOLID;
+        // FIXME: why are we putting EWT_CFLAG_TRANSLUCENT here but not in create_detail_illusionary_contents?
+        flags |= (EWT_VISCONTENTS_WINDOW | EWT_CFLAG_TRANSLUCENT | EWT_CFLAG_DETAIL);
+        return contentflags_t::make(flags);
+    }
+
+    static contentflags_t create_detail_wall_contents(contentflags_t original)
+    {
+        contents_int_t flags = original.flags;
+        flags &= ~EWT_VISCONTENTS_SOLID;
+        flags |= (EWT_VISCONTENTS_DETAIL_WALL | EWT_CFLAG_DETAIL);
+        return contentflags_t::make(flags);
+    }
+
+    static contentflags_t create_detail_solid_contents(contentflags_t original)
+    {
+        contents_int_t flags = original.flags;
+        flags |= (EWT_VISCONTENTS_SOLID | EWT_CFLAG_DETAIL);
+        return contentflags_t::make(flags);
+    }
+
     bool equals(const gamedef_t *game, contentflags_t other) const;
 
     // is any kind of detail? (solid, liquid, etc.)
@@ -433,10 +465,6 @@ struct gamedef_t
     virtual bool texinfo_is_hintskip(const surfflags_t &flags, const std::string &name) const = 0;
     virtual contentflags_t create_contents_from_native(int32_t native) const = 0;
     virtual int32_t contents_to_native(contentflags_t contents) const = 0;
-    virtual contentflags_t create_detail_illusionary_contents(contentflags_t original) const = 0;
-    virtual contentflags_t create_detail_fence_contents(contentflags_t original) const = 0;
-    virtual contentflags_t create_detail_wall_contents(contentflags_t original) const = 0;
-    virtual contentflags_t create_detail_solid_contents(contentflags_t original) const = 0;
     virtual bool contents_are_type_equal(contentflags_t self, contentflags_t other) const = 0;
     virtual bool contents_are_equal(contentflags_t self, contentflags_t other) const = 0;
     virtual bool contents_are_detail_wall(contentflags_t contents) const = 0;
