@@ -57,9 +57,9 @@ bool contentflags_t::equals(const gamedef_t *game, contentflags_t other) const
     return flags == other.flags;
 }
 
-bool contentflags_t::types_equal(contentflags_t other, const gamedef_t *game) const
+bool contentflags_t::types_equal(contentflags_t other) const
 {
-    return game->contents_are_type_equal(*this, other);
+    return get_content_type() == other.get_content_type();
 }
 
 bool contentflags_t::is_any_detail() const

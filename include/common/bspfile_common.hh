@@ -227,7 +227,12 @@ struct contentflags_t
     // flags that turn things on/off - match. Exactly what the native
     // "type" is depends on the game, but any of the detail flags must
     // also match.
-    bool types_equal(contentflags_t other, const gamedef_t *game) const;
+    bool types_equal(contentflags_t other) const;
+
+    inline contents_int_t get_content_type() const
+    {
+        return flags & (EWT_ALL_VISIBLE_CONTENTS | EWT_ALL_INVISCONTENTS);
+    }
 
     // when multiple brushes contribute to a leaf, the higher priority
     // one determines the leaf contents
@@ -467,7 +472,6 @@ struct gamedef_t
     virtual bool texinfo_is_hintskip(const surfflags_t &flags, const std::string &name) const = 0;
     virtual contentflags_t create_contents_from_native(int32_t native) const = 0;
     virtual int32_t contents_to_native(contentflags_t contents) const = 0;
-    virtual bool contents_are_type_equal(contentflags_t self, contentflags_t other) const = 0;
     virtual bool contents_are_empty(contentflags_t contents) const = 0;
     virtual bool contents_clip_same_type(contentflags_t self, contentflags_t other) const = 0;
     virtual bool contents_are_valid(contentflags_t contents, bool strict = true) const = 0;

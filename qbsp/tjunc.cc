@@ -149,7 +149,7 @@ static bool Welds(contentflags_t a, contentflags_t b)
     // FIXME: no clipping same type?
 
     // all types weld with themselves
-    if (a.types_equal(b, qbsp_options.target_game))
+    if (a.types_equal(b))
         return true;
 
     // detail wall only welds with detail wall

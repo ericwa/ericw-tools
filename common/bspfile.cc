@@ -278,15 +278,6 @@ public:
         return CONTENTS_EMPTY;
     }
 
-    bool contents_are_type_equal(contentflags_t self, contentflags_t other) const override
-    {
-        // fixme-brushbsp: document what this is supposed to do, remove if unneeded?
-        // is it checking for equality of visible content bits (in q2 terminology)?
-        // same highest-priority visible content bit?
-
-        return self.flags == other.flags;
-    }
-
     bool contents_clip_same_type(contentflags_t self, contentflags_t other) const override
     {
         if (!self.equals(this, other))
@@ -934,11 +925,6 @@ struct gamedef_q2_t : public gamedef_t
     inline int32_t get_content_type(contentflags_t contents) const
     {
         return contents.flags & (EWT_ALL_VISIBLE_CONTENTS | EWT_ALL_INVISCONTENTS);
-    }
-
-    bool contents_are_type_equal(contentflags_t self, contentflags_t other) const override
-    {
-        return get_content_type(self) == get_content_type(other);
     }
 
     bool contents_clip_same_type(contentflags_t self, contentflags_t other) const override

@@ -1460,7 +1460,7 @@ static contentflags_t Brush_GetContents(const mapentity_t &entity, const mapbrus
             base_contents = contents;
         }
 
-        if (!contents.types_equal(base_contents, qbsp_options.target_game)) {
+        if (!contents.types_equal(base_contents)) {
             logging::print("WARNING: {}: brush has multiple face contents ({} vs {}), the former will be used.\n",
                 mapface.line, base_contents.to_string(), contents.to_string());
             break;
