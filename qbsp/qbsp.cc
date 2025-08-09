@@ -976,7 +976,7 @@ static void GatherBspbrushes_r(node_t *node, bspbrush_t::container &container)
 static void GatherLeafVolumes_r(node_t *node, bspbrush_t::container &container)
 {
     if (auto *leafdata = node->get_leafdata()) {
-        if (!leafdata->contents.is_empty(qbsp_options.target_game)) {
+        if (!leafdata->contents.is_empty()) {
             container.push_back(node->volume);
         }
         return;

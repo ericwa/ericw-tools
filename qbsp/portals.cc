@@ -1018,7 +1018,7 @@ static void FindPortalSide(portal_t *p, visible_faces_stats_t &stats)
     // if either is "_noclipfaces" then we don't require a content change
     contentflags_t viscontents = qbsp_options.target_game->portal_visible_contents(
         p->nodes[0]->get_leafdata()->contents, p->nodes[1]->get_leafdata()->contents);
-    if (viscontents.is_empty(qbsp_options.target_game))
+    if (viscontents.is_empty())
         return;
 
     // bestside[0] is the brushside visible on portal side[0] which is the positive side of the plane, always
@@ -1135,7 +1135,7 @@ static void MarkVisibleSides_r(node_t *node, visible_faces_stats_t &stats)
     auto *leafdata = node->get_leafdata();
 
     // empty leafs are never boundary leafs
-    if (leafdata->contents.is_empty(qbsp_options.target_game))
+    if (leafdata->contents.is_empty())
         return;
 
     // see if there is a visible face

@@ -1450,7 +1450,7 @@ static contentflags_t Brush_GetContents(const mapentity_t &entity, const mapbrus
         contentflags_t contents =
             qbsp_options.target_game->face_get_contents(mapface.texname.data(), texinfo.flags, mapface.contents);
 
-        if (contents.is_empty(qbsp_options.target_game)) {
+        if (contents.is_empty()) {
             continue;
         }
 

@@ -130,6 +130,7 @@ enum contents_t : contents_int_t
                                EWT_VISCONTENTS_LAVA | EWT_VISCONTENTS_SLIME | EWT_VISCONTENTS_WATER |
                                EWT_VISCONTENTS_MIST,
 
+    // FIXME: out of date
     EWT_ALL_INVISCONTENTS = EWT_INVISCONTENTS_ORIGIN | EWT_INVISCONTENTS_PLAYERCLIP | EWT_INVISCONTENTS_MONSTERCLIP |
                             EWT_INVISCONTENTS_AREAPORTAL | EWT_INVISCONTENTS_PROJECTILECLIP,
 };
@@ -204,7 +205,7 @@ struct contentflags_t
     }
     contentflags_t &set_clips_same_type(const std::optional<bool> &clips_same_type_value);
 
-    bool is_empty(const gamedef_t *game) const;
+    bool is_empty() const;
     bool is_any_solid() const;
     // solid, not detail
     bool is_solid() const;
@@ -464,7 +465,6 @@ struct gamedef_t
     virtual bool texinfo_is_hintskip(const surfflags_t &flags, const std::string &name) const = 0;
     virtual contentflags_t create_contents_from_native(int32_t native) const = 0;
     virtual int32_t contents_to_native(contentflags_t contents) const = 0;
-    virtual bool contents_are_empty(contentflags_t contents) const = 0;
     virtual bool contents_clip_same_type(contentflags_t self, contentflags_t other) const = 0;
     virtual bool contents_are_valid(contentflags_t contents, bool strict = true) const = 0;
     virtual int32_t contents_from_string(std::string_view str) const = 0;

@@ -98,7 +98,7 @@ TEST(common, clusterContents)
             // it's empty because of the rule that:
             // - if all leaves in the cluster are solid, it means you can't see in, and there's no visportal
             // - otherwise, you can see in, and it needs a visportal
-            EXPECT_TRUE(solid_empty_cluster.is_empty(game));
+            EXPECT_TRUE(solid_empty_cluster.is_empty());
             // this is a bit weird...
             EXPECT_TRUE(solid_empty_cluster.is_any_detail());
 
@@ -115,7 +115,7 @@ TEST(common, q1Origin)
     auto origin = game->face_get_contents("origin", {}, {});
 
     EXPECT_TRUE(origin.is_origin());
-    EXPECT_FALSE(origin.is_empty(game));
+    EXPECT_FALSE(origin.is_empty());
 }
 
 TEST(common, q2Origin)
@@ -125,7 +125,7 @@ TEST(common, q2Origin)
     auto origin = game->face_get_contents("", {}, game->create_contents_from_native(Q2_CONTENTS_ORIGIN));
 
     EXPECT_TRUE(origin.is_origin());
-    EXPECT_FALSE(origin.is_empty(game));
+    EXPECT_FALSE(origin.is_empty());
 }
 
 TEST(common, sharedContentFlagTests)
@@ -153,12 +153,12 @@ TEST(common, sharedContentFlagTests)
             {
                 SCOPED_TRACE("is_empty");
 
-                EXPECT_TRUE(contentflags_t::make(EWT_VISCONTENTS_EMPTY).is_empty(game));
-                EXPECT_FALSE(solid.is_empty(game));
-                EXPECT_FALSE(detail_solid.is_empty(game));
-                EXPECT_FALSE(detail_wall.is_empty(game));
-                EXPECT_FALSE(detail_fence.is_empty(game));
-                EXPECT_FALSE(detail_illusionary.is_empty(game));
+                EXPECT_TRUE(contentflags_t::make(EWT_VISCONTENTS_EMPTY).is_empty());
+                EXPECT_FALSE(solid.is_empty());
+                EXPECT_FALSE(detail_solid.is_empty());
+                EXPECT_FALSE(detail_wall.is_empty());
+                EXPECT_FALSE(detail_fence.is_empty());
+                EXPECT_FALSE(detail_illusionary.is_empty());
             }
 
             {

@@ -135,9 +135,9 @@ contentflags_t &contentflags_t::set_clips_same_type(const std::optional<bool> &c
     return *this;
 }
 
-bool contentflags_t::is_empty(const gamedef_t *game) const
+bool contentflags_t::is_empty() const
 {
-    return game->contents_are_empty(*this);
+    return !get_content_type();
 }
 
 bool contentflags_t::is_any_solid() const
