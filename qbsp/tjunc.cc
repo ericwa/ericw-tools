@@ -167,7 +167,7 @@ static bool Welds(contentflags_t a, contentflags_t b)
         return false;
 
     // never weld with backfaces
-    if (qbsp_options.target_game->contents_are_empty(a) || qbsp_options.target_game->contents_are_empty(b))
+    if (a.is_empty(qbsp_options.target_game) || b.is_empty(qbsp_options.target_game))
         return false;
 
     // otherwise, weld
