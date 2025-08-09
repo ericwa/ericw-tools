@@ -211,7 +211,8 @@ struct contentflags_t
     bool has_structural_solid() const { return (flags & EWT_VISCONTENTS_SOLID) && !(flags & EWT_CFLAG_DETAIL); }
     // FIXME: checks for "sky" bit, but sky might not be the visible contents so "is_sky()" is a misonomer
     bool is_sky() const;
-    bool is_liquid(const gamedef_t *game) const;
+    // NOTE: unlike the other is_*() checks, this one checks the visible contents
+    bool is_liquid() const;
     bool is_valid(const gamedef_t *game, bool strict = true) const;
     // FIXME: checks for "clip" bits (player or monster), but is_clip() makes it sound like an exclusive check.
     bool is_clip() const;
@@ -472,7 +473,6 @@ struct gamedef_t
     virtual bool contents_are_detail_illusionary(contentflags_t contents) const = 0;
     virtual bool contents_are_empty(contentflags_t contents) const = 0;
     virtual bool contents_clip_same_type(contentflags_t self, contentflags_t other) const = 0;
-    virtual bool contents_are_liquid(contentflags_t contents) const = 0;
     virtual bool contents_are_valid(contentflags_t contents, bool strict = true) const = 0;
     virtual int32_t contents_from_string(std::string_view str) const = 0;
     virtual bool portal_can_see_through(contentflags_t contents0, contentflags_t contents1, bool transwater) const = 0;

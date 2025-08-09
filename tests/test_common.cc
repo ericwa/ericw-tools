@@ -60,7 +60,7 @@ TEST(common, q1Contents)
 
         EXPECT_TRUE(combined.is_any_solid());
         EXPECT_TRUE(combined.is_detail_solid());
-        EXPECT_FALSE(combined.is_liquid(game_q1));
+        EXPECT_FALSE(combined.is_liquid());
         EXPECT_FALSE(combined.is_solid());
     }
 

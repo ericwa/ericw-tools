@@ -140,9 +140,14 @@ bool contentflags_t::is_sky() const
     return (flags & EWT_VISCONTENTS_SKY) != 0;
 }
 
-bool contentflags_t::is_liquid(const gamedef_t *game) const
+bool contentflags_t::is_liquid() const
 {
-    return game->contents_are_liquid(*this);
+    contents_int_t visibleflags = visible_contents().flags;
+
+    if (visibleflags & EWT_INVISCONTENTS_AREAPORTAL)
+        return true; // HACK: treat areaportal as a liquid for the purposes of the CSG code
+
+    return (visibleflags & EWT_ALL_LIQUIDS) != 0;
 }
 
 bool contentflags_t::is_valid(const gamedef_t *game, bool strict) const

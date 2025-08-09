@@ -332,11 +332,6 @@ public:
         return (contents.flags & EWT_ALL_VISIBLE_CONTENTS) == 0;
     }
 
-    bool contents_are_liquid(contentflags_t contents) const override
-    {
-        return (contents.visible_contents().flags & EWT_ALL_LIQUIDS) != 0;
-    }
-
     bool contents_are_valid(contentflags_t contents, bool strict) const override
     {
         // fixme-brushbsp: document exactly what this is supposed to do
@@ -1023,14 +1018,6 @@ struct gamedef_q2_t : public gamedef_t
     bool contents_are_empty(contentflags_t contents) const override
     {
         return !get_content_type(contents);
-    }
-
-    bool contents_are_liquid(contentflags_t contents) const override
-    {
-        if (contents.flags & EWT_INVISCONTENTS_AREAPORTAL)
-            return true; // HACK: treat areaportal as a liquid for the purposes of the CSG code
-
-        return (contents.flags & EWT_ALL_LIQUIDS) != 0;
     }
 
     bool contents_are_valid(contentflags_t contents, bool strict) const override

@@ -708,7 +708,7 @@ static surfflags_t SurfFlagsForEntity(
             flags.no_shadow = true;
         }
     }
-    if (face_contents.is_liquid(qbsp_options.target_game) && !is_translucent) {
+    if (face_contents.is_liquid() && !is_translucent) {
         // opaque liquids don't cast shadow unless opted in
         if (shadow != 1) {
             flags.no_shadow = true;
@@ -1497,7 +1497,7 @@ static contentflags_t Brush_GetContents(const mapentity_t &entity, const mapbrus
 
     // non-Q2: -transwater implies liquids are detail
     if (qbsp_options.target_game->id != GAME_QUAKE_II && qbsp_options.transwater.value()) {
-        if (base_contents.is_liquid(qbsp_options.target_game)) {
+        if (base_contents.is_liquid()) {
             base_contents = contentflags_t::make(base_contents.flags | EWT_CFLAG_DETAIL);
         }
     }
