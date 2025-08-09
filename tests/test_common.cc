@@ -51,7 +51,7 @@ TEST(common, q1Contents)
             game_q1->combine_contents(detail_illusionary, game_q1->create_contents_from_native(CONTENTS_WATER));
 
         EXPECT_EQ(game_q1->contents_to_native(combined), CONTENTS_WATER);
-        EXPECT_TRUE(combined.is_detail_illusionary(game_q1));
+        EXPECT_TRUE(combined.is_detail_illusionary());
     }
 
     {
@@ -194,31 +194,31 @@ TEST(common, sharedContentFlagTests)
             {
                 SCOPED_TRACE("is_detail_wall");
 
-                EXPECT_FALSE(solid.is_detail_wall(game));
-                EXPECT_FALSE(detail_solid.is_detail_wall(game));
-                EXPECT_TRUE(detail_wall.is_detail_wall(game));
-                EXPECT_FALSE(detail_fence.is_detail_wall(game));
-                EXPECT_FALSE(detail_illusionary.is_detail_wall(game));
+                EXPECT_FALSE(solid.is_detail_wall());
+                EXPECT_FALSE(detail_solid.is_detail_wall());
+                EXPECT_TRUE(detail_wall.is_detail_wall());
+                EXPECT_FALSE(detail_fence.is_detail_wall());
+                EXPECT_FALSE(detail_illusionary.is_detail_wall());
             }
 
             {
                 SCOPED_TRACE("is_detail_fence");
 
-                EXPECT_FALSE(solid.is_detail_fence(game));
-                EXPECT_FALSE(detail_solid.is_detail_fence(game));
-                EXPECT_FALSE(detail_wall.is_detail_fence(game));
-                EXPECT_TRUE(detail_fence.is_detail_fence(game));
-                EXPECT_FALSE(detail_illusionary.is_detail_fence(game));
+                EXPECT_FALSE(solid.is_detail_fence());
+                EXPECT_FALSE(detail_solid.is_detail_fence());
+                EXPECT_FALSE(detail_wall.is_detail_fence());
+                EXPECT_TRUE(detail_fence.is_detail_fence());
+                EXPECT_FALSE(detail_illusionary.is_detail_fence());
             }
 
             {
                 SCOPED_TRACE("is_detail_illusionary");
 
-                EXPECT_FALSE(solid.is_detail_illusionary(game));
-                EXPECT_FALSE(detail_solid.is_detail_illusionary(game));
-                EXPECT_FALSE(detail_wall.is_detail_illusionary(game));
-                EXPECT_FALSE(detail_fence.is_detail_illusionary(game));
-                EXPECT_TRUE(detail_illusionary.is_detail_illusionary(game));
+                EXPECT_FALSE(solid.is_detail_illusionary());
+                EXPECT_FALSE(detail_solid.is_detail_illusionary());
+                EXPECT_FALSE(detail_wall.is_detail_illusionary());
+                EXPECT_FALSE(detail_fence.is_detail_illusionary());
+                EXPECT_TRUE(detail_illusionary.is_detail_illusionary());
             }
         }
     }

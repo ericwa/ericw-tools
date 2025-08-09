@@ -180,9 +180,9 @@ struct contentflags_t
     bool is_any_detail() const;
     // is detail and is solid
     bool is_detail_solid() const;
-    bool is_detail_wall(const gamedef_t *game) const;
-    bool is_detail_fence(const gamedef_t *game) const;
-    bool is_detail_illusionary(const gamedef_t *game) const;
+    bool is_detail_wall() const;
+    bool is_detail_fence() const;
+    bool is_detail_illusionary() const;
 
     std::optional<bool> mirror_inside() const
     {
@@ -221,7 +221,7 @@ struct contentflags_t
 
     void make_valid(const gamedef_t *game);
 
-    bool is_fence(const gamedef_t *game) const;
+    bool is_fence() const;
 
     // check if this content's `type` - which is distinct from various
     // flags that turn things on/off - match. Exactly what the native
@@ -468,9 +468,6 @@ struct gamedef_t
     virtual contentflags_t create_contents_from_native(int32_t native) const = 0;
     virtual int32_t contents_to_native(contentflags_t contents) const = 0;
     virtual bool contents_are_type_equal(contentflags_t self, contentflags_t other) const = 0;
-    virtual bool contents_are_detail_wall(contentflags_t contents) const = 0;
-    virtual bool contents_are_detail_fence(contentflags_t contents) const = 0;
-    virtual bool contents_are_detail_illusionary(contentflags_t contents) const = 0;
     virtual bool contents_are_empty(contentflags_t contents) const = 0;
     virtual bool contents_clip_same_type(contentflags_t self, contentflags_t other) const = 0;
     virtual bool contents_are_valid(contentflags_t contents, bool strict = true) const = 0;

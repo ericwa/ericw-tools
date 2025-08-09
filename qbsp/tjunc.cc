@@ -153,7 +153,7 @@ static bool Welds(contentflags_t a, contentflags_t b)
         return true;
 
     // detail wall only welds with detail wall
-    if (a.is_detail_wall(qbsp_options.target_game) || b.is_detail_wall(qbsp_options.target_game))
+    if (a.is_detail_wall() || b.is_detail_wall())
         return false;
 
     // no need to weld translucent to opaque

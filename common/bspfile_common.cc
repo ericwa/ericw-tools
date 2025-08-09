@@ -72,19 +72,34 @@ bool contentflags_t::is_detail_solid() const
     return (flags & EWT_CFLAG_DETAIL) && (flags & EWT_VISCONTENTS_SOLID);
 }
 
-bool contentflags_t::is_detail_wall(const gamedef_t *game) const
+bool contentflags_t::is_detail_wall() const
 {
-    return game->contents_are_detail_wall(*this);
+    // FIXME: this seems off, should be a visible contents check?
+    if (flags & EWT_VISCONTENTS_SOLID) {
+        return false;
+    }
+
+    return (flags & EWT_CFLAG_DETAIL) && (flags & EWT_VISCONTENTS_DETAIL_WALL);
 }
 
-bool contentflags_t::is_detail_fence(const gamedef_t *game) const
+bool contentflags_t::is_detail_fence() const
 {
-    return game->contents_are_detail_fence(*this);
+    // FIXME: this seems off, should be a visible contents check?
+    if (flags & EWT_VISCONTENTS_SOLID) {
+        return false;
+    }
+
+    return (flags & EWT_CFLAG_DETAIL) && (flags & EWT_VISCONTENTS_WINDOW);
 }
 
-bool contentflags_t::is_detail_illusionary(const gamedef_t *game) const
+bool contentflags_t::is_detail_illusionary() const
 {
-    return game->contents_are_detail_illusionary(*this);
+    // FIXME: this seems off, should be a visible contents check?
+    if (flags & EWT_VISCONTENTS_SOLID) {
+        return false;
+    }
+
+    return (flags & EWT_CFLAG_DETAIL) && (flags & (EWT_VISCONTENTS_MIST | EWT_VISCONTENTS_AUX));
 }
 
 contentflags_t &contentflags_t::set_mirrored(const std::optional<bool> &mirror_inside_value)
@@ -175,9 +190,9 @@ void contentflags_t::make_valid(const gamedef_t *game)
     game->contents_make_valid(*this);
 }
 
-bool contentflags_t::is_fence(const gamedef_t *game) const
+bool contentflags_t::is_fence() const
 {
-    return is_detail_fence(game) || is_detail_illusionary(game);
+    return is_detail_fence() || is_detail_illusionary();
 }
 
 contentflags_t contentflags_t::cluster_contents(contentflags_t other) const

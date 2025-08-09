@@ -287,24 +287,6 @@ public:
         return self.flags == other.flags;
     }
 
-    bool contents_are_detail_wall(contentflags_t contents) const override
-    {
-        // fixme-brushbsp: document whether this is an exclusive test (i.e. what does it return for water|fence|detail)
-        return (contents.flags & EWT_CFLAG_DETAIL) && (contents.flags & EWT_VISCONTENTS_DETAIL_WALL);
-    }
-
-    bool contents_are_detail_fence(contentflags_t contents) const override
-    {
-        // fixme-brushbsp: document whether this is an exclusive test (i.e. what does it return for water|fence|detail)
-        return (contents.flags & EWT_CFLAG_DETAIL) && (contents.flags & EWT_VISCONTENTS_WINDOW);
-    }
-
-    bool contents_are_detail_illusionary(contentflags_t contents) const override
-    {
-        // fixme-brushbsp: document whether this is an exclusive test (i.e. what does it return for water|mist|detail)
-        return (contents.flags & EWT_CFLAG_DETAIL) && (contents.flags & EWT_VISCONTENTS_MIST);
-    }
-
     bool contents_clip_same_type(contentflags_t self, contentflags_t other) const override
     {
         if (!self.equals(this, other))
@@ -402,7 +384,7 @@ public:
          *
          * Normally solid leafs are not written and just referenced as leaf 0.
          */
-        if (contents.is_detail_fence(this) || contents.is_detail_wall(this)) {
+        if (contents.is_detail_fence() || contents.is_detail_wall()) {
             return contentflags_t::make(EWT_VISCONTENTS_SOLID);
         }
 
@@ -957,41 +939,6 @@ struct gamedef_q2_t : public gamedef_t
     bool contents_are_type_equal(contentflags_t self, contentflags_t other) const override
     {
         return get_content_type(self) == get_content_type(other);
-    }
-
-    bool contents_are_detail_wall(contentflags_t contents) const override
-    {
-        // fixme: Q1 is different
-        if (contents.flags & EWT_VISCONTENTS_SOLID) {
-            return false;
-        }
-
-        contents_int_t test = (EWT_CFLAG_DETAIL | EWT_VISCONTENTS_DETAIL_WALL);
-        return ((contents.flags & test) == test);
-    }
-
-    bool contents_are_detail_fence(contentflags_t contents) const override
-    {
-        // fixme: Q1 is different
-        if (contents.flags & EWT_VISCONTENTS_SOLID) {
-            return false;
-        }
-
-        contents_int_t test = (EWT_CFLAG_DETAIL | EWT_VISCONTENTS_WINDOW);
-        return ((contents.flags & test) == test);
-    }
-
-    bool contents_are_detail_illusionary(contentflags_t contents) const override
-    {
-        // fixme: Q1 is different
-        if (contents.flags & EWT_VISCONTENTS_SOLID) {
-            return false;
-        }
-
-        contents_int_t mist1_type = (EWT_CFLAG_DETAIL | EWT_VISCONTENTS_MIST);
-        contents_int_t mist2_type = (EWT_CFLAG_DETAIL | EWT_VISCONTENTS_AUX);
-
-        return ((contents.flags & mist1_type) == mist1_type) || ((contents.flags & mist2_type) == mist2_type);
     }
 
     bool contents_clip_same_type(contentflags_t self, contentflags_t other) const override
