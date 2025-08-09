@@ -402,7 +402,7 @@ public:
          *
          * Normally solid leafs are not written and just referenced as leaf 0.
          */
-        if (contents_are_detail_fence(contents) || contents_are_detail_wall(contents)) {
+        if (contents.is_detail_fence(this) || contents.is_detail_wall(this)) {
             return contentflags_t::make(EWT_VISCONTENTS_SOLID);
         }
 
@@ -1005,10 +1005,7 @@ struct gamedef_q2_t : public gamedef_t
         return true;
     }
 
-    bool contents_are_empty(contentflags_t contents) const override
-    {
-        return !get_content_type(contents);
-    }
+    bool contents_are_empty(contentflags_t contents) const override { return !get_content_type(contents); }
 
     bool contents_are_valid(contentflags_t contents, bool strict) const override
     {
@@ -1172,7 +1169,7 @@ struct gamedef_q2_t : public gamedef_t
 
     void contents_make_valid(contentflags_t &contents) const override
     {
-        if (contents_are_valid(contents, false)) {
+        if (contents.is_valid(this, false)) {
             return;
         }
 

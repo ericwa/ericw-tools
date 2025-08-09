@@ -217,6 +217,7 @@ struct contentflags_t
     // FIXME: checks for "clip" bits (player or monster), but is_clip() makes it sound like an exclusive check.
     bool is_clip() const;
     bool is_origin() const;
+    bool is_opaque(const gamedef_t *game, bool transwater) const;
 
     void make_valid(const gamedef_t *game);
 

@@ -165,6 +165,11 @@ bool contentflags_t::is_origin() const
     return (flags & EWT_INVISCONTENTS_ORIGIN) != 0;
 }
 
+bool contentflags_t::is_opaque(const gamedef_t *game, bool transwater) const
+{
+    return game->contents_are_opaque(*this, transwater);
+}
+
 void contentflags_t::make_valid(const gamedef_t *game)
 {
     game->contents_make_valid(*this);
@@ -187,7 +192,6 @@ contentflags_t contentflags_t::cluster_contents(contentflags_t other) const
 
     return contentflags_t::make(combined);
 }
-
 
 std::string contentflags_t::to_string() const
 {
