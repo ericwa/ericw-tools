@@ -467,7 +467,6 @@ struct gamedef_t
     virtual contentflags_t create_contents_from_native(int32_t native) const = 0;
     virtual int32_t contents_to_native(contentflags_t contents) const = 0;
     virtual bool contents_are_type_equal(contentflags_t self, contentflags_t other) const = 0;
-    virtual bool contents_are_equal(contentflags_t self, contentflags_t other) const = 0;
     virtual bool contents_are_detail_wall(contentflags_t contents) const = 0;
     virtual bool contents_are_detail_fence(contentflags_t contents) const = 0;
     virtual bool contents_are_detail_illusionary(contentflags_t contents) const = 0;

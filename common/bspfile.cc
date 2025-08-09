@@ -287,11 +287,6 @@ public:
         return self.flags == other.flags;
     }
 
-    bool contents_are_equal(contentflags_t self, contentflags_t other) const override
-    {
-        return self.flags == other.flags;
-    }
-
     bool contents_are_detail_wall(contentflags_t contents) const override
     {
         // fixme-brushbsp: document whether this is an exclusive test (i.e. what does it return for water|fence|detail)
@@ -962,11 +957,6 @@ struct gamedef_q2_t : public gamedef_t
     bool contents_are_type_equal(contentflags_t self, contentflags_t other) const override
     {
         return get_content_type(self) == get_content_type(other);
-    }
-
-    bool contents_are_equal(contentflags_t self, contentflags_t other) const override
-    {
-        return self.flags == other.flags;
     }
 
     bool contents_are_detail_wall(contentflags_t contents) const override
