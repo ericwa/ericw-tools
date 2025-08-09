@@ -234,14 +234,6 @@ struct contentflags_t
         return flags & (EWT_ALL_VISIBLE_CONTENTS | EWT_ALL_INVISCONTENTS);
     }
 
-    // when multiple brushes contribute to a leaf, the higher priority
-    // one determines the leaf contents
-    int32_t priority(const gamedef_t *game) const;
-
-    // whether this should chop (if so, only lower priority content brushes get chopped)
-    // should return true only for solid / opaque content types
-    bool chops(const gamedef_t *game) const;
-
     contentflags_t cluster_contents(contentflags_t other) const;
 
     std::string to_string() const;
