@@ -533,8 +533,7 @@ static void FillDetailEnclosedLeafsToDetailSolid_R(node_t *node, detail_filled_l
     }
 
     // Finally, we can fill it in as detail solid.
-    leafdata->contents =
-        qbsp_options.target_game->create_detail_solid_contents(contentflags_t::make(EWT_VISCONTENTS_SOLID));
+    leafdata->contents = contentflags_t::create_detail_solid_contents(contentflags_t::make(EWT_VISCONTENTS_SOLID));
     stats.filledleafs++;
 }
 

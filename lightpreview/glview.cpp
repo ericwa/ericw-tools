@@ -1879,7 +1879,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
         std::vector<simple_vertex_t> points;
 
         for (const auto &leaf : leaf_visuals) {
-            if (leaf.contents.is_empty(bsp.loadversion->game))
+            if (leaf.contents.is_empty())
                 continue;
 
             for (const auto &winding : leaf.windings) {

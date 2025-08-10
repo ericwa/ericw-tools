@@ -60,7 +60,7 @@ static bool ShouldOmitFace(face_t *f)
     // omit faces fully covered by detail wall
     if (!f->markleafs.empty() && std::all_of(f->markleafs.begin(), f->markleafs.end(), [](node_t *l) {
             auto *leafdata = l->get_leafdata();
-            return leafdata->contents.is_detail_wall(qbsp_options.target_game);
+            return leafdata->contents.is_detail_wall();
         })) {
         return true;
     }

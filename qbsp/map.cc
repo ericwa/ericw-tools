@@ -708,7 +708,7 @@ static surfflags_t SurfFlagsForEntity(
             flags.no_shadow = true;
         }
     }
-    if (face_contents.is_liquid(qbsp_options.target_game) && !is_translucent) {
+    if (face_contents.is_liquid() && !is_translucent) {
         // opaque liquids don't cast shadow unless opted in
         if (shadow != 1) {
             flags.no_shadow = true;
@@ -1450,7 +1450,7 @@ static contentflags_t Brush_GetContents(const mapentity_t &entity, const mapbrus
         contentflags_t contents =
             qbsp_options.target_game->face_get_contents(mapface.texname.data(), texinfo.flags, mapface.contents);
 
-        if (contents.is_empty(qbsp_options.target_game)) {
+        if (contents.is_empty()) {
             continue;
         }
 
@@ -1460,7 +1460,7 @@ static contentflags_t Brush_GetContents(const mapentity_t &entity, const mapbrus
             base_contents = contents;
         }
 
-        if (!contents.types_equal(base_contents, qbsp_options.target_game)) {
+        if (!contents.types_equal(base_contents)) {
             logging::print("WARNING: {}: brush has multiple face contents ({} vs {}), the former will be used.\n",
                 mapface.line, base_contents.to_string(), contents.to_string());
             break;
@@ -1497,7 +1497,7 @@ static contentflags_t Brush_GetContents(const mapentity_t &entity, const mapbrus
 
     // non-Q2: -transwater implies liquids are detail
     if (qbsp_options.target_game->id != GAME_QUAKE_II && qbsp_options.transwater.value()) {
-        if (base_contents.is_liquid(qbsp_options.target_game)) {
+        if (base_contents.is_liquid()) {
             base_contents = contentflags_t::make(base_contents.flags | EWT_CFLAG_DETAIL);
         }
     }

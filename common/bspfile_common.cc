@@ -57,9 +57,9 @@ bool contentflags_t::equals(const gamedef_t *game, contentflags_t other) const
     return flags == other.flags;
 }
 
-bool contentflags_t::types_equal(contentflags_t other, const gamedef_t *game) const
+bool contentflags_t::types_equal(contentflags_t other) const
 {
-    return game->contents_are_type_equal(*this, other);
+    return get_content_type() == other.get_content_type();
 }
 
 bool contentflags_t::is_any_detail() const
@@ -72,19 +72,34 @@ bool contentflags_t::is_detail_solid() const
     return (flags & EWT_CFLAG_DETAIL) && (flags & EWT_VISCONTENTS_SOLID);
 }
 
-bool contentflags_t::is_detail_wall(const gamedef_t *game) const
+bool contentflags_t::is_detail_wall() const
 {
-    return game->contents_are_detail_wall(*this);
+    // FIXME: this seems off, should be a visible contents check?
+    if (flags & EWT_VISCONTENTS_SOLID) {
+        return false;
+    }
+
+    return (flags & EWT_CFLAG_DETAIL) && (flags & EWT_VISCONTENTS_DETAIL_WALL);
 }
 
-bool contentflags_t::is_detail_fence(const gamedef_t *game) const
+bool contentflags_t::is_detail_fence() const
 {
-    return game->contents_are_detail_fence(*this);
+    // FIXME: this seems off, should be a visible contents check?
+    if (flags & EWT_VISCONTENTS_SOLID) {
+        return false;
+    }
+
+    return (flags & EWT_CFLAG_DETAIL) && (flags & EWT_VISCONTENTS_WINDOW);
 }
 
-bool contentflags_t::is_detail_illusionary(const gamedef_t *game) const
+bool contentflags_t::is_detail_illusionary() const
 {
-    return game->contents_are_detail_illusionary(*this);
+    // FIXME: this seems off, should be a visible contents check?
+    if (flags & EWT_VISCONTENTS_SOLID) {
+        return false;
+    }
+
+    return (flags & EWT_CFLAG_DETAIL) && (flags & (EWT_VISCONTENTS_MIST | EWT_VISCONTENTS_AUX));
 }
 
 contentflags_t &contentflags_t::set_mirrored(const std::optional<bool> &mirror_inside_value)
@@ -120,9 +135,9 @@ contentflags_t &contentflags_t::set_clips_same_type(const std::optional<bool> &c
     return *this;
 }
 
-bool contentflags_t::is_empty(const gamedef_t *game) const
+bool contentflags_t::is_empty() const
 {
-    return game->contents_are_empty(*this);
+    return !get_content_type();
 }
 
 bool contentflags_t::is_any_solid() const
@@ -140,9 +155,14 @@ bool contentflags_t::is_sky() const
     return (flags & EWT_VISCONTENTS_SKY) != 0;
 }
 
-bool contentflags_t::is_liquid(const gamedef_t *game) const
+bool contentflags_t::is_liquid() const
 {
-    return game->contents_are_liquid(*this);
+    contents_int_t visibleflags = visible_contents().flags;
+
+    if (visibleflags & EWT_INVISCONTENTS_AREAPORTAL)
+        return true; // HACK: treat areaportal as a liquid for the purposes of the CSG code
+
+    return (visibleflags & EWT_ALL_LIQUIDS) != 0;
 }
 
 bool contentflags_t::is_valid(const gamedef_t *game, bool strict) const
@@ -160,14 +180,19 @@ bool contentflags_t::is_origin() const
     return (flags & EWT_INVISCONTENTS_ORIGIN) != 0;
 }
 
+bool contentflags_t::is_opaque(const gamedef_t *game, bool transwater) const
+{
+    return game->contents_are_opaque(*this, transwater);
+}
+
 void contentflags_t::make_valid(const gamedef_t *game)
 {
     game->contents_make_valid(*this);
 }
 
-bool contentflags_t::is_fence(const gamedef_t *game) const
+bool contentflags_t::is_fence() const
 {
-    return is_detail_fence(game) || is_detail_illusionary(game);
+    return is_detail_fence() || is_detail_illusionary();
 }
 
 contentflags_t contentflags_t::cluster_contents(contentflags_t other) const
@@ -182,7 +207,6 @@ contentflags_t contentflags_t::cluster_contents(contentflags_t other) const
 
     return contentflags_t::make(combined);
 }
-
 
 std::string contentflags_t::to_string() const
 {

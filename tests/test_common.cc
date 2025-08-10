@@ -19,10 +19,10 @@ TEST(common, q1Contents)
     auto *game_q1 = bspver_q1.game;
 
     const auto solid = contentflags_t::make(EWT_VISCONTENTS_SOLID);
-    const auto detail_solid = game_q1->create_detail_solid_contents(solid);
-    const auto detail_wall = game_q1->create_detail_wall_contents(solid);
-    const auto detail_fence = game_q1->create_detail_fence_contents(solid);
-    const auto detail_illusionary = game_q1->create_detail_illusionary_contents(solid);
+    const auto detail_solid = contentflags_t::create_detail_solid_contents(solid);
+    const auto detail_wall = contentflags_t::create_detail_wall_contents(solid);
+    const auto detail_fence = contentflags_t::create_detail_fence_contents(solid);
+    const auto detail_illusionary = contentflags_t::create_detail_illusionary_contents(solid);
 
     const std::array test_contents{game_q1->create_contents_from_native(CONTENTS_EMPTY),
         game_q1->create_contents_from_native(CONTENTS_SOLID), game_q1->create_contents_from_native(CONTENTS_WATER),
@@ -51,7 +51,7 @@ TEST(common, q1Contents)
             game_q1->combine_contents(detail_illusionary, game_q1->create_contents_from_native(CONTENTS_WATER));
 
         EXPECT_EQ(game_q1->contents_to_native(combined), CONTENTS_WATER);
-        EXPECT_TRUE(combined.is_detail_illusionary(game_q1));
+        EXPECT_TRUE(combined.is_detail_illusionary());
     }
 
     {
@@ -60,7 +60,7 @@ TEST(common, q1Contents)
 
         EXPECT_TRUE(combined.is_any_solid());
         EXPECT_TRUE(combined.is_detail_solid());
-        EXPECT_FALSE(combined.is_liquid(game_q1));
+        EXPECT_FALSE(combined.is_liquid());
         EXPECT_FALSE(combined.is_solid());
     }
 
@@ -85,7 +85,7 @@ TEST(common, clusterContents)
             SCOPED_TRACE(bspver->name);
 
             const auto solid = contentflags_t::make(EWT_VISCONTENTS_SOLID);
-            const auto solid_detail = game->create_detail_solid_contents(solid);
+            const auto solid_detail = contentflags_t::create_detail_solid_contents(solid);
             const auto empty = contentflags_t::make(EWT_VISCONTENTS_EMPTY);
 
             auto solid_solid_cluster = solid_detail.cluster_contents(solid_detail);
@@ -98,7 +98,7 @@ TEST(common, clusterContents)
             // it's empty because of the rule that:
             // - if all leaves in the cluster are solid, it means you can't see in, and there's no visportal
             // - otherwise, you can see in, and it needs a visportal
-            EXPECT_TRUE(solid_empty_cluster.is_empty(game));
+            EXPECT_TRUE(solid_empty_cluster.is_empty());
             // this is a bit weird...
             EXPECT_TRUE(solid_empty_cluster.is_any_detail());
 
@@ -115,7 +115,7 @@ TEST(common, q1Origin)
     auto origin = game->face_get_contents("origin", {}, {});
 
     EXPECT_TRUE(origin.is_origin());
-    EXPECT_FALSE(origin.is_empty(game));
+    EXPECT_FALSE(origin.is_empty());
 }
 
 TEST(common, q2Origin)
@@ -125,7 +125,7 @@ TEST(common, q2Origin)
     auto origin = game->face_get_contents("", {}, game->create_contents_from_native(Q2_CONTENTS_ORIGIN));
 
     EXPECT_TRUE(origin.is_origin());
-    EXPECT_FALSE(origin.is_empty(game));
+    EXPECT_FALSE(origin.is_empty());
 }
 
 TEST(common, sharedContentFlagTests)
@@ -139,10 +139,10 @@ TEST(common, sharedContentFlagTests)
             SCOPED_TRACE(bspver->name);
 
             const auto solid = contentflags_t::make(EWT_VISCONTENTS_SOLID);
-            const auto detail_solid = game->create_detail_solid_contents(solid);
-            const auto detail_wall = game->create_detail_wall_contents(solid);
-            const auto detail_fence = game->create_detail_fence_contents(solid);
-            const auto detail_illusionary = game->create_detail_illusionary_contents(solid);
+            const auto detail_solid = contentflags_t::create_detail_solid_contents(solid);
+            const auto detail_wall = contentflags_t::create_detail_wall_contents(solid);
+            const auto detail_fence = contentflags_t::create_detail_fence_contents(solid);
+            const auto detail_illusionary = contentflags_t::create_detail_illusionary_contents(solid);
 
             SCOPED_TRACE(solid.to_string());
             SCOPED_TRACE(detail_solid.to_string());
@@ -153,12 +153,12 @@ TEST(common, sharedContentFlagTests)
             {
                 SCOPED_TRACE("is_empty");
 
-                EXPECT_TRUE(contentflags_t::make(EWT_VISCONTENTS_EMPTY).is_empty(game));
-                EXPECT_FALSE(solid.is_empty(game));
-                EXPECT_FALSE(detail_solid.is_empty(game));
-                EXPECT_FALSE(detail_wall.is_empty(game));
-                EXPECT_FALSE(detail_fence.is_empty(game));
-                EXPECT_FALSE(detail_illusionary.is_empty(game));
+                EXPECT_TRUE(contentflags_t::make(EWT_VISCONTENTS_EMPTY).is_empty());
+                EXPECT_FALSE(solid.is_empty());
+                EXPECT_FALSE(detail_solid.is_empty());
+                EXPECT_FALSE(detail_wall.is_empty());
+                EXPECT_FALSE(detail_fence.is_empty());
+                EXPECT_FALSE(detail_illusionary.is_empty());
             }
 
             {
@@ -194,31 +194,31 @@ TEST(common, sharedContentFlagTests)
             {
                 SCOPED_TRACE("is_detail_wall");
 
-                EXPECT_FALSE(solid.is_detail_wall(game));
-                EXPECT_FALSE(detail_solid.is_detail_wall(game));
-                EXPECT_TRUE(detail_wall.is_detail_wall(game));
-                EXPECT_FALSE(detail_fence.is_detail_wall(game));
-                EXPECT_FALSE(detail_illusionary.is_detail_wall(game));
+                EXPECT_FALSE(solid.is_detail_wall());
+                EXPECT_FALSE(detail_solid.is_detail_wall());
+                EXPECT_TRUE(detail_wall.is_detail_wall());
+                EXPECT_FALSE(detail_fence.is_detail_wall());
+                EXPECT_FALSE(detail_illusionary.is_detail_wall());
             }
 
             {
                 SCOPED_TRACE("is_detail_fence");
 
-                EXPECT_FALSE(solid.is_detail_fence(game));
-                EXPECT_FALSE(detail_solid.is_detail_fence(game));
-                EXPECT_FALSE(detail_wall.is_detail_fence(game));
-                EXPECT_TRUE(detail_fence.is_detail_fence(game));
-                EXPECT_FALSE(detail_illusionary.is_detail_fence(game));
+                EXPECT_FALSE(solid.is_detail_fence());
+                EXPECT_FALSE(detail_solid.is_detail_fence());
+                EXPECT_FALSE(detail_wall.is_detail_fence());
+                EXPECT_TRUE(detail_fence.is_detail_fence());
+                EXPECT_FALSE(detail_illusionary.is_detail_fence());
             }
 
             {
                 SCOPED_TRACE("is_detail_illusionary");
 
-                EXPECT_FALSE(solid.is_detail_illusionary(game));
-                EXPECT_FALSE(detail_solid.is_detail_illusionary(game));
-                EXPECT_FALSE(detail_wall.is_detail_illusionary(game));
-                EXPECT_FALSE(detail_fence.is_detail_illusionary(game));
-                EXPECT_TRUE(detail_illusionary.is_detail_illusionary(game));
+                EXPECT_FALSE(solid.is_detail_illusionary());
+                EXPECT_FALSE(detail_solid.is_detail_illusionary());
+                EXPECT_FALSE(detail_wall.is_detail_illusionary());
+                EXPECT_FALSE(detail_fence.is_detail_illusionary());
+                EXPECT_TRUE(detail_illusionary.is_detail_illusionary());
             }
         }
     }

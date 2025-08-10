@@ -130,6 +130,7 @@ enum contents_t : contents_int_t
                                EWT_VISCONTENTS_LAVA | EWT_VISCONTENTS_SLIME | EWT_VISCONTENTS_WATER |
                                EWT_VISCONTENTS_MIST,
 
+    // FIXME: out of date
     EWT_ALL_INVISCONTENTS = EWT_INVISCONTENTS_ORIGIN | EWT_INVISCONTENTS_PLAYERCLIP | EWT_INVISCONTENTS_MONSTERCLIP |
                             EWT_INVISCONTENTS_AREAPORTAL | EWT_INVISCONTENTS_PROJECTILECLIP,
 };
@@ -142,15 +143,47 @@ struct contentflags_t
 
     static contentflags_t make(contents_int_t f) { return contentflags_t{.flags = static_cast<contents_t>(f)}; }
 
+    static contentflags_t create_detail_illusionary_contents(contentflags_t original)
+    {
+        contents_int_t flags = original.flags;
+        flags &= ~EWT_VISCONTENTS_SOLID;
+        flags |= EWT_VISCONTENTS_MIST | EWT_CFLAG_DETAIL;
+        return contentflags_t::make(flags);
+    }
+
+    static contentflags_t create_detail_fence_contents(contentflags_t original)
+    {
+        contents_int_t flags = original.flags;
+        flags &= ~EWT_VISCONTENTS_SOLID;
+        // FIXME: why are we putting EWT_CFLAG_TRANSLUCENT here but not in create_detail_illusionary_contents?
+        flags |= (EWT_VISCONTENTS_WINDOW | EWT_CFLAG_TRANSLUCENT | EWT_CFLAG_DETAIL);
+        return contentflags_t::make(flags);
+    }
+
+    static contentflags_t create_detail_wall_contents(contentflags_t original)
+    {
+        contents_int_t flags = original.flags;
+        flags &= ~EWT_VISCONTENTS_SOLID;
+        flags |= (EWT_VISCONTENTS_DETAIL_WALL | EWT_CFLAG_DETAIL);
+        return contentflags_t::make(flags);
+    }
+
+    static contentflags_t create_detail_solid_contents(contentflags_t original)
+    {
+        contents_int_t flags = original.flags;
+        flags |= (EWT_VISCONTENTS_SOLID | EWT_CFLAG_DETAIL);
+        return contentflags_t::make(flags);
+    }
+
     bool equals(const gamedef_t *game, contentflags_t other) const;
 
     // is any kind of detail? (solid, liquid, etc.)
     bool is_any_detail() const;
     // is detail and is solid
     bool is_detail_solid() const;
-    bool is_detail_wall(const gamedef_t *game) const;
-    bool is_detail_fence(const gamedef_t *game) const;
-    bool is_detail_illusionary(const gamedef_t *game) const;
+    bool is_detail_wall() const;
+    bool is_detail_fence() const;
+    bool is_detail_illusionary() const;
 
     std::optional<bool> mirror_inside() const
     {
@@ -172,36 +205,35 @@ struct contentflags_t
     }
     contentflags_t &set_clips_same_type(const std::optional<bool> &clips_same_type_value);
 
-    bool is_empty(const gamedef_t *game) const;
+    bool is_empty() const;
     bool is_any_solid() const;
     // solid, not detail
     bool is_solid() const;
     bool has_structural_solid() const { return (flags & EWT_VISCONTENTS_SOLID) && !(flags & EWT_CFLAG_DETAIL); }
     // FIXME: checks for "sky" bit, but sky might not be the visible contents so "is_sky()" is a misonomer
     bool is_sky() const;
-    bool is_liquid(const gamedef_t *game) const;
+    // NOTE: unlike the other is_*() checks, this one checks the visible contents
+    bool is_liquid() const;
     bool is_valid(const gamedef_t *game, bool strict = true) const;
     // FIXME: checks for "clip" bits (player or monster), but is_clip() makes it sound like an exclusive check.
     bool is_clip() const;
     bool is_origin() const;
+    bool is_opaque(const gamedef_t *game, bool transwater) const;
 
     void make_valid(const gamedef_t *game);
 
-    bool is_fence(const gamedef_t *game) const;
+    bool is_fence() const;
 
     // check if this content's `type` - which is distinct from various
     // flags that turn things on/off - match. Exactly what the native
     // "type" is depends on the game, but any of the detail flags must
     // also match.
-    bool types_equal(contentflags_t other, const gamedef_t *game) const;
+    bool types_equal(contentflags_t other) const;
 
-    // when multiple brushes contribute to a leaf, the higher priority
-    // one determines the leaf contents
-    int32_t priority(const gamedef_t *game) const;
-
-    // whether this should chop (if so, only lower priority content brushes get chopped)
-    // should return true only for solid / opaque content types
-    bool chops(const gamedef_t *game) const;
+    inline contents_int_t get_content_type() const
+    {
+        return flags & (EWT_ALL_VISIBLE_CONTENTS | EWT_ALL_INVISCONTENTS);
+    }
 
     contentflags_t cluster_contents(contentflags_t other) const;
 
@@ -433,18 +465,7 @@ struct gamedef_t
     virtual bool texinfo_is_hintskip(const surfflags_t &flags, const std::string &name) const = 0;
     virtual contentflags_t create_contents_from_native(int32_t native) const = 0;
     virtual int32_t contents_to_native(contentflags_t contents) const = 0;
-    virtual contentflags_t create_detail_illusionary_contents(contentflags_t original) const = 0;
-    virtual contentflags_t create_detail_fence_contents(contentflags_t original) const = 0;
-    virtual contentflags_t create_detail_wall_contents(contentflags_t original) const = 0;
-    virtual contentflags_t create_detail_solid_contents(contentflags_t original) const = 0;
-    virtual bool contents_are_type_equal(contentflags_t self, contentflags_t other) const = 0;
-    virtual bool contents_are_equal(contentflags_t self, contentflags_t other) const = 0;
-    virtual bool contents_are_detail_wall(contentflags_t contents) const = 0;
-    virtual bool contents_are_detail_fence(contentflags_t contents) const = 0;
-    virtual bool contents_are_detail_illusionary(contentflags_t contents) const = 0;
-    virtual bool contents_are_empty(contentflags_t contents) const = 0;
     virtual bool contents_clip_same_type(contentflags_t self, contentflags_t other) const = 0;
-    virtual bool contents_are_liquid(contentflags_t contents) const = 0;
     virtual bool contents_are_valid(contentflags_t contents, bool strict = true) const = 0;
     virtual int32_t contents_from_string(std::string_view str) const = 0;
     virtual bool portal_can_see_through(contentflags_t contents0, contentflags_t contents1, bool transwater) const = 0;
