@@ -70,7 +70,7 @@ TEST(common, q1Contents)
 
         EXPECT_FALSE(combined.is_detail_solid());
         EXPECT_TRUE(combined.is_sky());
-        EXPECT_FALSE(combined.is_solid());
+        EXPECT_TRUE(combined.is_solid());
     }
 }
 

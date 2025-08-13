@@ -385,23 +385,25 @@ public:
 
     contentflags_t combine_contents(contentflags_t a, contentflags_t b) const override
     {
-        auto bits_a = a.flags;
-        auto bits_b = b.flags;
+        contents_int_t bits_a = a.flags;
+        contents_int_t bits_b = b.flags;
 
-        auto result = contentflags_t::make(bits_a | bits_b);
-
+        // structural solid eats detail flags
         if (a.is_solid() || b.is_solid()) {
-            return contentflags_t::make(EWT_VISCONTENTS_SOLID);
+            bits_a &= ~EWT_CFLAG_DETAIL;
+            bits_b &= ~EWT_CFLAG_DETAIL;
         }
         if (a.is_sky() || b.is_sky()) {
-            return contentflags_t::make(EWT_VISCONTENTS_SKY);
+            bits_a &= ~EWT_CFLAG_DETAIL;
+            bits_b &= ~EWT_CFLAG_DETAIL;
         }
         if ((a.flags & EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER) || (b.flags & EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER)) {
             // strip out detail flag, otherwise it breaks the visblocker feature
-            result = contentflags_t::make(result.flags & ~EWT_CFLAG_DETAIL);
+            bits_a &= ~EWT_CFLAG_DETAIL;
+            bits_b &= ~EWT_CFLAG_DETAIL;
         }
 
-        return result;
+        return contentflags_t::make(bits_a | bits_b);
     }
 
     contentflags_t portal_visible_contents(contentflags_t a, contentflags_t b) const override
