@@ -389,7 +389,7 @@ public:
     }
 
     contentflags_t face_get_contents(
-        const std::string &texname, const surfflags_t &flags, contentflags_t) const override
+        const std::string &texname, const surfflags_t &flags, contentflags_t, bool transwater) const override
     {
         // check for strong content indicators
         if (!Q_strcasecmp(texname.data(), "origin")) {
@@ -399,12 +399,18 @@ public:
         } else if (!Q_strcasecmp(texname.data(), "clip")) {
             return contentflags_t::make(EWT_INVISCONTENTS_PLAYERCLIP);
         } else if (texname[0] == '*') {
+            // non-Q2: -transwater implies liquids are detail and translucent
+            contents_int_t liquid_flags = 0;
+            if (transwater) {
+                liquid_flags = EWT_CFLAG_DETAIL;
+            }
+
             if (!Q_strncasecmp(texname.data() + 1, "lava", 4)) {
-                return contentflags_t::make(EWT_VISCONTENTS_LAVA);
+                return contentflags_t::make(EWT_VISCONTENTS_LAVA | liquid_flags);
             } else if (!Q_strncasecmp(texname.data() + 1, "slime", 5)) {
-                return contentflags_t::make(EWT_VISCONTENTS_SLIME);
+                return contentflags_t::make(EWT_VISCONTENTS_SLIME | liquid_flags);
             } else {
-                return contentflags_t::make(EWT_VISCONTENTS_WATER);
+                return contentflags_t::make(EWT_VISCONTENTS_WATER | liquid_flags);
             }
         } else if (!Q_strncasecmp(texname.data(), "sky", 3)) {
             return contentflags_t::make(EWT_VISCONTENTS_SKY);
@@ -892,7 +898,7 @@ struct gamedef_q2_t : public gamedef_t
     std::span<const aabb3d> get_hull_sizes() const override { return {}; }
 
     contentflags_t face_get_contents(
-        const std::string &texname, const surfflags_t &flags, contentflags_t contents) const override
+        const std::string &texname, const surfflags_t &flags, contentflags_t contents, bool transwater) const override
     {
         // hints and skips are never detail, and have no content
         if (flags.native_q2 & (Q2_SURF_HINT | Q2_SURF_SKIP)) {

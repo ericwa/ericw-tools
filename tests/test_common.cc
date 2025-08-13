@@ -112,7 +112,7 @@ TEST(common, q1Origin)
 {
     auto *game = bspver_q1.game;
 
-    auto origin = game->face_get_contents("origin", {}, {});
+    auto origin = game->face_get_contents("origin", {}, {}, false);
 
     EXPECT_TRUE(origin.is_origin());
     EXPECT_FALSE(origin.is_empty());
@@ -122,7 +122,7 @@ TEST(common, q2Origin)
 {
     auto *game = bspver_q2.game;
 
-    auto origin = game->face_get_contents("", {}, game->create_contents_from_native(Q2_CONTENTS_ORIGIN));
+    auto origin = game->face_get_contents("", {}, game->create_contents_from_native(Q2_CONTENTS_ORIGIN), false);
 
     EXPECT_TRUE(origin.is_origin());
     EXPECT_FALSE(origin.is_empty());

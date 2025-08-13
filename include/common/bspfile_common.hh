@@ -489,7 +489,7 @@ struct gamedef_t
         contentflags_t portal_visible_contents, contentflags_t brushcontents, planeside_t brushside_side) const = 0;
     virtual std::span<const aabb3d> get_hull_sizes() const = 0;
     virtual contentflags_t face_get_contents(
-        const std::string &texname, const surfflags_t &flags, contentflags_t contents) const = 0;
+        const std::string &texname, const surfflags_t &flags, contentflags_t contents, bool transwater) const = 0;
     virtual void init_filesystem(const fs::path &source, const settings::common_settings &settings) const = 0;
     virtual const std::vector<qvec3b> &get_default_palette() const = 0;
 };

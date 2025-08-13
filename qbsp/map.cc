@@ -1439,8 +1439,8 @@ static contentflags_t Brush_GetContents(const mapentity_t &entity, const mapbrus
     for (auto &mapface : mapbrush.faces) {
         const maptexinfo_t &texinfo = mapface.get_texinfo();
 
-        contentflags_t contents =
-            qbsp_options.target_game->face_get_contents(mapface.texname.data(), texinfo.flags, mapface.contents);
+        contentflags_t contents = qbsp_options.target_game->face_get_contents(
+            mapface.texname.data(), texinfo.flags, mapface.contents, qbsp_options.transwater.value());
 
         if (contents.is_empty()) {
             continue;
@@ -1482,13 +1482,6 @@ static contentflags_t Brush_GetContents(const mapentity_t &entity, const mapbrus
         // note this overrides the logic in face_get_contents() that normally forces mist to be detail
         base_contents = contentflags_t::make((base_contents.flags & ~(EWT_ALL_VISIBLE_CONTENTS | EWT_CFLAG_DETAIL)) |
                                              EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER);
-    }
-
-    // non-Q2: -transwater implies liquids are detail
-    if (qbsp_options.target_game->id != GAME_QUAKE_II && qbsp_options.transwater.value()) {
-        if (base_contents.is_liquid()) {
-            base_contents = contentflags_t::make(base_contents.flags | EWT_CFLAG_DETAIL);
-        }
     }
 
     return base_contents;
