@@ -315,17 +315,18 @@ public:
         if (((c0 ^ c1) & EWT_ALL_VISIBLE_CONTENTS) == 0)
             return true;
 
-        if (c0 & EWT_CFLAG_DETAIL)
+        if ((c0 & EWT_CFLAG_TRANSLUCENT) || (c0 & EWT_CFLAG_DETAIL)) {
             c0 = 0;
-        if (c1 & EWT_CFLAG_DETAIL)
+        }
+        if ((c1 & EWT_CFLAG_TRANSLUCENT) || (c1 & EWT_CFLAG_DETAIL)) {
             c1 = 0;
+        }
 
-        if ((c0 ^ c1) == 0)
-            return true; // identical on both sides
-
-        if (((c0 ^ c1) & EWT_ALL_VISIBLE_CONTENTS) == 0)
+        // identical on both sides
+        if (!(c0 ^ c1))
             return true;
-        return false;
+
+        return (((c0 ^ c1) & EWT_ALL_VISIBLE_CONTENTS) == 0);
     }
 
     bool contents_are_opaque(contentflags_t contents, bool transwater) const override
