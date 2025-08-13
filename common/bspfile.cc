@@ -305,29 +305,28 @@ public:
 
     bool portal_can_see_through(contentflags_t contents0, contentflags_t contents1, bool transwater) const override
     {
-        contents_int_t bits_a = contents0.flags;
-        contents_int_t bits_b = contents1.flags;
+        contents_int_t c0 = contents0.flags, c1 = contents1.flags;
 
         // can't see through solid
-        if ((bits_a & EWT_VISCONTENTS_SOLID) || (bits_b & EWT_VISCONTENTS_SOLID)) {
+        if ((c0 & EWT_VISCONTENTS_SOLID) || (c1 & EWT_VISCONTENTS_SOLID)) {
             return false;
         }
 
-        bool a_translucent = transwater ? ((bits_a & EWT_ALL_LIQUIDS) != 0) : false;
-        bool b_translucent = transwater ? ((bits_b & EWT_ALL_LIQUIDS) != 0) : false;
+        bool a_translucent = transwater ? ((c0 & EWT_ALL_LIQUIDS) != 0) : false;
+        bool b_translucent = transwater ? ((c1 & EWT_ALL_LIQUIDS) != 0) : false;
 
-        if (((bits_a ^ bits_b) & EWT_ALL_VISIBLE_CONTENTS) == 0)
+        if (((c0 ^ c1) & EWT_ALL_VISIBLE_CONTENTS) == 0)
             return true;
 
-        if ((bits_a & EWT_CFLAG_DETAIL) || a_translucent)
-            bits_a = 0;
-        if ((bits_b & EWT_CFLAG_DETAIL) || b_translucent)
-            bits_b = 0;
+        if ((c0 & EWT_CFLAG_DETAIL) || a_translucent)
+            c0 = 0;
+        if ((c1 & EWT_CFLAG_DETAIL) || b_translucent)
+            c1 = 0;
 
-        if ((bits_a ^ bits_b) == 0)
+        if ((c0 ^ c1) == 0)
             return true; // identical on both sides
 
-        if (((bits_a ^ bits_b) & EWT_ALL_VISIBLE_CONTENTS) == 0)
+        if (((c0 ^ c1) & EWT_ALL_VISIBLE_CONTENTS) == 0)
             return true;
         return false;
     }
