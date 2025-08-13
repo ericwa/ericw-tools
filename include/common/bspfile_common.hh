@@ -29,6 +29,7 @@
 #include <any>
 #include <optional>
 #include <span>
+#include <mutex>
 
 #include <common/bitflags.hh>
 #include <common/fs.hh>
