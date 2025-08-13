@@ -233,12 +233,6 @@ public:
         return 0;
     }
 
-    bool texinfo_is_hintskip(const surfflags_t &flags, const std::string &name) const override
-    {
-        // anything texname other than "hint" in a hint brush is treated as "hintskip", and discarded
-        return !string_iequals(name, "hint");
-    }
-
     contentflags_t create_contents_from_native(int32_t native) const override
     {
         switch (native) {
@@ -655,12 +649,6 @@ struct gamedef_q2_t : public gamedef_t
         }
 
         return 0;
-    }
-
-    bool texinfo_is_hintskip(const surfflags_t &flags, const std::string &name) const override
-    {
-        // any face in a hint brush that isn't HINT are treated as "hintskip", and discarded
-        return !(flags.native_q2 & Q2_SURF_HINT);
     }
 
     contentflags_t create_contents_from_native(int32_t native) const override

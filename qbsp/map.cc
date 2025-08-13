@@ -1670,8 +1670,8 @@ static mapbrush_t ParseBrush(const mapfile::brush_t &in, mapentity_t &entity, te
     if (is_hint) {
 
         for (auto &face : brush.faces) {
-            if (qbsp_options.target_game->texinfo_is_hintskip(
-                    face.get_texinfo().flags, map.miptexTextureName(face.get_texinfo().miptex))) {
+            // any face in a hint brush that isn't HINT are treated as "hintskip", and discarded
+            if (!face.get_texinfo().flags.is_hint()) {
                 auto copy = face.get_texinfo();
                 copy.flags.set_hintskip(true);
                 face.texinfo = FindTexinfo(copy, face.get_plane());

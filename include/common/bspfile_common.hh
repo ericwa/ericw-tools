@@ -472,8 +472,6 @@ struct gamedef_t
      */
     virtual bool surfflags_may_phong(const surfflags_t &a, const surfflags_t &b) const = 0;
     virtual int32_t surfflags_from_string(std::string_view str) const = 0;
-    // FIXME: fix so that we don't have to pass a name here
-    virtual bool texinfo_is_hintskip(const surfflags_t &flags, const std::string &name) const = 0;
     virtual contentflags_t create_contents_from_native(int32_t native) const = 0;
     virtual int32_t contents_to_native(contentflags_t contents) const = 0;
     virtual bool contents_clip_same_type(contentflags_t self, contentflags_t other) const = 0;
