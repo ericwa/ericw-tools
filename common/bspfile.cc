@@ -303,7 +303,7 @@ public:
         return 0;
     }
 
-    bool portal_can_see_through(contentflags_t contents0, contentflags_t contents1, bool transwater) const override
+    bool portal_can_see_through(contentflags_t contents0, contentflags_t contents1) const override
     {
         contents_int_t c0 = contents0.flags, c1 = contents1.flags;
 
@@ -312,15 +312,12 @@ public:
             return false;
         }
 
-        bool a_translucent = transwater ? ((c0 & EWT_ALL_LIQUIDS) != 0) : false;
-        bool b_translucent = transwater ? ((c1 & EWT_ALL_LIQUIDS) != 0) : false;
-
         if (((c0 ^ c1) & EWT_ALL_VISIBLE_CONTENTS) == 0)
             return true;
 
-        if ((c0 & EWT_CFLAG_DETAIL) || a_translucent)
+        if (c0 & EWT_CFLAG_DETAIL)
             c0 = 0;
-        if ((c1 & EWT_CFLAG_DETAIL) || b_translucent)
+        if (c1 & EWT_CFLAG_DETAIL)
             c1 = 0;
 
         if ((c0 ^ c1) == 0)
@@ -916,7 +913,7 @@ struct gamedef_q2_t : public gamedef_t
         return strongest_contents_change;
     }
 
-    bool portal_can_see_through(contentflags_t contents0, contentflags_t contents1, bool) const override
+    bool portal_can_see_through(contentflags_t contents0, contentflags_t contents1) const override
     {
         contents_int_t c0 = contents0.flags, c1 = contents1.flags;
 

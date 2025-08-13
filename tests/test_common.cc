@@ -103,7 +103,7 @@ TEST(common, clusterContents)
             EXPECT_TRUE(solid_empty_cluster.is_any_detail());
 
             // check portal_can_see_through
-            EXPECT_FALSE(game->portal_can_see_through(empty, solid_detail, true));
+            EXPECT_FALSE(game->portal_can_see_through(empty, solid_detail));
         }
     }
 }
@@ -359,7 +359,7 @@ TEST(common, q2PortalCanSeeThrough)
     auto *game_q2 = bspver_q2.game;
 
     EXPECT_TRUE(game_q2->portal_can_see_through(contentflags_t::make(EWT_VISCONTENTS_DETAIL_WALL | EWT_CFLAG_DETAIL),
-        contentflags_t::make(EWT_INVISCONTENTS_PLAYERCLIP), false));
+        contentflags_t::make(EWT_INVISCONTENTS_PLAYERCLIP)));
 }
 
 TEST(imglib, png)
