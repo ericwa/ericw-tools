@@ -50,7 +50,7 @@ constexpr int PSIDE_FACING = 4;
 
 struct bspstats_t : logging::stat_tracker_t
 {
-    std::unique_ptr<content_stats_base_t> leafstats;
+    content_stats_t leafstats;
     // total number of nodes, includes c_nonvis
     stat &c_nodes = register_stat("nodes");
     // number of nodes created by splitting on a side_t which had !visible
@@ -359,7 +359,7 @@ static void LeafNode(node_t *leafnode, bspbrush_t::container brushes, bspstats_t
         leafdata->original_brushes.push_back(brush->original_brush());
     }
 
-    qbsp_options.target_game->count_contents_in_stats(leafdata->contents, *stats.leafstats);
+    stats.leafstats.count_contents_in_stats(leafdata->contents);
 
     if (qbsp_options.debugleak.value() || qbsp_options.debugbspbrushes.value()) {
         leafdata->bsp_brushes = brushes;
@@ -1336,7 +1336,6 @@ void BrushBSP(tree_t &tree, mapentity_t &entity, const bspbrush_t::container &br
     tree.headnode = node;
 
     bspstats_t stats{};
-    stats.leafstats = qbsp_options.target_game->create_content_stats();
 
     {
         logging::percent_clock clock;
@@ -1361,8 +1360,7 @@ inline bool BrushGE(const bspbrush_t &b1, const bspbrush_t &b2)
         return false;
 
     // detail brushes never bite structural brushes
-    if ((b1.contents.is_any_detail()) &&
-        !(b2.contents.is_any_detail())) {
+    if ((b1.contents.is_any_detail()) && !(b2.contents.is_any_detail())) {
         return false;
     }
     return b1.contents.is_any_solid() && b2.contents.is_any_solid();

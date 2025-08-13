@@ -904,10 +904,10 @@ static bool IsTrigger(const mapentity_t &entity)
     return trigger_pos == (tex.size() - strlen("trigger"));
 }
 
-static void CountLeafs_r(node_t *node, content_stats_base_t &stats)
+static void CountLeafs_r(node_t *node, content_stats_t &stats)
 {
     if (auto *leafdata = node->get_leafdata()) {
-        qbsp_options.target_game->count_contents_in_stats(leafdata->contents, stats);
+        stats.count_contents_in_stats(leafdata->contents);
         return;
     }
 
@@ -939,9 +939,9 @@ void CountLeafs(node_t *headnode)
 {
     logging::funcheader();
 
-    auto stats = qbsp_options.target_game->create_content_stats();
-    CountLeafs_r(headnode, *stats);
-    qbsp_options.target_game->print_content_stats(*stats, "leafs");
+    auto stats = content_stats_t();
+    CountLeafs_r(headnode, stats);
+    stats.print_content_stats("leafs");
 
     // count the heights of the tree at each leaf
     logging::stat_tracker_t stat_print;

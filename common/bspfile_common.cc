@@ -612,6 +612,30 @@ std::vector<contentflags_t> LoadExtendedContentFlags(const fs::path &sourcefilen
     return result;
 }
 
+// content_stats_t
+
+void content_stats_t::count_contents_in_stats(contentflags_t contents)
+{
+    {
+        std::unique_lock lock(stat_mutex);
+        native_types[contents.flags]++;
+    }
+
+    ++total_brushes;
+}
+
+void content_stats_t::print_content_stats(const char *what) const
+{
+    logging::stat_tracker_t stat_print;
+
+    for (auto [bits, count] : native_types) {
+        auto c = contentflags_t{.flags = bits};
+        stat_print.register_stat(fmt::format("{} {}", get_contents_display(c.flags), what)).count += count;
+    }
+
+    stat_print.register_stat(fmt::format("{} total", what)).count += total_brushes;
+}
+
 // gamedef_t
 
 gamedef_t::gamedef_t(const char *friendly_name, const char *default_base_dir)

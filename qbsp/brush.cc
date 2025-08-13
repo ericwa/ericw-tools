@@ -678,7 +678,7 @@ std::optional<bspbrush_t> LoadBrush(const mapentity_t &src, mapbrush_t &mapbrush
 
 //=============================================================================
 
-static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hullnum, content_stats_base_t &stats,
+static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hullnum, content_stats_t &stats,
     bspbrush_t::container &brushes, logging::percent_clock &clock, size_t &num_clipped)
 {
     clock.max += src.mapbrushes.size();
@@ -847,7 +847,7 @@ static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hu
             continue;
         }
 
-        qbsp_options.target_game->count_contents_in_stats(brush->contents, stats);
+        stats.count_contents_in_stats(brush->contents);
 
         dst.bounds += brush->bounds;
         brushes.push_back(bspbrush_t::make_ptr(std::move(*brush)));
@@ -868,11 +868,11 @@ void Brush_LoadEntity(mapentity_t &entity, hull_index_t hullnum, bspbrush_t::con
 
     bool is_world_entity = map.is_world_entity(entity);
 
-    auto stats = qbsp_options.target_game->create_content_stats();
+    auto stats = content_stats_t();
     logging::percent_clock clock(0);
     clock.displayElapsed = is_world_entity;
 
-    Brush_LoadEntity(entity, entity, hullnum, *stats, brushes, clock, num_clipped);
+    Brush_LoadEntity(entity, entity, hullnum, stats, brushes, clock, num_clipped);
 
     /*
      * If this is the world entity, find all func_group and func_detail
@@ -889,7 +889,7 @@ void Brush_LoadEntity(mapentity_t &entity, hull_index_t hullnum, bspbrush_t::con
             ProcessAreaPortal(source);
 
             if (IsWorldBrushEntity(source) || IsNonRemoveWorldBrushEntity(source)) {
-                Brush_LoadEntity(entity, source, hullnum, *stats, brushes, clock, num_clipped);
+                Brush_LoadEntity(entity, source, hullnum, stats, brushes, clock, num_clipped);
             }
         }
     }
@@ -898,7 +898,7 @@ void Brush_LoadEntity(mapentity_t &entity, hull_index_t hullnum, bspbrush_t::con
 
     logging::header("CountBrushes");
 
-    qbsp_options.target_game->print_content_stats(*stats, "brushes");
+    stats.print_content_stats("brushes");
 
     logging::stat_tracker_t stat_print;
     auto &visible_sides_stat = stat_print.register_stat("visible sides");

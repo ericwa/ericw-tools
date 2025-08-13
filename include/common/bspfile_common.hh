@@ -416,9 +416,16 @@ enum gameid_t
     GAME_TOTAL
 };
 
-struct content_stats_base_t
+struct content_stats_t
 {
-    virtual ~content_stats_base_t() = default;
+private:
+    std::mutex stat_mutex;
+    std::unordered_map<contents_t, size_t> native_types;
+    std::atomic<size_t> total_brushes;
+
+public:
+    void count_contents_in_stats(contentflags_t contents);
+    void print_content_stats(const char *what) const;
 };
 
 // Game definition, which contains data specific to
@@ -491,9 +498,6 @@ struct gamedef_t
         const std::string &texname, const surfflags_t &flags, contentflags_t contents) const = 0;
     virtual void init_filesystem(const fs::path &source, const settings::common_settings &settings) const = 0;
     virtual const std::vector<qvec3b> &get_default_palette() const = 0;
-    virtual std::unique_ptr<content_stats_base_t> create_content_stats() const = 0;
-    virtual void count_contents_in_stats(contentflags_t contents, content_stats_base_t &stats) const = 0;
-    virtual void print_content_stats(const content_stats_base_t &stats, const char *what) const = 0;
 };
 
 // Lump specification; stores the name and size

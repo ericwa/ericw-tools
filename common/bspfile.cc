@@ -558,45 +558,6 @@ public:
         static const auto palette = make_palette(palette_bytes);
         return palette;
     }
-
-private:
-    struct content_stats_t : public content_stats_base_t
-    {
-        std::mutex stat_mutex;
-        std::unordered_map<contents_t, size_t> native_types;
-        std::atomic<size_t> total_brushes;
-    };
-
-public:
-    std::unique_ptr<content_stats_base_t> create_content_stats() const override
-    {
-        return std::unique_ptr<content_stats_base_t>(new content_stats_t{});
-    }
-
-    void count_contents_in_stats(contentflags_t contents, content_stats_base_t &stats_any) const override
-    {
-        content_stats_t &stats = dynamic_cast<content_stats_t &>(stats_any);
-
-        {
-            std::unique_lock lock(stats.stat_mutex);
-            stats.native_types[contents.flags]++;
-        }
-
-        stats.total_brushes++;
-    }
-
-    void print_content_stats(const content_stats_base_t &stats_any, const char *what) const override
-    {
-        const content_stats_t &stats = dynamic_cast<const content_stats_t &>(stats_any);
-        logging::stat_tracker_t stat_print;
-
-        for (auto [bits, count] : stats.native_types) {
-            auto c = contentflags_t{.flags = bits};
-            stat_print.register_stat(fmt::format("{} {}", get_contents_display(c.flags), what)).count += count;
-        }
-
-        stat_print.register_stat(fmt::format("{} total", what)).count += stats.total_brushes;
-    }
 };
 
 struct gamedef_h2_t : public gamedef_q1_like_t<GAME_HEXEN_II>
@@ -1333,45 +1294,6 @@ public:
             155, 167, 139, 119, 135, 107, 87, 159, 91, 83};
         static const auto palette = make_palette(palette_bytes);
         return palette;
-    }
-
-private:
-    struct content_stats_t : public content_stats_base_t
-    {
-        std::mutex stat_mutex;
-        std::unordered_map<contents_t, size_t> native_types;
-        std::atomic<size_t> total_brushes;
-    };
-
-public:
-    std::unique_ptr<content_stats_base_t> create_content_stats() const override
-    {
-        return std::unique_ptr<content_stats_base_t>(new content_stats_t{});
-    }
-
-    void count_contents_in_stats(contentflags_t contents, content_stats_base_t &stats_any) const override
-    {
-        content_stats_t &stats = dynamic_cast<content_stats_t &>(stats_any);
-
-        {
-            std::unique_lock lock(stats.stat_mutex);
-            stats.native_types[contents.flags]++;
-        }
-
-        stats.total_brushes++;
-    }
-
-    void print_content_stats(const content_stats_base_t &stats_any, const char *what) const override
-    {
-        const content_stats_t &stats = dynamic_cast<const content_stats_t &>(stats_any);
-        logging::stat_tracker_t stat_print;
-
-        for (auto [bits, count] : stats.native_types) {
-            auto c = contentflags_t{.flags = bits};
-            stat_print.register_stat(fmt::format("{} {}", get_contents_display(c.flags), what)).count += count;
-        }
-
-        stat_print.register_stat(fmt::format("{} total", what)).count += stats.total_brushes;
     }
 };
 
