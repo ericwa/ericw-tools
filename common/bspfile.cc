@@ -303,32 +303,6 @@ public:
         return 0;
     }
 
-    bool portal_can_see_through(contentflags_t contents0, contentflags_t contents1) const override
-    {
-        contents_int_t c0 = contents0.flags, c1 = contents1.flags;
-
-        // can't see through solid
-        if ((c0 & EWT_VISCONTENTS_SOLID) || (c1 & EWT_VISCONTENTS_SOLID)) {
-            return false;
-        }
-
-        if (((c0 ^ c1) & EWT_ALL_VISIBLE_CONTENTS) == 0)
-            return true;
-
-        if ((c0 & EWT_CFLAG_TRANSLUCENT) || (c0 & EWT_CFLAG_DETAIL)) {
-            c0 = 0;
-        }
-        if ((c1 & EWT_CFLAG_TRANSLUCENT) || (c1 & EWT_CFLAG_DETAIL)) {
-            c1 = 0;
-        }
-
-        // identical on both sides
-        if (!(c0 ^ c1))
-            return true;
-
-        return (((c0 ^ c1) & EWT_ALL_VISIBLE_CONTENTS) == 0);
-    }
-
     bool contents_are_opaque(contentflags_t contents, bool transwater) const override
     {
         auto bits = contents.visible_contents().flags;
@@ -912,32 +886,6 @@ struct gamedef_q2_t : public gamedef_t
         auto strongest_contents_change = contentflags_t::make(result).visible_contents();
 
         return strongest_contents_change;
-    }
-
-    bool portal_can_see_through(contentflags_t contents0, contentflags_t contents1) const override
-    {
-        contents_int_t c0 = contents0.flags, c1 = contents1.flags;
-
-        // can't see through solid
-        if ((c0 & EWT_VISCONTENTS_SOLID) || (c1 & EWT_VISCONTENTS_SOLID)) {
-            return false;
-        }
-
-        if (((c0 ^ c1) & EWT_ALL_VISIBLE_CONTENTS) == 0)
-            return true;
-
-        if ((c0 & EWT_CFLAG_TRANSLUCENT) || (c0 & EWT_CFLAG_DETAIL)) {
-            c0 = 0;
-        }
-        if ((c1 & EWT_CFLAG_TRANSLUCENT) || (c1 & EWT_CFLAG_DETAIL)) {
-            c1 = 0;
-        }
-
-        // identical on both sides
-        if (!(c0 ^ c1))
-            return true;
-
-        return (((c0 ^ c1) & EWT_ALL_VISIBLE_CONTENTS) == 0);
     }
 
     bool contents_are_opaque(contentflags_t contents, bool transwater) const override

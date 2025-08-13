@@ -65,7 +65,7 @@ bool Portal_VisFlood(const portal_t *p)
     contentflags_t contents1 = ClusterContents(p->nodes[1]);
 
     // Check per-game visibility
-    return qbsp_options.target_game->portal_can_see_through(contents0, contents1);
+    return contentflags_t::portal_can_see_through(contents0, contents1);
 }
 
 /*

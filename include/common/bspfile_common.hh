@@ -237,6 +237,7 @@ struct contentflags_t
 
     contentflags_t cluster_contents(contentflags_t other) const;
     static contentflags_t combine_contents(contentflags_t a, contentflags_t b);
+    static bool portal_can_see_through(contentflags_t contents0, contentflags_t contents1);
 
     std::string to_string() const;
 
@@ -478,7 +479,6 @@ struct gamedef_t
     virtual bool contents_clip_same_type(contentflags_t self, contentflags_t other) const = 0;
     virtual bool contents_are_valid(contentflags_t contents, bool strict = true) const = 0;
     virtual int32_t contents_from_string(std::string_view str) const = 0;
-    virtual bool portal_can_see_through(contentflags_t contents0, contentflags_t contents1) const = 0;
     virtual bool contents_are_opaque(contentflags_t contents, bool transwater) const = 0;
     enum class remap_type_t
     {
