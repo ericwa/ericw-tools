@@ -272,19 +272,6 @@ public:
         return CONTENTS_EMPTY;
     }
 
-    bool contents_clip_same_type(contentflags_t self, contentflags_t other) const override
-    {
-        if (!self.equals(this, other))
-            return false;
-
-        // they're equal types...
-
-        if (self.flags & EWT_CFLAG_SUPPRESS_CLIPPING_SAME_TYPE)
-            return false; // don't clip
-
-        return true;
-    }
-
     int32_t contents_from_string(std::string_view str) const override
     {
         // Q1 doesn't get contents from files
@@ -799,17 +786,6 @@ struct gamedef_q2_t : public gamedef_t
     inline int32_t get_content_type(contentflags_t contents) const
     {
         return contents.flags & (EWT_ALL_VISIBLE_CONTENTS | EWT_ALL_INVISCONTENTS);
-    }
-
-    bool contents_clip_same_type(contentflags_t self, contentflags_t other) const override
-    {
-        if ((self.flags & EWT_ALL_VISIBLE_CONTENTS) != (other.flags & EWT_ALL_VISIBLE_CONTENTS))
-            return false; // not same type
-
-        if (self.flags & EWT_CFLAG_SUPPRESS_CLIPPING_SAME_TYPE)
-            return false;
-
-        return true;
     }
 
     static constexpr const char *bitflag_names[] = {"SOLID", "WINDOW", "AUX", "LAVA", "SLIME", "WATER", "MIST", "128",

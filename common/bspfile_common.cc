@@ -120,11 +120,6 @@ contentflags_t &contentflags_t::set_mirrored(const std::optional<bool> &mirror_i
     return *this;
 }
 
-bool contentflags_t::will_clip_same_type(const gamedef_t *game, contentflags_t other) const
-{
-    return game->contents_clip_same_type(*this, other);
-}
-
 contentflags_t &contentflags_t::set_clips_same_type(const std::optional<bool> &clips_same_type_value)
 {
     if (clips_same_type_value) {

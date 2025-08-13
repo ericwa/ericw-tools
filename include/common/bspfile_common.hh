@@ -194,8 +194,6 @@ struct contentflags_t
     }
     contentflags_t &set_mirrored(const std::optional<bool> &mirror_inside_value);
 
-    inline bool will_clip_same_type(const gamedef_t *game) const { return will_clip_same_type(game, *this); }
-    bool will_clip_same_type(const gamedef_t *game, contentflags_t other) const;
     std::optional<bool> clips_same_type() const
     {
         if (flags & EWT_CFLAG_SUPPRESS_CLIPPING_SAME_TYPE) {
@@ -471,7 +469,6 @@ struct gamedef_t
     virtual int32_t surfflags_from_string(std::string_view str) const = 0;
     virtual contentflags_t create_contents_from_native(int32_t native) const = 0;
     virtual int32_t contents_to_native(contentflags_t contents) const = 0;
-    virtual bool contents_clip_same_type(contentflags_t self, contentflags_t other) const = 0;
     virtual int32_t contents_from_string(std::string_view str) const = 0;
     virtual bool contents_are_opaque(contentflags_t contents, bool transwater) const = 0;
     enum class remap_type_t
