@@ -208,6 +208,29 @@ contentflags_t contentflags_t::cluster_contents(contentflags_t other) const
     return contentflags_t::make(combined);
 }
 
+contentflags_t contentflags_t::combine_contents(contentflags_t a, contentflags_t b)
+{
+    contents_int_t bits_a = a.flags;
+    contents_int_t bits_b = b.flags;
+
+    // structural solid eats detail flags
+    if (a.is_solid() || b.is_solid()) {
+        bits_a &= ~EWT_CFLAG_DETAIL;
+        bits_b &= ~EWT_CFLAG_DETAIL;
+    }
+    if (a.is_sky() || b.is_sky()) {
+        bits_a &= ~EWT_CFLAG_DETAIL;
+        bits_b &= ~EWT_CFLAG_DETAIL;
+    }
+    if ((a.flags & EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER) || (b.flags & EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER)) {
+        // strip out detail flag, otherwise it breaks the visblocker feature
+        bits_a &= ~EWT_CFLAG_DETAIL;
+        bits_b &= ~EWT_CFLAG_DETAIL;
+    }
+
+    return contentflags_t::make(bits_a | bits_b);
+}
+
 std::string contentflags_t::to_string() const
 {
     std::string s = get_contents_display(flags);

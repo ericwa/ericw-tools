@@ -383,29 +383,6 @@ public:
         return contents;
     }
 
-    contentflags_t combine_contents(contentflags_t a, contentflags_t b) const override
-    {
-        contents_int_t bits_a = a.flags;
-        contents_int_t bits_b = b.flags;
-
-        // structural solid eats detail flags
-        if (a.is_solid() || b.is_solid()) {
-            bits_a &= ~EWT_CFLAG_DETAIL;
-            bits_b &= ~EWT_CFLAG_DETAIL;
-        }
-        if (a.is_sky() || b.is_sky()) {
-            bits_a &= ~EWT_CFLAG_DETAIL;
-            bits_b &= ~EWT_CFLAG_DETAIL;
-        }
-        if ((a.flags & EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER) || (b.flags & EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER)) {
-            // strip out detail flag, otherwise it breaks the visblocker feature
-            bits_a &= ~EWT_CFLAG_DETAIL;
-            bits_b &= ~EWT_CFLAG_DETAIL;
-        }
-
-        return contentflags_t::make(bits_a | bits_b);
-    }
-
     contentflags_t portal_visible_contents(contentflags_t a, contentflags_t b) const override
     {
         auto bits_a = a.flags;
@@ -999,29 +976,6 @@ struct gamedef_q2_t : public gamedef_t
         }
 
         return contents;
-    }
-
-    contentflags_t combine_contents(contentflags_t a, contentflags_t b) const override
-    {
-        contents_int_t bits_a = a.flags;
-        contents_int_t bits_b = b.flags;
-
-        // structural solid eats detail flags
-        if (a.is_solid() || b.is_solid()) {
-            bits_a &= ~EWT_CFLAG_DETAIL;
-            bits_b &= ~EWT_CFLAG_DETAIL;
-        }
-        if (a.is_sky() || b.is_sky()) {
-            bits_a &= ~EWT_CFLAG_DETAIL;
-            bits_b &= ~EWT_CFLAG_DETAIL;
-        }
-        if ((a.flags & EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER) || (b.flags & EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER)) {
-            // strip out detail flag, otherwise it breaks the visblocker feature
-            bits_a &= ~EWT_CFLAG_DETAIL;
-            bits_b &= ~EWT_CFLAG_DETAIL;
-        }
-
-        return contentflags_t::make(bits_a | bits_b);
     }
 
     bool portal_generates_face(

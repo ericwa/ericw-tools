@@ -236,6 +236,7 @@ struct contentflags_t
     }
 
     contentflags_t cluster_contents(contentflags_t other) const;
+    static contentflags_t combine_contents(contentflags_t a, contentflags_t b);
 
     std::string to_string() const;
 
@@ -485,7 +486,6 @@ struct gamedef_t
         leaf
     };
     virtual contentflags_t contents_remap_for_export(contentflags_t contents, remap_type_t type) const = 0;
-    virtual contentflags_t combine_contents(contentflags_t a, contentflags_t b) const = 0;
     // for a portal with contents from `a` to `b`, returns what type of face should be rendered facing `a` and `b`
     virtual contentflags_t portal_visible_contents(contentflags_t a, contentflags_t b) const = 0;
     // for a brush with the given contents touching a portal with the required `portal_visible_contents`, as determined

@@ -353,7 +353,7 @@ static void LeafNode(node_t *leafnode, bspbrush_t::container brushes, bspstats_t
 
     leafdata->contents = contentflags_t::make(EWT_VISCONTENTS_EMPTY);
     for (auto &brush : brushes) {
-        leafdata->contents = qbsp_options.target_game->combine_contents(leafdata->contents, brush->contents);
+        leafdata->contents = contentflags_t::combine_contents(leafdata->contents, brush->contents);
     }
     for (auto &brush : brushes) {
         leafdata->original_brushes.push_back(brush->original_brush());

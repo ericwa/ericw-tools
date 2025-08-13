@@ -36,7 +36,7 @@ TEST(common, q1Contents)
         EXPECT_EQ(game_q1->contents_to_native(solid), CONTENTS_SOLID);
 
         for (const auto &c : test_contents) {
-            auto combined = game_q1->combine_contents(solid, c);
+            auto combined = contentflags_t::combine_contents(solid, c);
 
             EXPECT_EQ(game_q1->contents_to_native(combined), CONTENTS_SOLID);
             EXPECT_TRUE(combined.is_solid());
@@ -48,7 +48,7 @@ TEST(common, q1Contents)
     {
         SCOPED_TRACE("detail_illusionary plus water");
         auto combined =
-            game_q1->combine_contents(detail_illusionary, game_q1->create_contents_from_native(CONTENTS_WATER));
+            contentflags_t::combine_contents(detail_illusionary, game_q1->create_contents_from_native(CONTENTS_WATER));
 
         EXPECT_EQ(game_q1->contents_to_native(combined), CONTENTS_WATER);
         EXPECT_TRUE(combined.is_detail_illusionary());
@@ -56,7 +56,7 @@ TEST(common, q1Contents)
 
     {
         SCOPED_TRACE("detail_solid plus water");
-        auto combined = game_q1->combine_contents(detail_solid, game_q1->create_contents_from_native(CONTENTS_WATER));
+        auto combined = contentflags_t::combine_contents(detail_solid, game_q1->create_contents_from_native(CONTENTS_WATER));
 
         EXPECT_TRUE(combined.is_any_solid());
         EXPECT_TRUE(combined.is_detail_solid());
@@ -66,7 +66,7 @@ TEST(common, q1Contents)
 
     {
         SCOPED_TRACE("detail_solid plus sky");
-        auto combined = game_q1->combine_contents(detail_solid, game_q1->create_contents_from_native(CONTENTS_SKY));
+        auto combined = contentflags_t::combine_contents(detail_solid, game_q1->create_contents_from_native(CONTENTS_SKY));
 
         EXPECT_FALSE(combined.is_detail_solid());
         EXPECT_TRUE(combined.is_sky());
@@ -261,7 +261,7 @@ TEST(common, q2Contents)
         for (const auto &[before, after] : before_after_adding_solid) {
 
             auto combined = game_q2->contents_remap_for_export(
-                game_q2->combine_contents(game_q2->create_contents_from_native(before), solid),
+                contentflags_t::combine_contents(game_q2->create_contents_from_native(before), solid),
                 gamedef_t::remap_type_t::leaf);
 
             EXPECT_EQ(game_q2->contents_to_native(combined), after);
@@ -290,7 +290,7 @@ TEST(common, q2Contents)
             {Q2_CONTENTS_DETAIL | Q2_CONTENTS_WATER, Q2_CONTENTS_WATER | Q2_CONTENTS_DETAIL},
             {Q2_CONTENTS_DETAIL | Q2_CONTENTS_MIST, Q2_CONTENTS_WATER | Q2_CONTENTS_DETAIL | Q2_CONTENTS_MIST}};
         for (const auto &[before, after] : before_after_adding_water) {
-            auto combined = game_q2->combine_contents(game_q2->create_contents_from_native(before), water);
+            auto combined = contentflags_t::combine_contents(game_q2->create_contents_from_native(before), water);
 
             {
                 SCOPED_TRACE(
