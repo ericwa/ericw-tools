@@ -1011,7 +1011,11 @@ struct gamedef_q2_t : public gamedef_t
             bits_a &= ~EWT_CFLAG_DETAIL;
             bits_b &= ~EWT_CFLAG_DETAIL;
         }
-        if ((bits_a & EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER) || (bits_b & EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER)) {
+        if (a.is_sky() || b.is_sky()) {
+            bits_a &= ~EWT_CFLAG_DETAIL;
+            bits_b &= ~EWT_CFLAG_DETAIL;
+        }
+        if ((a.flags & EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER) || (b.flags & EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER)) {
             // strip out detail flag, otherwise it breaks the visblocker feature
             bits_a &= ~EWT_CFLAG_DETAIL;
             bits_b &= ~EWT_CFLAG_DETAIL;
