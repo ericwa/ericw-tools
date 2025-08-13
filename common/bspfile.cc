@@ -285,12 +285,6 @@ public:
         return true;
     }
 
-    bool contents_are_valid(contentflags_t contents, bool strict) const override
-    {
-        // fixme-brushbsp: document exactly what this is supposed to do
-        return true;
-    }
-
     int32_t contents_from_string(std::string_view str) const override
     {
         // Q1 doesn't get contents from files
@@ -397,16 +391,6 @@ public:
             return (bits_brush & (EWT_ALL_LIQUIDS | EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER)) != 0;
         }
         return true;
-    }
-
-    void contents_make_valid(contentflags_t &contents) const override
-    {
-        // fixme-brushbsp: probably wrong?
-        // todo: anything smarter we can do here?
-        // think this can't even happen in Q1 anyways
-        if (!contents_are_valid(contents, false)) {
-            contents = contentflags_t::make(EWT_VISCONTENTS_SOLID);
-        }
     }
 
     std::span<const aabb3d> get_hull_sizes() const override
@@ -828,20 +812,6 @@ struct gamedef_q2_t : public gamedef_t
         return true;
     }
 
-    bool contents_are_valid(contentflags_t contents, bool strict) const override
-    {
-        // check that we don't have more than one visible contents type
-        // FIXME: we don't do that
-        const int32_t x = contents.flags & EWT_ALL_VISIBLE_CONTENTS;
-
-        // TODO: check other invalid mixes
-        if (!x && strict) {
-            return false;
-        }
-
-        return true;
-    }
-
     static constexpr const char *bitflag_names[] = {"SOLID", "WINDOW", "AUX", "LAVA", "SLIME", "WATER", "MIST", "128",
         "256", "512", "1024", "2048", "4096", "8192", "16384", "AREAPORTAL", "PLAYERCLIP", "MONSTERCLIP", "CURRENT_0",
         "CURRENT_90", "CURRENT_180", "CURRENT_270", "CURRENT_UP", "CURRENT_DOWN", "ORIGIN", "MONSTER", "DEADMONSTER",
@@ -941,30 +911,6 @@ struct gamedef_q2_t : public gamedef_t
             return true;
         }
         return true;
-    }
-
-    void contents_make_valid(contentflags_t &contents) const override
-    {
-        if (contents.is_valid(this, false)) {
-            return;
-        }
-
-        // clear all visible contents bits except the strongest one
-        bool got = false;
-        contents_int_t flags = contents.flags;
-
-        for (int32_t i = 0; i <= EWT_LAST_VISIBLE_CONTENTS_INDEX; i++) {
-            if (!got) {
-                if (flags & nth_bit(i)) {
-                    got = true;
-                    continue;
-                }
-            } else {
-                flags &= ~nth_bit(i);
-            }
-        }
-
-        contents = contentflags_t::make(flags);
     }
 
     std::span<const aabb3d> get_hull_sizes() const override { return {}; }

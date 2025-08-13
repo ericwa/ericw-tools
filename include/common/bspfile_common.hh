@@ -214,13 +214,10 @@ struct contentflags_t
     bool is_sky() const;
     // NOTE: unlike the other is_*() checks, this one checks the visible contents
     bool is_liquid() const;
-    bool is_valid(const gamedef_t *game, bool strict = true) const;
     // FIXME: checks for "clip" bits (player or monster), but is_clip() makes it sound like an exclusive check.
     bool is_clip() const;
     bool is_origin() const;
     bool is_opaque(const gamedef_t *game, bool transwater) const;
-
-    void make_valid(const gamedef_t *game);
 
     bool is_fence() const;
 
@@ -475,7 +472,6 @@ struct gamedef_t
     virtual contentflags_t create_contents_from_native(int32_t native) const = 0;
     virtual int32_t contents_to_native(contentflags_t contents) const = 0;
     virtual bool contents_clip_same_type(contentflags_t self, contentflags_t other) const = 0;
-    virtual bool contents_are_valid(contentflags_t contents, bool strict = true) const = 0;
     virtual int32_t contents_from_string(std::string_view str) const = 0;
     virtual bool contents_are_opaque(contentflags_t contents, bool transwater) const = 0;
     enum class remap_type_t
@@ -492,7 +488,6 @@ struct gamedef_t
     // _mirrorinside
     virtual bool portal_generates_face(
         contentflags_t portal_visible_contents, contentflags_t brushcontents, planeside_t brushside_side) const = 0;
-    virtual void contents_make_valid(contentflags_t &contents) const = 0;
     virtual std::span<const aabb3d> get_hull_sizes() const = 0;
     virtual contentflags_t face_get_contents(
         const std::string &texname, const surfflags_t &flags, contentflags_t contents) const = 0;

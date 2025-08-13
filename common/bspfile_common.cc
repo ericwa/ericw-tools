@@ -165,11 +165,6 @@ bool contentflags_t::is_liquid() const
     return (visibleflags & EWT_ALL_LIQUIDS) != 0;
 }
 
-bool contentflags_t::is_valid(const gamedef_t *game, bool strict) const
-{
-    return game->contents_are_valid(*this, strict);
-}
-
 bool contentflags_t::is_clip() const
 {
     return (flags & (EWT_INVISCONTENTS_PLAYERCLIP | EWT_INVISCONTENTS_MONSTERCLIP)) != 0;
@@ -183,11 +178,6 @@ bool contentflags_t::is_origin() const
 bool contentflags_t::is_opaque(const gamedef_t *game, bool transwater) const
 {
     return game->contents_are_opaque(*this, transwater);
-}
-
-void contentflags_t::make_valid(const gamedef_t *game)
-{
-    game->contents_make_valid(*this);
 }
 
 bool contentflags_t::is_fence() const

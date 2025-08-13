@@ -144,9 +144,6 @@ Returns a global edge number, possibly negative to indicate a backwards edge.
 */
 inline int64_t GetEdge(size_t v1, size_t v2, const face_t *face, emit_faces_stats_t &stats)
 {
-    if (!face->contents.front.is_valid(qbsp_options.target_game, false))
-        FError("Face with invalid contents");
-
     if (!qbsp_options.noedgereuse.value()) {
         // search for existing edges
         if (auto it = map.hashedges.find(std::make_pair(v2, v1)); it != map.hashedges.end()) {

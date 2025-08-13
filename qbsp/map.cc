@@ -932,14 +932,6 @@ static void ParseTextureDef(const mapentity_t &entity, const mapfile::brush_side
         mapface.contents = contentflags_t::make(EWT_VISCONTENTS_EMPTY);
     tx->flags = {extinfo.info->flags};
     tx->value = extinfo.info->value;
-
-    if (!mapface.contents.is_valid(qbsp_options.target_game, false)) {
-        auto old_contents = mapface.contents;
-        qbsp_options.target_game->contents_make_valid(mapface.contents);
-        logging::print("WARNING: {}: face has invalid contents {}, remapped to {}\n", mapface.line,
-            old_contents.to_string(), mapface.contents.to_string());
-    }
-
     tx->vecs = input_side.vecs;
 }
 
@@ -1466,9 +1458,6 @@ static contentflags_t Brush_GetContents(const mapentity_t &entity, const mapbrus
             break;
         }
     }
-
-    // make sure we found a valid type
-    Q_assert(base_contents.is_valid(qbsp_options.target_game, false));
 
     // extended flags
     if (entity.epairs.has("_mirrorinside")) {
