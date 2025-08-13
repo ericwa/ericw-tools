@@ -432,6 +432,8 @@ public:
 // the game a BSP version is being compiled for.
 struct gamedef_t
 {
+    virtual ~gamedef_t() = default;
+
     // friendly name, used for commands
     const char *friendly_name;
 
