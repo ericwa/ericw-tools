@@ -84,8 +84,7 @@ bool Portal_EntityFlood(const portal_t *p, int32_t s)
     }
 
     // can never cross to a solid
-    if (p->nodes[0]->get_leafdata()->contents.is_solid() ||
-        p->nodes[1]->get_leafdata()->contents.is_solid()) {
+    if (p->nodes[0]->get_leafdata()->contents.is_solid() || p->nodes[1]->get_leafdata()->contents.is_solid()) {
         return false;
     }
 
@@ -1037,9 +1036,9 @@ static void FindPortalSide(portal_t *p, visible_faces_stats_t &stats)
             ++it) {
             auto *brush = *it;
             const bool generate_outside_face =
-                qbsp_options.target_game->portal_generates_face(viscontents, brush->contents, SIDE_FRONT);
+                contentflags_t::portal_generates_face(viscontents, brush->contents, SIDE_FRONT);
             const bool generate_inside_face =
-                qbsp_options.target_game->portal_generates_face(viscontents, brush->contents, SIDE_BACK);
+                contentflags_t::portal_generates_face(viscontents, brush->contents, SIDE_BACK);
 
             if (!(generate_outside_face || generate_inside_face)) {
                 continue;

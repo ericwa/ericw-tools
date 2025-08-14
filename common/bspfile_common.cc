@@ -274,6 +274,39 @@ contentflags_t contentflags_t::portal_visible_contents(contentflags_t a, content
     return strongest_contents_change;
 }
 
+bool contentflags_t::portal_generates_face(
+    contentflags_t portal_visible_contents, contentflags_t brushcontents, planeside_t brushside_side)
+{
+    auto bits_portal = portal_visible_contents.flags;
+    auto bits_brush = brushcontents.flags;
+
+    // find the highest visible content bit set in portal
+    int32_t index = portal_visible_contents.visible_contents_index();
+    if (index == -1) {
+        return false;
+    }
+
+    // check if it's not set in the brush
+    if (!(bits_brush & nth_bit(index))) {
+        return false;
+    }
+
+    if (brushside_side == SIDE_BACK) {
+        // explicit override?
+        if (bits_brush & EWT_CFLAG_MIRROR_INSIDE_SET) {
+            return (bits_brush & EWT_CFLAG_MIRROR_INSIDE) != 0;
+        }
+        if (portal_visible_contents.flags &
+            (EWT_VISCONTENTS_WINDOW | EWT_VISCONTENTS_AUX | EWT_VISCONTENTS_DETAIL_WALL)) {
+            // windows or aux don't generate inside faces
+            return false;
+        }
+        // other types get mirrored by default
+        return true;
+    }
+    return true;
+}
+
 std::string contentflags_t::to_string() const
 {
     std::string s = get_contents_display(flags);
