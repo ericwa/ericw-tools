@@ -1486,7 +1486,7 @@ TEST(testmapsQ1, detailFence)
     EXPECT_EQ(detail_fence_leaf->nummarksurfaces, 0);
 
     contentflags_t detail_fence_leaf_flags = extflags[leafnum];
-    EXPECT_EQ(detail_fence_leaf_flags.flags, EWT_VISCONTENTS_WINDOW | EWT_CFLAG_DETAIL | EWT_CFLAG_TRANSLUCENT);
+    EXPECT_EQ(detail_fence_leaf_flags.flags, EWT_VISCONTENTS_WINDOW | EWT_CFLAG_DETAIL | EWT_CFLAG_TRANSLUCENT | EWT_CFLAG_MIRROR_INSIDE_SET);
 
     // grab a random face inside the detail_fence - we should find it inside the player start leaf's markfaces list
     const auto back_of_pillar_pos = qvec3d(176, -32, 120);

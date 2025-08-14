@@ -148,8 +148,9 @@ struct contentflags_t
     static contentflags_t create_detail_illusionary_contents(contentflags_t original)
     {
         contents_int_t flags = original.flags;
-        flags &= ~EWT_VISCONTENTS_SOLID;
-        flags |= EWT_VISCONTENTS_MIST | EWT_CFLAG_TRANSLUCENT | EWT_CFLAG_DETAIL;
+        flags &= ~(EWT_VISCONTENTS_SOLID | EWT_CFLAG_MIRROR_INSIDE);
+        flags |= EWT_VISCONTENTS_MIST | EWT_CFLAG_TRANSLUCENT | EWT_CFLAG_DETAIL | EWT_CFLAG_MIRROR_INSIDE_SET;
+        // start with mirror_inside off; we'll turn it back on if the mapper requested it
         return contentflags_t::make(flags);
     }
 
@@ -157,7 +158,8 @@ struct contentflags_t
     {
         contents_int_t flags = original.flags;
         flags &= ~EWT_VISCONTENTS_SOLID;
-        flags |= (EWT_VISCONTENTS_WINDOW | EWT_CFLAG_TRANSLUCENT | EWT_CFLAG_DETAIL);
+        flags |= (EWT_VISCONTENTS_WINDOW | EWT_CFLAG_TRANSLUCENT | EWT_CFLAG_DETAIL | EWT_CFLAG_MIRROR_INSIDE_SET);
+        // start with mirror_inside off; we'll turn it back on if the mapper requested it
         return contentflags_t::make(flags);
     }
 

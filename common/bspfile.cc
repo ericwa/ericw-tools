@@ -325,8 +325,12 @@ public:
             if (bits_brush & EWT_CFLAG_MIRROR_INSIDE_SET) {
                 return (bits_brush & EWT_CFLAG_MIRROR_INSIDE) != 0;
             }
-
-            return (bits_brush & (EWT_ALL_LIQUIDS | EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER)) != 0;
+            if (portal_visible_contents.flags & (EWT_VISCONTENTS_WINDOW | EWT_VISCONTENTS_AUX | EWT_VISCONTENTS_DETAIL_WALL)) {
+                // windows or aux don't generate inside faces
+                return false;
+            }
+            // other types get mirrored by default
+            return true;
         }
         return true;
     }
@@ -802,7 +806,7 @@ struct gamedef_q2_t : public gamedef_t
             if (bits_brush & EWT_CFLAG_MIRROR_INSIDE_SET) {
                 return (bits_brush & EWT_CFLAG_MIRROR_INSIDE) != 0;
             }
-            if (portal_visible_contents.flags & (EWT_VISCONTENTS_WINDOW | EWT_VISCONTENTS_AUX)) {
+            if (portal_visible_contents.flags & (EWT_VISCONTENTS_WINDOW | EWT_VISCONTENTS_AUX | EWT_VISCONTENTS_DETAIL_WALL)) {
                 // windows or aux don't generate inside faces
                 return false;
             }
