@@ -789,6 +789,11 @@ struct gamedef_q2_t : public gamedef_t
         auto bits_a = a.flags;
         auto bits_b = b.flags;
 
+        // aviods spamming "sides not found" warning on Q1 maps with sky
+        if ((bits_a & (EWT_VISCONTENTS_SOLID | EWT_VISCONTENTS_SKY)) &&
+            (bits_b & (EWT_VISCONTENTS_SOLID | EWT_VISCONTENTS_SKY)))
+            return contentflags_t::make(EWT_VISCONTENTS_EMPTY);
+
         contents_int_t result;
 
         if ((bits_a & EWT_CFLAG_SUPPRESS_CLIPPING_SAME_TYPE) || (bits_b & EWT_CFLAG_SUPPRESS_CLIPPING_SAME_TYPE)) {
