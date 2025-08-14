@@ -278,32 +278,6 @@ public:
         return 0;
     }
 
-    bool contents_are_opaque(contentflags_t contents, bool transwater) const override
-    {
-        auto bits = contents.visible_contents().flags;
-
-        if (bits == EWT_VISCONTENTS_SOLID)
-            return true;
-        else if (bits == EWT_VISCONTENTS_SKY)
-            return true;
-        else if (bits == EWT_VISCONTENTS_DETAIL_WALL)
-            return true;
-        else if (bits == EWT_VISCONTENTS_WINDOW)
-            return false;
-        else if (bits == EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER)
-            return true;
-        else if (bits == EWT_VISCONTENTS_LAVA)
-            return !transwater;
-        else if (bits == EWT_VISCONTENTS_SLIME)
-            return !transwater;
-        else if (bits == EWT_VISCONTENTS_WATER)
-            return !transwater;
-        else if (bits == EWT_VISCONTENTS_MIST)
-            return false;
-
-        return false;
-    }
-
     contentflags_t contents_remap_for_export(contentflags_t contents, remap_type_t type) const override
     {
         /*
@@ -402,7 +376,7 @@ public:
             // non-Q2: -transwater implies liquids are detail and translucent
             contents_int_t liquid_flags = 0;
             if (transwater) {
-                liquid_flags = EWT_CFLAG_DETAIL;
+                liquid_flags = EWT_CFLAG_DETAIL | EWT_CFLAG_TRANSLUCENT;
             }
 
             if (!Q_strncasecmp(texname.data() + 1, "lava", 4)) {
@@ -826,22 +800,6 @@ struct gamedef_q2_t : public gamedef_t
         auto strongest_contents_change = contentflags_t::make(result).visible_contents();
 
         return strongest_contents_change;
-    }
-
-    bool contents_are_opaque(contentflags_t contents, bool transwater) const override
-    {
-        int32_t c = contents.flags;
-
-        if (contents.visible_contents().flags == EWT_VISCONTENTS_EMPTY)
-            return false;
-
-        // it's visible..
-
-        if (c & EWT_CFLAG_TRANSLUCENT) {
-            return false;
-        }
-
-        return true;
     }
 
     contentflags_t contents_remap_for_export(contentflags_t contents, remap_type_t type) const override

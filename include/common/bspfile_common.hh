@@ -149,7 +149,7 @@ struct contentflags_t
     {
         contents_int_t flags = original.flags;
         flags &= ~EWT_VISCONTENTS_SOLID;
-        flags |= EWT_VISCONTENTS_MIST | EWT_CFLAG_DETAIL;
+        flags |= EWT_VISCONTENTS_MIST | EWT_CFLAG_TRANSLUCENT | EWT_CFLAG_DETAIL;
         return contentflags_t::make(flags);
     }
 
@@ -157,7 +157,6 @@ struct contentflags_t
     {
         contents_int_t flags = original.flags;
         flags &= ~EWT_VISCONTENTS_SOLID;
-        // FIXME: why are we putting EWT_CFLAG_TRANSLUCENT here but not in create_detail_illusionary_contents?
         flags |= (EWT_VISCONTENTS_WINDOW | EWT_CFLAG_TRANSLUCENT | EWT_CFLAG_DETAIL);
         return contentflags_t::make(flags);
     }
@@ -472,7 +471,6 @@ struct gamedef_t
     virtual contentflags_t create_contents_from_native(int32_t native) const = 0;
     virtual int32_t contents_to_native(contentflags_t contents) const = 0;
     virtual int32_t contents_from_string(std::string_view str) const = 0;
-    virtual bool contents_are_opaque(contentflags_t contents, bool transwater) const = 0;
     enum class remap_type_t
     {
         brush,

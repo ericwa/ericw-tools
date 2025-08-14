@@ -1480,8 +1480,9 @@ static contentflags_t Brush_GetContents(const mapentity_t &entity, const mapbrus
         // - unset existing visible contents + detail
         // - set mist, mirrorinside, mirrorinside set
         // note this overrides the logic in face_get_contents() that normally forces mist to be detail
-        base_contents = contentflags_t::make((base_contents.flags & ~(EWT_ALL_VISIBLE_CONTENTS | EWT_CFLAG_DETAIL)) |
-                                             EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER);
+        base_contents = contentflags_t::make(
+            (base_contents.flags & ~(EWT_ALL_VISIBLE_CONTENTS | EWT_CFLAG_DETAIL | EWT_CFLAG_TRANSLUCENT)) |
+            EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER);
     }
 
     return base_contents;

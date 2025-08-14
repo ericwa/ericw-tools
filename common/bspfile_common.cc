@@ -172,7 +172,16 @@ bool contentflags_t::is_origin() const
 
 bool contentflags_t::is_opaque(const gamedef_t *game, bool transwater) const
 {
-    return game->contents_are_opaque(*this, transwater);
+    if (visible_contents().flags == EWT_VISCONTENTS_EMPTY)
+        return false;
+
+    // it's visible..
+
+    if (flags & EWT_CFLAG_TRANSLUCENT) {
+        return false;
+    }
+
+    return true;
 }
 
 bool contentflags_t::is_fence() const
@@ -200,17 +209,17 @@ contentflags_t contentflags_t::combine_contents(contentflags_t a, contentflags_t
 
     // structural solid eats detail flags
     if (a.is_solid() || b.is_solid()) {
-        bits_a &= ~EWT_CFLAG_DETAIL;
-        bits_b &= ~EWT_CFLAG_DETAIL;
+        bits_a &= ~(EWT_CFLAG_DETAIL | EWT_CFLAG_TRANSLUCENT);
+        bits_b &= ~(EWT_CFLAG_DETAIL | EWT_CFLAG_TRANSLUCENT);
     }
     if (a.is_sky() || b.is_sky()) {
-        bits_a &= ~EWT_CFLAG_DETAIL;
-        bits_b &= ~EWT_CFLAG_DETAIL;
+        bits_a &= ~(EWT_CFLAG_DETAIL | EWT_CFLAG_TRANSLUCENT);
+        bits_b &= ~(EWT_CFLAG_DETAIL | EWT_CFLAG_TRANSLUCENT);
     }
     if ((a.flags & EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER) || (b.flags & EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER)) {
         // strip out detail flag, otherwise it breaks the visblocker feature
-        bits_a &= ~EWT_CFLAG_DETAIL;
-        bits_b &= ~EWT_CFLAG_DETAIL;
+        bits_a &= ~(EWT_CFLAG_DETAIL | EWT_CFLAG_TRANSLUCENT);
+        bits_b &= ~(EWT_CFLAG_DETAIL | EWT_CFLAG_TRANSLUCENT);
     }
 
     return contentflags_t::make(bits_a | bits_b);
