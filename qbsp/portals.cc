@@ -1016,7 +1016,7 @@ static void FindPortalSide(portal_t *p, visible_faces_stats_t &stats)
     // solid > lava > water, etc
 
     // if either is "_noclipfaces" then we don't require a content change
-    contentflags_t viscontents = qbsp_options.target_game->portal_visible_contents(
+    contentflags_t viscontents = contentflags_t::portal_visible_contents(
         p->nodes[0]->get_leafdata()->contents, p->nodes[1]->get_leafdata()->contents);
     if (viscontents.is_empty())
         return;

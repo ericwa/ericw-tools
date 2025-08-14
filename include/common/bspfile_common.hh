@@ -234,6 +234,8 @@ struct contentflags_t
     contentflags_t cluster_contents(contentflags_t other) const;
     static contentflags_t combine_contents(contentflags_t a, contentflags_t b);
     static bool portal_can_see_through(contentflags_t contents0, contentflags_t contents1);
+    // for a portal with contents from `a` to `b`, returns what type of face should be rendered facing `a` and `b`
+    static contentflags_t portal_visible_contents(contentflags_t a, contentflags_t b);
 
     std::string to_string() const;
 
@@ -477,8 +479,6 @@ struct gamedef_t
         leaf
     };
     virtual contentflags_t contents_remap_for_export(contentflags_t contents, remap_type_t type) const = 0;
-    // for a portal with contents from `a` to `b`, returns what type of face should be rendered facing `a` and `b`
-    virtual contentflags_t portal_visible_contents(contentflags_t a, contentflags_t b) const = 0;
     // for a brush with the given contents touching a portal with the required `portal_visible_contents`, as determined
     // by portal_visible_contents, should the `brushside_side` of the brushside generate a face? e.g. liquids generate
     // front and back sides by default, but for q1 detail_wall/detail_illusionary the back side is opt-in with

@@ -251,6 +251,29 @@ bool contentflags_t::portal_can_see_through(contentflags_t contents0, contentfla
     return (((c0 ^ c1) & EWT_ALL_VISIBLE_CONTENTS) == 0);
 }
 
+contentflags_t contentflags_t::portal_visible_contents(contentflags_t a, contentflags_t b)
+{
+    auto bits_a = a.flags;
+    auto bits_b = b.flags;
+
+    // aviods spamming "sides not found" warning on Q1 maps with sky
+    if ((bits_a & (EWT_VISCONTENTS_SOLID | EWT_VISCONTENTS_SKY)) &&
+        (bits_b & (EWT_VISCONTENTS_SOLID | EWT_VISCONTENTS_SKY)))
+        return contentflags_t::make(EWT_VISCONTENTS_EMPTY);
+
+    contents_int_t result;
+
+    if ((bits_a & EWT_CFLAG_SUPPRESS_CLIPPING_SAME_TYPE) || (bits_b & EWT_CFLAG_SUPPRESS_CLIPPING_SAME_TYPE)) {
+        result = bits_a | bits_b;
+    } else {
+        result = bits_a ^ bits_b;
+    }
+
+    auto strongest_contents_change = contentflags_t::make(result).visible_contents();
+
+    return strongest_contents_change;
+}
+
 std::string contentflags_t::to_string() const
 {
     std::string s = get_contents_display(flags);

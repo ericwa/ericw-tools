@@ -303,29 +303,6 @@ public:
         return contents;
     }
 
-    contentflags_t portal_visible_contents(contentflags_t a, contentflags_t b) const override
-    {
-        auto bits_a = a.flags;
-        auto bits_b = b.flags;
-
-        // aviods spamming "sides not found" warning on Q1 maps with sky
-        if ((bits_a & (EWT_VISCONTENTS_SOLID | EWT_VISCONTENTS_SKY)) &&
-            (bits_b & (EWT_VISCONTENTS_SOLID | EWT_VISCONTENTS_SKY)))
-            return contentflags_t::make(EWT_VISCONTENTS_EMPTY);
-
-        contents_int_t result;
-
-        if ((bits_a & EWT_CFLAG_SUPPRESS_CLIPPING_SAME_TYPE) || (bits_b & EWT_CFLAG_SUPPRESS_CLIPPING_SAME_TYPE)) {
-            result = bits_a | bits_b;
-        } else {
-            result = bits_a ^ bits_b;
-        }
-
-        auto strongest_contents_change = contentflags_t::make(result).visible_contents();
-
-        return strongest_contents_change;
-    }
-
     bool portal_generates_face(
         contentflags_t portal_visible_contents, contentflags_t brushcontents, planeside_t brushside_side) const override
     {
@@ -782,29 +759,6 @@ struct gamedef_q2_t : public gamedef_t
         }
 
         return 0;
-    }
-
-    contentflags_t portal_visible_contents(contentflags_t a, contentflags_t b) const override
-    {
-        auto bits_a = a.flags;
-        auto bits_b = b.flags;
-
-        // aviods spamming "sides not found" warning on Q1 maps with sky
-        if ((bits_a & (EWT_VISCONTENTS_SOLID | EWT_VISCONTENTS_SKY)) &&
-            (bits_b & (EWT_VISCONTENTS_SOLID | EWT_VISCONTENTS_SKY)))
-            return contentflags_t::make(EWT_VISCONTENTS_EMPTY);
-
-        contents_int_t result;
-
-        if ((bits_a & EWT_CFLAG_SUPPRESS_CLIPPING_SAME_TYPE) || (bits_b & EWT_CFLAG_SUPPRESS_CLIPPING_SAME_TYPE)) {
-            result = bits_a | bits_b;
-        } else {
-            result = bits_a ^ bits_b;
-        }
-
-        auto strongest_contents_change = contentflags_t::make(result).visible_contents();
-
-        return strongest_contents_change;
     }
 
     contentflags_t contents_remap_for_export(contentflags_t contents, remap_type_t type) const override
