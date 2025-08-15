@@ -286,6 +286,9 @@ struct contentflags_t
     auto operator<=>(const contentflags_t &other) const = default;
 };
 
+// gtest support
+std::ostream &operator<<(std::ostream &os, contents_t flags);
+
 enum q1_surf_flags_t : int32_t;
 enum q2_surf_flags_t : int32_t;
 

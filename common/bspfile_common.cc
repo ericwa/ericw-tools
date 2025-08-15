@@ -324,6 +324,12 @@ contentflags_t contentflags_t::from_json(const nlohmann::json &json)
     return contentflags_t::make(set_contents_json(json));
 }
 
+std::ostream &operator<<(std::ostream &os, contents_t flags)
+{
+    os << get_contents_display(flags);
+    return os;
+}
+
 // surfflags_t
 
 bool surfflags_t::is_nodraw() const
