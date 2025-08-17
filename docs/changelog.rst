@@ -2,13 +2,19 @@
 Changelog
 =========
 
-2.0.0-alpha10 (unreleased)
-==========================
+2.0.0-alpha10
+=============
 
 Changes
 -------
 
-- ``.texinfo.json`` file is always written (simplifies passing data between qbsp and vis/light)
+- qbsp: ``.texinfo.json`` file is always written (simplifies passing data between qbsp and vis/light)
+- light: switchable shadow casters now self-shadow when the switchable shadow is off.
+
+  Previously, turning off the switchable shadow would both stop casting shadows on the world and stop self-shadowing.
+
+  This won't be a visible change on the majority of switchable shadow uses case that are simple walls, or
+  where the bmodel is hidden when the shadow turns off.
 
 Features
 --------
@@ -18,11 +24,25 @@ Features
   on Q2 BSP's. These are experimental in Q2 and not yet supported by any engines, but both .lit and BSPX HDR formats can
   be viewed in lightpreview with Q2 BSP's.
 
-Developer
+Bug fixes
 ---------
 
-- Qt 6 now required for lightpreview (previously only Qt 5 was required)
+- qbsp: Fix :classname:`func_detail_fence` causing "grey flash" on winquke, FTEQW, and others (but not Fitz/QS), for
+  faces embedded inside the :classname:`func_detail_fence`'s volume.
+
+  We were previously implemeting :classname:`func_detail_fence` by emitting marksurfaces for solid leafs, which are
+  not rendered in FTEQW/winquake. The new implementation emits marksurfaces on neighbouring leafs which renders
+  in all engines.
+- lightpreview: don't render marksurfaces on solid leafs, for consistency with FTEQW/winquake
+- light: Fix lighting of faces embedded inside :classname:`func_detail_fence` (previously, always solid black)
+- light: Better check for whether a map contains color, i.e. whether a ``.lit`` file needs to be generated
+
+Developer Changes
+-----------------
+
+- Qt 6 now required for lightpreview (previously Qt 5 was required)
 - Embree 4 is now required (previously 3 or 4 were supported)
+- Share more code between Q1 and Q2 that was previously duplicated
 
 2.0.0-alpha9
 ============
