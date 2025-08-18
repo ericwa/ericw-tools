@@ -120,6 +120,7 @@ private:
     void loadFile(const QString &file);
     void loadFileInternal(const QString &file, bool is_reload);
     void displayCameraPositionInfo();
+    void updateCameraStoppedMovingInfo();
 
 private:
     GLView *glView = nullptr;

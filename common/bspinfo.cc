@@ -311,6 +311,16 @@ full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, 
         max_styles_per_face = lmstyle16.size() / sizeof(uint16_t) / bsp.dfaces.size();
         bspx_lmstyle16.resize(max_styles_per_face * bsp.dfaces.size());
         memcpy(bspx_lmstyle16.data(), lmstyle16.data(), lmstyle16.size());
+    } else if (bspx.contains("LMSTYLE")) {
+        auto &lmstyle = bspx.at("LMSTYLE");
+        max_styles_per_face = lmstyle.size() / bsp.dfaces.size();
+        bspx_lmstyle16.reserve(max_styles_per_face * bsp.dfaces.size());
+
+        for (size_t i = 0; i < bsp.dfaces.size(); i++) {
+            for (size_t b = 0; b < max_styles_per_face; b++) {
+                bspx_lmstyle16.push_back(lmstyle.data()[(i * max_styles_per_face) + b]);
+            }
+        }
     }
 
     // make rectangles

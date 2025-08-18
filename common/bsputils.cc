@@ -934,6 +934,8 @@ faceextents_t::faceextents_t(
 
     if (lmwidth > 0 && lmheight > 0) {
         lm_extents = {lmwidth - 1, lmheight - 1};
+    } else {
+        lm_extents = {0, 0};
     }
 
     worldToTexCoordMatrix = WorldToTexSpace(&bsp, &face);

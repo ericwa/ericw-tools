@@ -429,6 +429,7 @@ void MainWindow::createPropertiesSidebar()
         [this](bool checked) { glView->setDrawTranslucencyAsOpaque(checked); });
     connect(m_littransucency, &QAbstractButton::toggled, this, [this](bool checked) { glView->setLitTranslucency(checked); });
     connect(glView, &GLView::cameraMoved, this, &MainWindow::displayCameraPositionInfo);
+    connect(glView, &GLView::stoppedMoving, this, &MainWindow::updateCameraStoppedMovingInfo);
     connect(show_bmodels, &QAbstractButton::toggled, this, [this](bool checked) { glView->setShowBmodels(checked); });
     connect(brightnessSlider, &QAbstractSlider::valueChanged, this, [this, brightnessLabel](int value) {
         float brightness = value / 10.0f;
@@ -1137,5 +1138,12 @@ void MainWindow::displayCameraPositionInfo()
     std::string cpp_str = fmt::format("pos ({}) forward ({}) leaf ({}) contents ({}) area ({})", point, forward, leaf ? (leaf - bsp->dleafs.data()) : -1, leaf_type, area);
 
     m_cameraStatus->setText(QString::fromStdString(cpp_str));
+}
+
+void MainWindow::updateCameraStoppedMovingInfo()
+{
+    const qvec3f point = glView->cameraPosition();
+    const qvec3f forward = glView->cameraForward();
+
     face_panel->updateWithBSP(&std::get<mbsp_t>(m_bspdata.bsp), m_entities, m_bspdata.bspx.entries, point, forward);
 }

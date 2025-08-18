@@ -2088,8 +2088,22 @@ void GLView::applyFlyMovement(float duration_seconds)
     if (m_keysPressed & static_cast<uint32_t>(keys_t::fly_up))
         m_cameraOrigin += QVector3D(0, 0, 1) * distance;
 
+    uint32_t m_keyDiff = m_oldKeysPressed ^ m_keysPressed;
+    m_oldKeysPressed = m_keysPressed;
+
+    constexpr auto movementKeys = static_cast<uint32_t>(keys_t::up) |
+                                  static_cast<uint32_t>(keys_t::down) |
+                                  static_cast<uint32_t>(keys_t::left) |
+                                  static_cast<uint32_t>(keys_t::right) |
+                                  static_cast<uint32_t>(keys_t::fly_up) |
+                                  static_cast<uint32_t>(keys_t::fly_down);
+
     if (prevOrigin != m_cameraOrigin) {
         emit cameraMoved();
+    }
+
+    if ((m_keyDiff & movementKeys) != 0 && (m_keysPressed & movementKeys) == 0) {
+        emit stoppedMoving();
     }
 }
 

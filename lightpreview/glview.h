@@ -60,7 +60,7 @@ private:
     std::optional<mbsp_t> m_bsp;
     std::unordered_map<int, std::vector<uint8_t>> m_decompressedVis;
 
-    uint32_t m_keysPressed;
+    uint32_t m_keysPressed, m_oldKeysPressed = 0;
     std::optional<time_point> m_lastFrame;
     std::optional<QPoint> m_lastMouseDownPos;
     /**
@@ -293,6 +293,7 @@ private:
 
 signals:
     void cameraMoved();
+    void stoppedMoving();
 
 public:
     qvec3f cameraPosition() const;
