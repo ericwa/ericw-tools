@@ -73,7 +73,7 @@ enum class conversion_t
 struct extended_texinfo_t
 {
     uint32_t contents_native = 0;
-    surfflags_t flags = {0};
+    surfflags_t flags = {};
     int value = 0;
     std::string animation;
 };
@@ -174,7 +174,7 @@ public:
     setting_int32 subdivide;
     setting_bool nofill;
     setting_bool nomerge;
-    setting_bool nomergeacrossliquids;
+    setting_bool nomergeacrossliquids; // deprecated
     setting_bool noedgereuse;
     setting_bool noclip;
     setting_bool noskip;

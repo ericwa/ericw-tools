@@ -137,12 +137,7 @@ public:
     [[nodiscard]] constexpr size_t size() const { return N; }
 
     // Sort support
-    [[nodiscard]] constexpr bool operator<(const qvec &other) const { return v < other.v; }
-    [[nodiscard]] constexpr bool operator<=(const qvec &other) const { return v <= other.v; }
-    [[nodiscard]] constexpr bool operator>(const qvec &other) const { return v > other.v; }
-    [[nodiscard]] constexpr bool operator>=(const qvec &other) const { return v >= other.v; }
-    [[nodiscard]] constexpr bool operator==(const qvec &other) const { return v == other.v; }
-    [[nodiscard]] constexpr bool operator!=(const qvec &other) const { return v != other.v; }
+    [[nodiscard]] constexpr auto operator<=>(const qvec &) const = default;
 
     [[nodiscard]] constexpr const T &at(const size_t idx) const
     {
@@ -780,17 +775,9 @@ public:
     {
     }
 
-private:
-    auto as_tuple() const { return std::tie(normal, dist); }
-
 public:
     // Sort support
-    [[nodiscard]] constexpr bool operator<(const qplane3 &other) const { return as_tuple() < other.as_tuple(); }
-    [[nodiscard]] constexpr bool operator<=(const qplane3 &other) const { return as_tuple() <= other.as_tuple(); }
-    [[nodiscard]] constexpr bool operator>(const qplane3 &other) const { return as_tuple() > other.as_tuple(); }
-    [[nodiscard]] constexpr bool operator>=(const qplane3 &other) const { return as_tuple() >= other.as_tuple(); }
-    [[nodiscard]] constexpr bool operator==(const qplane3 &other) const { return as_tuple() == other.as_tuple(); }
-    [[nodiscard]] constexpr bool operator!=(const qplane3 &other) const { return as_tuple() != other.as_tuple(); }
+    [[nodiscard]] constexpr auto operator<=>(const qplane3 &other) const = default;
 
     [[nodiscard]] constexpr const qvec<T, 4> vec4() const { return qvec<T, 4>(normal[0], normal[1], normal[2], dist); }
 
@@ -905,12 +892,7 @@ public:
     }
 
     // Sort support
-    [[nodiscard]] constexpr bool operator<(const qmat &other) const { return m_values < other.m_values; }
-    [[nodiscard]] constexpr bool operator<=(const qmat &other) const { return m_values <= other.m_values; }
-    [[nodiscard]] constexpr bool operator>(const qmat &other) const { return m_values > other.m_values; }
-    [[nodiscard]] constexpr bool operator>=(const qmat &other) const { return m_values >= other.m_values; }
-    [[nodiscard]] constexpr bool operator==(const qmat &other) const { return m_values == other.m_values; }
-    [[nodiscard]] constexpr bool operator!=(const qmat &other) const { return m_values != other.m_values; }
+    [[nodiscard]] constexpr auto operator<=>(const qmat &other) const = default;
 
     // access to elements
 
@@ -1173,13 +1155,16 @@ std::vector<V> PointsAlongLine(const V &start, const V &end, const float step)
 bool LinesOverlap(
     const qvec3f &p0, const qvec3f &p1, const qvec3f &q0, const qvec3f &q1, double on_epsilon = DEFAULT_ON_EPSILON);
 
+/**
+ * Same as a std::array<T, 2> with the added semantics that arr[0] is "the front" and arr[1] is "the back".
+ */
 template<typename T>
 struct twosided
 {
     T front, back;
 
     // 0 is front, 1 is back
-    constexpr T &operator[](const int32_t &i)
+    constexpr T &operator[](int32_t i)
     {
         switch (i) {
             case 0: return front;
@@ -1189,7 +1174,7 @@ struct twosided
         throw std::exception();
     }
     // 0 is front, 1 is back
-    constexpr const T &operator[](const int32_t &i) const
+    constexpr const T &operator[](int32_t i) const
     {
         switch (i) {
             case 0: return front;
@@ -1208,6 +1193,10 @@ struct twosided
 
     // swap the front and back values
     constexpr void swap() { std::swap(front, back); }
+
+    // std::array compat
+    using value_type = T;
+    constexpr size_t size() const { return 2; }
 };
 
 namespace qv

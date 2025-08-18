@@ -234,7 +234,7 @@ Face_ContentsOrSurfaceFlags(const mbsp_t *bsp, const mface_t *face)
 {
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         const mtexinfo_t *info = Face_Texinfo(bsp, face);
-        return info->flags.native;
+        return info->flags.native_q2;
     } else {
         return TextureName_Contents(Face_TextureName(bsp, face));
     }
@@ -469,13 +469,6 @@ static clipnode_info_t BSP_FindClipnodeAtPoint_r(const mbsp_t *bsp, const int pa
         return BSP_FindClipnodeAtPoint_r(bsp, clipnodenum, SIDE_BACK, node->children[SIDE_BACK], point);
     }
 }
-
-bool clipnode_info_t::operator==(const clipnode_info_t &other) const
-{
-    return this->parent_clipnode == other.parent_clipnode && this->side == other.side &&
-           this->contents == other.contents;
-}
-
 clipnode_info_t BSP_FindClipnodeAtPoint(
     const mbsp_t *bsp, hull_index_t hullnum, const dmodelh2_t *model, const qvec3d &point)
 {

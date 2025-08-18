@@ -761,7 +761,7 @@ void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &
             json &node = nodes.insert(nodes.end(), json::object()).value();
 
             node.push_back({"planenum", src_node.planenum});
-            node.push_back({"children", src_node.children});
+            node.push_back({"children", json::array({src_node.children[0], src_node.children[1]})});
             node.push_back({"mins", src_node.mins});
             node.push_back({"maxs", src_node.maxs});
             node.push_back({"firstface", src_node.firstface});
@@ -783,7 +783,8 @@ void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &
                                                         src_texinfo.vecs.at(0, 2), src_texinfo.vecs.at(0, 3)}),
                                            json::array({src_texinfo.vecs.at(1, 0), src_texinfo.vecs.at(1, 1),
                                                src_texinfo.vecs.at(1, 2), src_texinfo.vecs.at(1, 3)})})});
-            texinfo.push_back({"flags", src_texinfo.flags.native});
+            texinfo.push_back({"flags", bspdata.loadversion->game->id == GAME_QUAKE_II ? src_texinfo.flags.native_q2
+                                                                                       : src_texinfo.flags.native_q1});
             texinfo.push_back({"miptex", src_texinfo.miptex});
             texinfo.push_back({"value", src_texinfo.value});
             texinfo.push_back({"texture", std::string(src_texinfo.texture.data())});
@@ -829,7 +830,7 @@ void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &
             json &clipnode = clipnodes.insert(clipnodes.end(), json::object()).value();
 
             clipnode.push_back({"planenum", src_clipnodes.planenum});
-            clipnode.push_back({"children", src_clipnodes.children});
+            clipnode.push_back({"children", json::array({src_clipnodes.children[0], src_clipnodes.children[1]})});
         }
     }
 

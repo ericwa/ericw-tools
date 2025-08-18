@@ -59,10 +59,10 @@ size_t ExportMapTexinfo(size_t texinfonum)
 
     if (src.outputnum.has_value())
         return src.outputnum.value();
-    else if (!qbsp_options.includeskip.value() && src.flags.is_nodraw) {
+    else if (!qbsp_options.includeskip.value() && src.flags.is_nodraw()) {
         // TODO: move to game specific
         // always include LIGHT
-        if (qbsp_options.target_game->id != GAME_QUAKE_II || !(src.flags.native & Q2_SURF_LIGHT))
+        if (qbsp_options.target_game->id != GAME_QUAKE_II || !(src.flags.native_q2 & Q2_SURF_LIGHT))
             return -1;
     }
 
@@ -74,7 +74,8 @@ size_t ExportMapTexinfo(size_t texinfonum)
     // make sure we don't write any non-native flags.
     // e.g. Quake only accepts 0 or TEX_SPECIAL.
     if (!src.flags.is_valid(qbsp_options.target_game)) {
-        FError("Internal error: Texinfo {} has invalid surface flags {}", texinfonum, src.flags.native);
+        FError("Internal error: Texinfo {} has invalid surface flags native_q1: {} native_q2: {}", texinfonum,
+            static_cast<int32_t>(src.flags.native_q1), static_cast<int32_t>(src.flags.native_q2));
     }
 
     dest.flags = src.flags;
@@ -191,11 +192,11 @@ static void ExportLeaf(node_t *node)
     dleaf.firstmarksurface = static_cast<int>(map.bsp.dleaffaces.size());
 
     for (auto &face : leafdata->markfaces) {
-        if (!qbsp_options.includeskip.value() && face->get_texinfo().flags.is_nodraw) {
+        if (!qbsp_options.includeskip.value() && face->get_texinfo().flags.is_nodraw()) {
 
             // TODO: move to game specific
             // always include LIGHT
-            if (qbsp_options.target_game->id != GAME_QUAKE_II || !(face->get_texinfo().flags.native & Q2_SURF_LIGHT))
+            if (qbsp_options.target_game->id != GAME_QUAKE_II || !(face->get_texinfo().flags.native_q2 & Q2_SURF_LIGHT))
                 continue;
         }
 
@@ -373,11 +374,11 @@ static void WriteExtendedTexinfoFlags()
 
         json t = json::object();
 
-        if (tx.flags.is_nodraw) {
-            t["is_nodraw"] = tx.flags.is_nodraw;
+        if (tx.flags.is_nodraw()) {
+            t["is_nodraw"] = tx.flags.is_nodraw();
         }
-        if (tx.flags.is_hint) {
-            t["is_hint"] = tx.flags.is_hint;
+        if (tx.flags.is_hint()) {
+            t["is_hint"] = tx.flags.is_hint();
         }
         if (tx.flags.no_dirt) {
             t["no_dirt"] = tx.flags.no_dirt;

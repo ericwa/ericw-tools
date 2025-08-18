@@ -78,10 +78,7 @@ private:
         // other: visofs
         int clusternum;
 
-        bool operator==(const face_visibility_key_t &other) const
-        {
-            return show_bmodels == other.show_bmodels && leafnum == other.leafnum && clusternum == other.clusternum;
-        }
+        auto operator<=>(const face_visibility_key_t &other) const = default;
     };
     face_visibility_key_t desiredFaceVisibility() const;
 
@@ -154,9 +151,7 @@ private:
         bool alpha_test = false;
         bool fullbright = false;
 
-        auto as_tuple() const { return std::make_tuple(program, texname, opacity, alpha_test, fullbright); }
-
-        bool operator<(const material_key &other) const { return as_tuple() < other.as_tuple(); }
+        auto operator<=>(const material_key &other) const = default;
     };
 
     std::shared_ptr<QOpenGLTexture> placeholder_texture;

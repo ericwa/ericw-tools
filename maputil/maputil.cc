@@ -403,7 +403,7 @@ static void maputil_make_brush_side(lua_State *state, const brush_side_t &side)
         lua_setfield(state, -2, "contents");
         lua_pushnumber(state, q2.value);
         lua_setfield(state, -2, "value");
-        lua_pushnumber(state, q2.flags.native);
+        lua_pushnumber(state, q2.flags);
         lua_setfield(state, -2, "flags");
 
         lua_setfield(state, -2, "info");
@@ -586,7 +586,7 @@ static void maputil_copy_side(lua_State *state, brush_side_t &side)
         lua_pop(state, 1);
 
         lua_getfield(state, -1, "flags");
-        q2.flags.native = lua_tonumber(state, -1);
+        q2.flags = lua_tonumber(state, -1);
         lua_pop(state, 1);
 
         side.extended_info = q2;
@@ -758,7 +758,7 @@ static int l_load_texture_meta(lua_State *state)
 
     lua_pushnumber(state, result.contents_native);
     lua_setfield(state, -2, "contents");
-    lua_pushnumber(state, result.flags.native);
+    lua_pushnumber(state, result.flags.native_q2);
     lua_setfield(state, -2, "flags");
     lua_pushnumber(state, result.value);
     lua_setfield(state, -2, "value");

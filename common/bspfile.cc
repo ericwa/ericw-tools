@@ -162,7 +162,7 @@ public:
         if (!Q_strcasecmp(texname, "skip"))
             return false;
 
-        return !(flags.native & TEX_SPECIAL);
+        return !(flags.native_q1 & TEX_SPECIAL);
     }
 
     bool surf_is_emissive(const surfflags_t &flags, const char *texname) const override
@@ -174,17 +174,17 @@ public:
         return true;
     }
 
-    bool surf_is_subdivided(const surfflags_t &flags) const override { return !(flags.native & TEX_SPECIAL); }
+    bool surf_is_subdivided(const surfflags_t &flags) const override { return !(flags.native_q1 & TEX_SPECIAL); }
 
     bool surfflags_are_valid(const surfflags_t &flags) const override
     {
         // Q1 only supports TEX_SPECIAL
-        return (flags.native & ~TEX_SPECIAL) == 0;
+        return (flags.native_q1 & ~TEX_SPECIAL) == 0;
     }
 
     bool surfflags_may_phong(const surfflags_t &a, const surfflags_t &b) const override
     {
-        return (a.native & TEX_SPECIAL) == (b.native & TEX_SPECIAL);
+        return (a.native_q1 & TEX_SPECIAL) == (b.native_q1 & TEX_SPECIAL);
     }
 
     int32_t surfflags_from_string(std::string_view str) const override
@@ -562,9 +562,9 @@ public:
         }
     }
 
-    const std::initializer_list<aabb3d> &get_hull_sizes() const override
+    std::span<const aabb3d> get_hull_sizes() const override
     {
-        static std::initializer_list<aabb3d> hulls = {
+        static constexpr aabb3d hulls[] = {
             {{0, 0, 0}, {0, 0, 0}}, {{-16, -16, -32}, {16, 16, 24}}, {{-32, -32, -64}, {32, 32, 24}}};
 
         return hulls;
@@ -664,9 +664,9 @@ struct gamedef_h2_t : public gamedef_q1_like_t<GAME_HEXEN_II>
     {
     }
 
-    const std::initializer_list<aabb3d> &get_hull_sizes() const override
+    std::span<const aabb3d> get_hull_sizes() const override
     {
-        static std::initializer_list<aabb3d> hulls = {{{0, 0, 0}, {0, 0, 0}}, {{-16, -16, -32}, {16, 16, 24}},
+        static constexpr aabb3d hulls[] = {{{0, 0, 0}, {0, 0, 0}}, {{-16, -16, -32}, {16, 16, 24}},
             {{-24, -24, -20}, {24, 24, 20}}, {{-16, -16, -16}, {16, 16, 12}},
             {{-8, -8, -8}, {8, 8, 8}}, // {{-40, -40, -42}, {40, 40, 42}} = original game
             {{-28, -28, -40}, {28, 28, 40}}};
@@ -721,9 +721,9 @@ struct gamedef_hl_t : public gamedef_q1_like_t<GAME_HALF_LIFE>
         has_rgb_lightmap = true;
     }
 
-    const std::initializer_list<aabb3d> &get_hull_sizes() const override
+    std::span<const aabb3d> get_hull_sizes() const override
     {
-        static std::initializer_list<aabb3d> hulls = {{{0, 0, 0}, {0, 0, 0}}, {{-16, -16, -36}, {16, 16, 36}},
+        static constexpr aabb3d hulls[] = {{{0, 0, 0}, {0, 0, 0}}, {{-16, -16, -36}, {16, 16, 36}},
             {{-32, -32, -32}, {32, 32, 32}}, {{-16, -16, -18}, {16, 16, 18}}};
 
         return hulls;
@@ -755,22 +755,22 @@ struct gamedef_q2_t : public gamedef_t
             return false;
 
         // Q2RTX should light nodraw faces
-        if (light_nodraw && (flags.native & Q2_SURF_NODRAW)) {
+        if (light_nodraw && flags.is_nodraw()) {
             return true;
         }
 
         // The only reason to lightmap sky faces in Q2 is to light models floating over sky.
         // If lightgrid is in use, this reason is no longer relevant, so skip lightmapping.
-        if (lightgrid_enabled && (flags.native & Q2_SURF_SKY)) {
+        if (lightgrid_enabled && (flags.native_q2 & Q2_SURF_SKY)) {
             return false;
         }
 
-        return !(flags.native & (Q2_SURF_NODRAW | Q2_SURF_SKIP));
+        return !(flags.native_q2 & (Q2_SURF_NODRAW | Q2_SURF_SKIP));
     }
 
     bool surf_is_emissive(const surfflags_t &flags, const char *texname) const override { return true; }
 
-    bool surf_is_subdivided(const surfflags_t &flags) const override { return !(flags.native & Q2_SURF_SKY); }
+    bool surf_is_subdivided(const surfflags_t &flags) const override { return !(flags.native_q2 & Q2_SURF_SKY); }
 
     bool surfflags_are_valid(const surfflags_t &flags) const override
     {
@@ -782,7 +782,7 @@ struct gamedef_q2_t : public gamedef_t
     {
         // these are the bits we'll require to match in order to allow phonging `a` and `b`
         auto mask = [](const surfflags_t &flags) {
-            return flags.native &
+            return flags.native_q2 &
                    (Q2_SURF_SKY | Q2_SURF_WARP | Q2_SURF_TRANS33 | Q2_SURF_TRANS66 | Q2_SURF_FLOWING | Q2_SURF_NODRAW);
         };
 
@@ -807,7 +807,7 @@ struct gamedef_q2_t : public gamedef_t
     bool texinfo_is_hintskip(const surfflags_t &flags, const std::string &name) const override
     {
         // any face in a hint brush that isn't HINT are treated as "hintskip", and discarded
-        return !(flags.native & Q2_SURF_HINT);
+        return !(flags.native_q2 & Q2_SURF_HINT);
     }
 
     contentflags_t create_contents_from_native(int32_t native) const override
@@ -1330,17 +1330,13 @@ struct gamedef_q2_t : public gamedef_t
         contents = contentflags_t::make(flags);
     }
 
-    const std::initializer_list<aabb3d> &get_hull_sizes() const override
-    {
-        static constexpr std::initializer_list<aabb3d> hulls = {};
-        return hulls;
-    }
+    std::span<const aabb3d> get_hull_sizes() const override { return {}; }
 
     contentflags_t face_get_contents(
         const std::string &texname, const surfflags_t &flags, contentflags_t contents) const override
     {
         // hints and skips are never detail, and have no content
-        if (flags.native & (Q2_SURF_HINT | Q2_SURF_SKIP)) {
+        if (flags.native_q2 & (Q2_SURF_HINT | Q2_SURF_SKIP)) {
             return contentflags_t::make(EWT_VISCONTENTS_EMPTY);
         }
 
@@ -1353,7 +1349,7 @@ struct gamedef_q2_t : public gamedef_t
 
         // if we have TRANS33 or TRANS66 or ALPHATEST, we have to be marked as WINDOW,
         // so unset SOLID, give us WINDOW, and give us TRANSLUCENT
-        if (flags.native & (Q2_SURF_TRANS33 | Q2_SURF_TRANS66 | Q2_SURF_ALPHATEST)) {
+        if (flags.native_q2 & (Q2_SURF_TRANS33 | Q2_SURF_TRANS66 | Q2_SURF_ALPHATEST)) {
             surf_contents |= EWT_CFLAG_TRANSLUCENT;
 
             if (surf_contents & EWT_VISCONTENTS_SOLID) {
@@ -1931,11 +1927,7 @@ struct gamedef_sin_t : public gamedef_t
     {
     }
 
-    const std::initializer_list<aabb3d> &get_hull_sizes() const override
-    {
-        static constexpr std::initializer_list<aabb3d> hulls = {};
-        return hulls;
-    }
+    std::span<const aabb3d> get_hull_sizes() const override { return {}; }
 
     contentflags_t face_get_contents(
         const std::string &texname, const surfflags_t &flags, contentflags_t contents) const override
@@ -2326,7 +2318,7 @@ inline void CopyArray(std::vector<F> &from, std::vector<T> &to)
         if constexpr (std::is_arithmetic_v<T> && std::is_arithmetic_v<F>)
             to.push_back(numeric_cast<T>(v));
         else
-            to.push_back(v);
+            to.push_back(static_cast<T>(v));
     }
 }
 

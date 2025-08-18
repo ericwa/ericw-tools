@@ -97,7 +97,7 @@ struct clipnode_info_t
     planeside_t side;
     int contents;
 
-    bool operator==(const clipnode_info_t &other) const;
+    auto operator<=>(const clipnode_info_t &other) const = default;
 };
 clipnode_info_t BSP_FindClipnodeAtPoint(
     const mbsp_t *bsp, hull_index_t hullnum, const dmodelh2_t *model, const qvec3d &point);

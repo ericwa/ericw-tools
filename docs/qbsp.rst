@@ -40,14 +40,6 @@ Options
 
    Don't perform face merging.
 
-.. option:: -nomergeacrossliquids
-
-   Don't merge faces above and below a liquid.
-
-   This is for maps targetting ezQuake (Q1) and Paintball2 (Q2) water caustics,
-   where the effect is applied per-face and breaks if a face is partially above
-   and partially below water.
-
 .. option:: -noedgereuse
 
    Don't reuse edges (may be useful for debugging software rendering).
@@ -818,6 +810,17 @@ Model Entity Keys
 
    Defaults to 0, brushes with higher values (equivalent to appearing later in the .map file) will clip away lower
    valued brushes.
+
+.. bmodel-key:: "_hulls" "n"
+
+   Bitmap ("Flags" type in FGD) that selects for which hulls collision data
+   will be generated. eg. a decimal value of 11 (0b1011) would generate hull 0, hull 1,
+   and hull 3.
+   Faces are computed using data from hull 0, not generating this hull will
+   prevent a bmodel from being rendered, acting as a CLIP brush only active for
+   the specified hulls.
+
+   Defaults to 0 which will generate clipnodes for all hulls.
 
 .. bmodel-key:: "_chop" "n"
 

@@ -9,9 +9,7 @@ add_executable(tests
 		test_qbsp.hh
 		test_qbsp_q2.cc
 		test_vis.cc
-		testutils.hh
 		${CMAKE_CURRENT_BINARY_DIR}/../testmaps.hh
-		testutils.hh
 		benchmark.cc
 		test_bsputil.cc
 		test_main.hh)

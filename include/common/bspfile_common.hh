@@ -27,6 +27,7 @@
 #include <unordered_map>
 #include <any>
 #include <optional>
+#include <span>
 #include <mutex>
 
 #include <common/bitflags.hh>
@@ -227,41 +228,54 @@ struct contentflags_t
     }
 };
 
+enum q1_surf_flags_t : int32_t;
+enum q2_surf_flags_t : int32_t;
+
 struct surfflags_t
 {
-    // native flags value; what's written to the BSP basically
-    int32_t native;
+    // native flags value; what's written to the BSP for a Q2 map basically
+    // when compiling Q1 maps, we can use these internally but obviously not write them out
+    q2_surf_flags_t native_q2;
+
+    // native q1 flags
+    q1_surf_flags_t native_q1;
 
     // an invisible surface (Q1 "skip" texture, Q2 SURF_NODRAW)
-    bool is_nodraw;
+    bool is_nodraw() const;
+
+    void set_nodraw(bool nodraw);
 
     // hint surface
-    bool is_hint;
+    bool is_hint() const;
+
+    void set_hint(bool hint);
 
     // is a skip surface from a hint brush
-    bool is_hintskip;
+    bool is_hintskip() const;
+
+    void set_hintskip(bool hintskip);
 
     // don't receive dirtmapping
-    bool no_dirt;
+    bool no_dirt : 1;
 
     // don't cast a shadow
-    bool no_shadow;
+    bool no_shadow : 1;
 
     // light doesn't bounce off this face
-    bool no_bounce;
+    bool no_bounce : 1;
 
     // opt out of minlight on this face (including opting out of local minlight, so
     // not the same as just setting minlight to 0).
-    bool no_minlight;
+    bool no_minlight : 1;
 
     // don't expand this face for larger clip hulls
-    bool no_expand;
+    bool no_expand : 1;
 
     // block any way phong can be enabled
-    bool no_phong;
+    bool no_phong : 1;
 
     // this face doesn't receive light
-    bool light_ignore;
+    bool light_ignore : 1;
 
     // if true, rescales any surface light emitted by these brushes to emit 50% light at 90 degrees from the surface
     // normal if false, use a more natural angle falloff of 0% at 90 degrees
@@ -321,8 +335,7 @@ struct surfflags_t
 
 public:
     // sort support
-    bool operator<(const surfflags_t &other) const;
-    bool operator>(const surfflags_t &other) const;
+    auto operator<=>(const surfflags_t &other) const = default;
 
     bool is_valid(const gamedef_t *game) const;
 };
@@ -434,7 +447,7 @@ struct gamedef_t
     virtual bool portal_generates_face(
         contentflags_t portal_visible_contents, contentflags_t brushcontents, planeside_t brushside_side) const = 0;
     virtual void contents_make_valid(contentflags_t &contents) const = 0;
-    virtual const std::initializer_list<aabb3d> &get_hull_sizes() const = 0;
+    virtual std::span<const aabb3d> get_hull_sizes() const = 0;
     virtual contentflags_t face_get_contents(
         const std::string &texname, const surfflags_t &flags, contentflags_t contents) const = 0;
     virtual void init_filesystem(const fs::path &source, const settings::common_settings &settings) const = 0;

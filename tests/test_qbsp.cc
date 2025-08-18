@@ -22,7 +22,6 @@
 #include <map>
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
-#include "testutils.hh"
 #include "test_main.hh"
 
 // FIXME: Clear global data (planes, etc) between each test
@@ -573,7 +572,7 @@ TEST(testmapsQ1, simpleSealed)
 
         EXPECT_EQ(bsp.dleafs[1].nummarksurfaces, 6);
         EXPECT_EQ(bsp.dleafs[1].firstmarksurface, 0);
-        EXPECT_VECTORS_UNOREDERED_EQUAL(bsp.dleaffaces, std::vector<uint32_t>{0, 1, 2, 3, 4, 5});
+        EXPECT_THAT(bsp.dleaffaces, testing::UnorderedElementsAre(0, 1, 2, 3, 4, 5));
     }
 }
 
@@ -581,7 +580,7 @@ TEST(testmapsQ1, simpleSealed2)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple_sealed2.map");
 
-    EXPECT_EQ(bsp.dleafs.size(), 3);
+    ASSERT_EQ(bsp.dleafs.size(), 3);
 
     EXPECT_EQ(bsp.dleafs[0].contents, CONTENTS_SOLID);
     EXPECT_EQ(bsp.dleafs[1].contents, CONTENTS_EMPTY);
@@ -610,8 +609,8 @@ TEST(testmapsQ1, simpleSealed2)
     auto *other_plus_y =
         BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], qvec3d(-64, -368, 128), qvec3d(0, 1, 0)); // back wall +Y normal
 
-    EXPECT_VECTORS_UNOREDERED_EQUAL(other_markfaces,
-        std::vector<const mface_t *>{other_floor, other_ceil, other_minus_x, other_plus_x, other_plus_y});
+    EXPECT_THAT(other_markfaces,
+        testing::UnorderedElementsAre(other_floor, other_ceil, other_minus_x, other_plus_x, other_plus_y));
 }
 
 TEST(testmapsQ1, q1FuncIllusionaryVisblocker)
@@ -1311,6 +1310,17 @@ TEST(testmapsQ1, cube)
     EXPECT_EQ(12, bsp.dclipnodes.size());
 }
 
+TEST(testmapsQ1, cubeCaseInsensitive)
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_cube_case_insensitive.map");
+
+    ASSERT_EQ(6, bsp.dfaces.size());
+    for (const auto &dface : bsp.dfaces) {
+        // the case from the .wad is used, not the case from the .map
+        ASSERT_EQ(Face_TextureNameView(&bsp, &dface), "orangestuff8");
+    }
+}
+
 /**
  * Two solid cuboids touching along one edge
  */
@@ -1491,6 +1501,39 @@ TEST(testmapsQ1, sealingHull1Onnode)
     EXPECT_EQ(CONTENTS_SOLID, BSP_FindContentsAtPoint(&bsp, 0, &bsp.dmodels[0], player_start_pos + qvec3d(0, 0, 1000)));
     EXPECT_EQ(CONTENTS_SOLID, BSP_FindContentsAtPoint(&bsp, 1, &bsp.dmodels[0], player_start_pos + qvec3d(0, 0, 1000)));
     EXPECT_EQ(CONTENTS_SOLID, BSP_FindContentsAtPoint(&bsp, 2, &bsp.dmodels[0], player_start_pos + qvec3d(0, 0, 1000)));
+}
+
+TEST(testmapsQ1, hullsFlag)
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_hulls.map");
+
+    ASSERT_EQ(3, bsp.dmodels.size()); // world and 2 func_wall's
+
+    {
+        const auto in_bmodel_pos = qvec3d(-152, -168, 168);
+
+        // the func_wall has _hulls is set to 5 = 0b101, so generate hulls 0 and 2 (blocks shambler and line traces but
+        // player can walk through)
+
+        EXPECT_EQ(CONTENTS_SOLID, BSP_FindContentsAtPoint(&bsp, 0, &bsp.dmodels[1], in_bmodel_pos));
+        EXPECT_EQ(CONTENTS_EMPTY, BSP_FindContentsAtPoint(&bsp, 1, &bsp.dmodels[1], in_bmodel_pos));
+        EXPECT_EQ(CONTENTS_SOLID, BSP_FindContentsAtPoint(&bsp, 2, &bsp.dmodels[1], in_bmodel_pos));
+
+        EXPECT_TRUE(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[1], in_bmodel_pos + qvec3d(8, 0, 0)));
+    }
+
+    {
+        // the second one has _hulls 6 = 0b110, so generate hulls 1 and 2 (blocks player + shambler, but no visual
+        // faces and point-size hull traces can pass through)
+
+        const auto in_bmodel_pos2 = qvec3d(-152, 24, 168);
+
+        EXPECT_EQ(CONTENTS_EMPTY, BSP_FindContentsAtPoint(&bsp, 0, &bsp.dmodels[2], in_bmodel_pos2));
+        EXPECT_EQ(CONTENTS_SOLID, BSP_FindContentsAtPoint(&bsp, 1, &bsp.dmodels[2], in_bmodel_pos2));
+        EXPECT_EQ(CONTENTS_SOLID, BSP_FindContentsAtPoint(&bsp, 2, &bsp.dmodels[2], in_bmodel_pos2));
+
+        EXPECT_FALSE(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[2], in_bmodel_pos2 + qvec3d(8, 0, 0)));
+    }
 }
 
 TEST(testmapsQ1, 0125UnitFaces)
@@ -2001,7 +2044,7 @@ TEST(qbspQ1, waterSubdivisionWithLitWaterOff)
 
     for (auto *face : faces) {
         auto *texinfo = BSP_GetTexinfo(&bsp, face->texinfo);
-        EXPECT_EQ(texinfo->flags.native, TEX_SPECIAL);
+        EXPECT_EQ(texinfo->flags.native_q1, TEX_SPECIAL);
     }
 }
 
@@ -2014,7 +2057,7 @@ TEST(qbspQ1, waterSubdivisionWithDefaults)
 
     for (auto *face : faces) {
         auto *texinfo = BSP_GetTexinfo(&bsp, face->texinfo);
-        EXPECT_EQ(texinfo->flags.native, 0);
+        EXPECT_EQ(texinfo->flags.native_q1, 0);
     }
 }
 
@@ -2401,7 +2444,7 @@ TEST(qbspQ1, tjuncMatrix)
         EXPECT_FALSE(has_tjunc(INDEX_SOLID, INDEX_DETAIL_FENCE_MIRRORINSIDE));
         EXPECT_FALSE(has_tjunc(INDEX_SOLID, INDEX_DETAIL_ILLUSIONARY));
         EXPECT_FALSE(has_tjunc(INDEX_SOLID, INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES));
-        EXPECT_FALSE(has_tjunc(INDEX_SOLID, INDEX_WATER));
+        EXPECT_TRUE(has_tjunc(INDEX_SOLID, INDEX_WATER));
         EXPECT_TRUE(has_tjunc(INDEX_SOLID, INDEX_SKY));
     }
 
@@ -2415,7 +2458,7 @@ TEST(qbspQ1, tjuncMatrix)
         EXPECT_FALSE(has_tjunc(INDEX_SOLID_DETAIL, INDEX_DETAIL_ILLUSIONARY));
         EXPECT_FALSE(has_tjunc(INDEX_SOLID_DETAIL, INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES));
         // see INDEX_SOLID, INDEX_WATER explanation
-        EXPECT_FALSE(has_tjunc(INDEX_SOLID_DETAIL, INDEX_WATER));
+        EXPECT_TRUE(has_tjunc(INDEX_SOLID_DETAIL, INDEX_WATER));
         EXPECT_TRUE(has_tjunc(INDEX_SOLID_DETAIL, INDEX_SKY));
     }
 
@@ -2431,7 +2474,7 @@ TEST(qbspQ1, tjuncMatrix)
         EXPECT_FALSE(has_tjunc(INDEX_DETAIL_WALL, INDEX_DETAIL_ILLUSIONARY));
         EXPECT_FALSE(has_tjunc(INDEX_DETAIL_WALL, INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES));
         // see INDEX_SOLID, INDEX_WATER explanation
-        EXPECT_FALSE(has_tjunc(INDEX_DETAIL_WALL, INDEX_WATER));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_WALL, INDEX_WATER));
         // sky cuts a hole in detail_wall
         EXPECT_TRUE(has_tjunc(INDEX_DETAIL_WALL, INDEX_SKY));
     }
@@ -2535,7 +2578,7 @@ TEST(qbspQ1, tjuncMatrix)
         EXPECT_FALSE(has_tjunc(INDEX_SKY, INDEX_DETAIL_FENCE_MIRRORINSIDE));
         EXPECT_FALSE(has_tjunc(INDEX_SKY, INDEX_DETAIL_ILLUSIONARY));
         EXPECT_FALSE(has_tjunc(INDEX_SKY, INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES));
-        EXPECT_FALSE(has_tjunc(INDEX_SKY, INDEX_WATER));
+        EXPECT_TRUE(has_tjunc(INDEX_SKY, INDEX_WATER));
         EXPECT_TRUE(has_tjunc(INDEX_SKY, INDEX_SKY));
     }
 }

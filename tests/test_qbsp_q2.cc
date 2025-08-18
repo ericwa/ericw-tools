@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include <gmock/gmock.h>
 
 #include <qbsp/map.hh>
 #include <common/bsputils.hh>
@@ -11,7 +12,6 @@
 #include <map>
 
 #include "test_qbsp.hh"
-#include "testutils.hh"
 
 TEST(testmapsQ2, detail)
 {
@@ -189,8 +189,9 @@ TEST(testmapsQ2, areaportal)
     //
     // the conceptual area portal has portalnum 1, and consists of two dareaportals entries with connections to area 1
     // and 2
-    EXPECT_VECTORS_UNOREDERED_EQUAL(bsp.dareaportals, std::vector<dareaportal_t>{{0, 0}, {1, 1}, {1, 2}});
-    EXPECT_VECTORS_UNOREDERED_EQUAL(bsp.dareas, std::vector<darea_t>{{0, 0}, {1, 1}, {1, 2}});
+    EXPECT_THAT(
+        bsp.dareaportals, testing::UnorderedElementsAreArray(std::vector<dareaportal_t>{{0, 0}, {1, 1}, {1, 2}}));
+    EXPECT_THAT(bsp.dareas, testing::UnorderedElementsAreArray(std::vector<darea_t>{{0, 0}, {1, 1}, {1, 2}}));
 
     // look up the leafs
     const qvec3d player_start{-88, -112, 120};
@@ -221,8 +222,8 @@ TEST(testmapsQ2, areaportal)
     EXPECT_EQ(Q2_CONTENTS_SOLID, Leaf_Brushes(&bsp, void_leaf).at(0)->contents);
 
     // check leaf areas
-    EXPECT_VECTORS_UNOREDERED_EQUAL(
-        (std::vector<int32_t>{1, 2}), std::vector<int32_t>{player_start_leaf->area, other_room_leaf->area});
+    EXPECT_THAT(
+        (std::vector<int32_t>{player_start_leaf->area, other_room_leaf->area}), testing::UnorderedElementsAre(1, 2));
     // the areaportal leaf itself actually gets assigned to one of the two sides' areas
     EXPECT_TRUE(areaportal_leaf->area == 1 || areaportal_leaf->area == 2);
     EXPECT_EQ(0, void_leaf->area); // a solid leaf gets the invalid area
@@ -250,8 +251,97 @@ TEST(testmapsQ2, areaportalWithDetail)
     //
     // the conceptual area portal has portalnum 1, and consists of two dareaportals entries with connections to area 1
     // and 2
-    EXPECT_VECTORS_UNOREDERED_EQUAL(bsp.dareaportals, std::vector<dareaportal_t>{{0, 0}, {1, 1}, {1, 2}});
-    EXPECT_VECTORS_UNOREDERED_EQUAL(bsp.dareas, std::vector<darea_t>{{0, 0}, {1, 1}, {1, 2}});
+    EXPECT_THAT(
+        bsp.dareaportals, testing::UnorderedElementsAreArray(std::vector<dareaportal_t>{{0, 0}, {1, 1}, {1, 2}}));
+    EXPECT_THAT(bsp.dareas, testing::UnorderedElementsAreArray(std::vector<darea_t>{{0, 0}, {1, 1}, {1, 2}}));
+}
+
+/**
+ * same as q2_areaportal.map but has 2 areaportals
+ * more clearly shows how areaportal indices work
+ *
+ *        ap1      ap2
+ *
+ *  player |  light |   ammo
+ *  start  |        | grenades
+ *
+ *   area     area      area
+ *    3         2        1
+ *
+ *         -- +x -->
+ */
+TEST(testmapsQ2, areaportals)
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_areaportals.map");
+
+    ASSERT_EQ(4, bsp.dareas.size()); // 1 reserved + 3 actual = 4
+    ASSERT_EQ(5, bsp.dareaportals.size()); // 1 reserved + (2 portals * 2 directions) = 5
+
+    // check the areaportal numbers from the "style" keys of the func_areaportal entities
+    auto ents = EntData_Parse(bsp);
+
+    auto playerstart_portal_it = std::ranges::find_if(
+        ents, [](const entdict_t &dict) { return dict.get("targetname") == "playerstart_portal"; });
+    auto grenades_portal_it =
+        std::ranges::find_if(ents, [](const entdict_t &dict) { return dict.get("targetname") == "grenades_portal"; });
+
+    ASSERT_NE(playerstart_portal_it, ents.end());
+    ASSERT_NE(grenades_portal_it, ents.end());
+
+    const int32_t playerstart_portal_num = playerstart_portal_it->get_int("style");
+    const int32_t grenades_portal_num = grenades_portal_it->get_int("style");
+
+    // may need to be adjusted
+    ASSERT_EQ(1, playerstart_portal_num);
+    ASSERT_EQ(2, grenades_portal_num);
+
+    // look up the leafs
+    const qvec3d player_start{-88, -112, 120};
+    const qvec3d light_pos{72, -136, 168};
+    const qvec3d grenades_pos{416, -128, 112};
+
+    auto *player_start_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], player_start);
+    auto *light_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], light_pos);
+    auto *grenades_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], grenades_pos);
+
+    // check leaf areas (may need to be adjusted)
+    EXPECT_EQ(2, light_leaf->area);
+    EXPECT_EQ(3, player_start_leaf->area);
+    EXPECT_EQ(1, grenades_leaf->area);
+
+    // inspect player_start_leaf area
+    {
+        const darea_t &area = bsp.dareas[player_start_leaf->area];
+        ASSERT_EQ(area.numareaportals, 1); // to light area
+
+        const dareaportal_t &portal = bsp.dareaportals[area.firstareaportal];
+        EXPECT_EQ(portal.otherarea, light_leaf->area);
+        EXPECT_EQ(portal.portalnum, playerstart_portal_num);
+    }
+
+    // inspect "light" leaf
+    {
+        const darea_t &area = bsp.dareas[light_leaf->area];
+        ASSERT_EQ(area.numareaportals, 2); // to player start, grenades areas
+
+        dareaportal_t portal_x = bsp.dareaportals[area.firstareaportal];
+        dareaportal_t portal_y = bsp.dareaportals[area.firstareaportal + 1];
+
+        EXPECT_THAT((std::vector{portal_x, portal_y}),
+            testing::UnorderedElementsAre(
+                dareaportal_t{.portalnum = playerstart_portal_num, .otherarea = player_start_leaf->area},
+                dareaportal_t{.portalnum = grenades_portal_num, .otherarea = grenades_leaf->area}));
+    }
+
+    // inspect "grenades" leaf
+    {
+        const darea_t &area = bsp.dareas[grenades_leaf->area];
+        ASSERT_EQ(area.numareaportals, 1); // to light leaf
+
+        dareaportal_t portal = bsp.dareaportals[area.firstareaportal];
+
+        EXPECT_EQ(portal, (dareaportal_t{.portalnum = grenades_portal_num, .otherarea = light_leaf->area}));
+    }
 }
 
 TEST(testmapsQ2, nodrawLight)
@@ -266,7 +356,7 @@ TEST(testmapsQ2, nodrawLight)
 
     auto *texinfo = Face_Texinfo(&bsp, topface);
     EXPECT_EQ(std::string(texinfo->texture.data()), "e1u1/trigger");
-    EXPECT_EQ(texinfo->flags.native, (Q2_SURF_LIGHT | Q2_SURF_NODRAW));
+    EXPECT_EQ(texinfo->flags.native_q2, (Q2_SURF_LIGHT | Q2_SURF_NODRAW));
 }
 
 TEST(testmapsQ2, longTextureName)
@@ -393,7 +483,7 @@ TEST(testmapsQ2, lavaclip)
 
     auto *texinfo = Face_Texinfo(&bsp, topface);
     EXPECT_EQ(std::string(texinfo->texture.data()), "e1u1/brlava");
-    EXPECT_EQ(texinfo->flags.native, (Q2_SURF_LIGHT | Q2_SURF_WARP));
+    EXPECT_EQ(texinfo->flags.native_q2, (Q2_SURF_LIGHT | Q2_SURF_WARP));
 }
 
 /**
@@ -451,37 +541,37 @@ TEST(testmapsQ2, liquids)
         const qvec3d wateropaque_trans33 = watertrans33_trans66 - qvec3d(0, 0, 48);
         const qvec3d floor_wateropaque = wateropaque_trans33 - qvec3d(0, 0, 48);
 
-        EXPECT_VECTORS_UNOREDERED_EQUAL(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], watertrans66_air)),
-            std::vector<std::string>({"e1u1/bluwter", "e1u1/bluwter"}));
+        EXPECT_THAT(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], watertrans66_air)),
+            testing::UnorderedElementsAre("e1u1/bluwter", "e1u1/bluwter"));
         EXPECT_EQ(0, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], watertrans33_trans66).size());
         EXPECT_EQ(0, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], wateropaque_trans33).size());
-        EXPECT_VECTORS_UNOREDERED_EQUAL(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], floor_wateropaque)),
-            std::vector<std::string>({"e1u1/c_met11_2"}));
+        EXPECT_THAT(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], floor_wateropaque)),
+            testing::UnorderedElementsAre("e1u1/c_met11_2"));
     }
 
     const qvec3d watertrans66_slimetrans66{-116, -144, 116};
 
     // water trans66 / slime trans66
     {
-        EXPECT_VECTORS_UNOREDERED_EQUAL(
+        EXPECT_THAT(
             TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], watertrans66_slimetrans66, qvec3d(0, -1, 0))),
-            std::vector<std::string>({"e1u1/sewer1"}));
+            testing::UnorderedElementsAre("e1u1/sewer1"));
 
-        EXPECT_VECTORS_UNOREDERED_EQUAL(
+        EXPECT_THAT(
             TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], watertrans66_slimetrans66, qvec3d(0, 1, 0))),
-            std::vector<std::string>({"e1u1/sewer1"}));
+            testing::UnorderedElementsAre("e1u1/sewer1"));
     }
 
     // slime trans66 / lava trans66
     const qvec3d slimetrans66_lavatrans66 = watertrans66_slimetrans66 + qvec3d(0, 48, 0);
     {
-        EXPECT_VECTORS_UNOREDERED_EQUAL(
+        EXPECT_THAT(
             TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], slimetrans66_lavatrans66, qvec3d(0, -1, 0))),
-            std::vector<std::string>({"e1u1/brlava"}));
+            testing::UnorderedElementsAre("e1u1/brlava"));
 
-        EXPECT_VECTORS_UNOREDERED_EQUAL(
+        EXPECT_THAT(
             TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], slimetrans66_lavatrans66, qvec3d(0, 1, 0))),
-            std::vector<std::string>({"e1u1/brlava"}));
+            testing::UnorderedElementsAre("e1u1/brlava"));
     }
 }
 
@@ -589,36 +679,35 @@ TEST(testmapsQ2, mirrorinside)
     {
         SCOPED_TRACE("window is not two sided by default");
         const qvec3d window_pos{192, 96, 156};
-        EXPECT_VECTORS_UNOREDERED_EQUAL(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], window_pos)),
-            std::vector<std::string>({"e2u2/wndow1_1"}));
+        EXPECT_THAT(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], window_pos)),
+            testing::UnorderedElementsAre("e2u2/wndow1_1"));
     }
 
     {
         SCOPED_TRACE("aux is not two sided by default");
         const qvec3d aux_pos{32, 96, 156};
-        EXPECT_VECTORS_UNOREDERED_EQUAL(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], aux_pos)),
-            std::vector<std::string>({"e1u1/brwater"}));
+        EXPECT_THAT(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], aux_pos)),
+            testing::UnorderedElementsAre("e1u1/brwater"));
     }
 
     {
         SCOPED_TRACE("mist is two sided by default");
         const qvec3d mist_pos{32, -28, 156};
-        EXPECT_VECTORS_UNOREDERED_EQUAL(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], mist_pos)),
-            std::vector<std::string>({"e1u1/brwater", "e1u1/brwater"}));
+        EXPECT_THAT(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], mist_pos)),
+            testing::UnorderedElementsAre("e1u1/brwater", "e1u1/brwater"));
     }
 
     {
         SCOPED_TRACE("_mirrorinside 0 disables the inside faces on mist");
         const qvec3d mist_mirrorinside0_pos{32, -224, 156};
-        EXPECT_VECTORS_UNOREDERED_EQUAL(
-            TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], mist_mirrorinside0_pos)),
-            std::vector<std::string>({"e1u1/brwater"}));
+        EXPECT_THAT(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], mist_mirrorinside0_pos)),
+            testing::UnorderedElementsAre("e1u1/brwater"));
     }
 
     {
         SCOPED_TRACE("_mirrorinside 1 works on func_detail_fence");
-        EXPECT_VECTORS_UNOREDERED_EQUAL(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], {32, -348, 156})),
-            std::vector<std::string>({"e1u1/alphamask", "e1u1/alphamask"}));
+        EXPECT_THAT(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], {32, -348, 156})),
+            testing::UnorderedElementsAre("e1u1/alphamask", "e1u1/alphamask"));
     }
 }
 
@@ -920,8 +1009,9 @@ TEST(testmapsQ2, tjuncMatrix)
         EXPECT_TRUE(has_tjunc(INDEX_DETAIL_WALL, INDEX_SOLID));
         // same as INDEX_DETAIL_WALL, INDEX_SOLID
         EXPECT_TRUE(has_tjunc(INDEX_DETAIL_WALL, INDEX_SOLID_DETAIL));
-        EXPECT_FALSE(has_tjunc(INDEX_DETAIL_WALL, INDEX_TRANSPARENT_WATER));
-        EXPECT_FALSE(has_tjunc(INDEX_DETAIL_WALL, INDEX_OPAQUE_WATER));
+        // 2.0.0-alpha9: water welds with everything
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_WALL, INDEX_TRANSPARENT_WATER));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_WALL, INDEX_OPAQUE_WATER));
         EXPECT_FALSE(has_tjunc(INDEX_DETAIL_WALL, INDEX_OPAQUE_MIST));
         EXPECT_FALSE(has_tjunc(INDEX_DETAIL_WALL, INDEX_TRANSPARENT_WINDOW));
         EXPECT_FALSE(has_tjunc(INDEX_DETAIL_WALL, INDEX_OPAQUE_AUX));
@@ -934,7 +1024,7 @@ TEST(testmapsQ2, tjuncMatrix)
         EXPECT_FALSE(has_tjunc(INDEX_SOLID, INDEX_DETAIL_WALL));
         EXPECT_TRUE(has_tjunc(INDEX_SOLID, INDEX_SOLID));
         EXPECT_TRUE(has_tjunc(INDEX_SOLID, INDEX_SOLID_DETAIL));
-        EXPECT_FALSE(has_tjunc(INDEX_SOLID, INDEX_TRANSPARENT_WATER));
+        EXPECT_TRUE(has_tjunc(INDEX_SOLID, INDEX_TRANSPARENT_WATER));
         EXPECT_TRUE(has_tjunc(INDEX_SOLID, INDEX_OPAQUE_WATER));
         EXPECT_TRUE(has_tjunc(INDEX_SOLID, INDEX_OPAQUE_MIST));
         EXPECT_FALSE(has_tjunc(INDEX_SOLID, INDEX_TRANSPARENT_WINDOW));
@@ -947,7 +1037,7 @@ TEST(testmapsQ2, tjuncMatrix)
         EXPECT_FALSE(has_tjunc(INDEX_SOLID_DETAIL, INDEX_DETAIL_WALL));
         EXPECT_TRUE(has_tjunc(INDEX_SOLID_DETAIL, INDEX_SOLID));
         EXPECT_TRUE(has_tjunc(INDEX_SOLID_DETAIL, INDEX_SOLID_DETAIL));
-        EXPECT_FALSE(has_tjunc(INDEX_SOLID_DETAIL, INDEX_TRANSPARENT_WATER));
+        EXPECT_TRUE(has_tjunc(INDEX_SOLID_DETAIL, INDEX_TRANSPARENT_WATER));
         EXPECT_TRUE(has_tjunc(INDEX_SOLID_DETAIL, INDEX_OPAQUE_WATER));
         EXPECT_TRUE(has_tjunc(INDEX_SOLID_DETAIL, INDEX_OPAQUE_MIST));
         EXPECT_FALSE(has_tjunc(INDEX_SOLID_DETAIL, INDEX_TRANSPARENT_WINDOW));
@@ -1013,7 +1103,7 @@ TEST(testmapsQ2, tjuncMatrix)
         EXPECT_TRUE(has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_SOLID_DETAIL));
         // translucent window and translucent water weld
         EXPECT_TRUE(has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_TRANSPARENT_WATER));
-        EXPECT_FALSE(has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_OPAQUE_WATER));
+        EXPECT_TRUE(has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_OPAQUE_WATER));
         EXPECT_FALSE(has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_OPAQUE_MIST));
         EXPECT_TRUE(has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_TRANSPARENT_WINDOW));
         // note, aux is lower priority than window, so bottom face of aux gets cut away
@@ -1028,7 +1118,7 @@ TEST(testmapsQ2, tjuncMatrix)
         EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_AUX, INDEX_DETAIL_WALL));
         EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_AUX, INDEX_SOLID));
         EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_AUX, INDEX_SOLID_DETAIL));
-        EXPECT_FALSE(has_tjunc(INDEX_OPAQUE_AUX, INDEX_TRANSPARENT_WATER));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_AUX, INDEX_TRANSPARENT_WATER));
         EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_AUX, INDEX_OPAQUE_WATER));
         EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_AUX, INDEX_OPAQUE_MIST));
         // window is stronger, cuts a hole which causes aux to weld
@@ -1042,7 +1132,7 @@ TEST(testmapsQ2, tjuncMatrix)
         EXPECT_FALSE(has_tjunc(INDEX_SKY, INDEX_DETAIL_WALL));
         EXPECT_TRUE(has_tjunc(INDEX_SKY, INDEX_SOLID));
         EXPECT_TRUE(has_tjunc(INDEX_SKY, INDEX_SOLID_DETAIL));
-        EXPECT_FALSE(has_tjunc(INDEX_SKY, INDEX_TRANSPARENT_WATER));
+        EXPECT_TRUE(has_tjunc(INDEX_SKY, INDEX_TRANSPARENT_WATER));
         EXPECT_TRUE(has_tjunc(INDEX_SKY, INDEX_OPAQUE_WATER));
         EXPECT_TRUE(has_tjunc(INDEX_SKY, INDEX_OPAQUE_MIST));
         EXPECT_FALSE(has_tjunc(INDEX_SKY, INDEX_TRANSPARENT_WINDOW));
@@ -1090,7 +1180,7 @@ TEST(testmapsQ2, unknownContents)
         auto *texinfo = BSP_GetTexinfo(&bsp, top_face->texinfo);
         ASSERT_TRUE(texinfo);
 
-        EXPECT_EQ(texinfo->flags.native, 1024);
+        EXPECT_EQ(texinfo->flags.native_q2, 1024);
     }
 }
 
@@ -1118,14 +1208,14 @@ TEST(testmapsQ2, chopOrder0)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_chop_order_0.map");
 
-    EXPECT_VECTORS_UNOREDERED_EQUAL(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0})),
-        std::vector<std::string>({"e1u1/ggrat4_2"}));
+    EXPECT_THAT(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0})),
+        testing::UnorderedElementsAre("e1u1/ggrat4_2"));
 }
 
 TEST(testmapsQ2, chopOrder1)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_chop_order_1.map");
 
-    EXPECT_VECTORS_UNOREDERED_EQUAL(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0})),
-        std::vector<std::string>({"e1u1/+0btshoot2"}));
+    EXPECT_THAT(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0})),
+        testing::UnorderedElementsAre("e1u1/+0btshoot2"));
 }

@@ -177,30 +177,48 @@ std::string contentflags_t::to_string() const
 
 // surfflags_t
 
-static auto as_tuple(const surfflags_t &flags)
+bool surfflags_t::is_nodraw() const
 {
-    return std::tie(flags.native, flags.is_nodraw, flags.is_hintskip, flags.is_hint, flags.no_dirt, flags.no_shadow,
-        flags.no_bounce, flags.no_minlight, flags.no_expand, flags.no_phong, flags.light_ignore,
-        flags.surflight_rescale, flags.surflight_style, flags.surflight_color, flags.surflight_minlight_scale,
-        flags.surflight_atten, flags.surflight_targetname, flags.phong_angle, flags.phong_angle_concave,
-        flags.phong_group, flags.minlight, flags.minlight_color, flags.light_alpha, flags.light_twosided,
-        flags.maxlight, flags.lightcolorscale, flags.surflight_group, flags.world_units_per_luxel,
-        flags.object_channel_mask);
+    return !!(native_q2 & Q2_SURF_NODRAW);
+}
+
+void surfflags_t::set_nodraw(bool nodraw)
+{
+    if (nodraw)
+        native_q2 = static_cast<q2_surf_flags_t>(native_q2 | Q2_SURF_NODRAW);
+    else
+        native_q2 = static_cast<q2_surf_flags_t>(native_q2 & ~Q2_SURF_NODRAW);
+}
+
+bool surfflags_t::is_hint() const
+{
+    return !!(native_q2 & Q2_SURF_HINT);
+}
+
+void surfflags_t::set_hint(bool hint)
+{
+    if (hint)
+        native_q2 = static_cast<q2_surf_flags_t>(native_q2 | Q2_SURF_HINT);
+    else
+        native_q2 = static_cast<q2_surf_flags_t>(native_q2 & ~Q2_SURF_HINT);
+}
+
+bool surfflags_t::is_hintskip() const
+{
+    return !!(native_q2 & Q2_SURF_SKIP);
+}
+
+void surfflags_t::set_hintskip(bool hintskip)
+{
+    if (hintskip)
+        native_q2 = static_cast<q2_surf_flags_t>(native_q2 | Q2_SURF_SKIP);
+    else
+        native_q2 = static_cast<q2_surf_flags_t>(native_q2 & ~Q2_SURF_SKIP);
 }
 
 bool surfflags_t::needs_write() const
 {
-    return as_tuple(*this) != as_tuple(surfflags_t());
-}
-
-bool surfflags_t::operator<(const surfflags_t &other) const
-{
-    return as_tuple(*this) < as_tuple(other);
-}
-
-bool surfflags_t::operator>(const surfflags_t &other) const
-{
-    return as_tuple(*this) > as_tuple(other);
+    return *this != surfflags_t();
 }
 
 bool surfflags_t::is_valid(const gamedef_t *game) const

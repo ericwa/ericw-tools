@@ -1381,42 +1381,42 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
             bool alpha_test = false, fullbright = false;
             
             if (bsp.loadversion->game->id == GAME_QUAKE_II) {
-                if (texinfo->flags.native & Q2_SURF_NODRAW) {
+                if (texinfo->flags.is_nodraw()) {
                     continue;
                 } else if (t.ends_with("/trigger")) {
                     continue;
                 }
 
-                if (texinfo->flags.native & Q2_SURF_SKY) {
+                if (texinfo->flags.native_q2 & Q2_SURF_SKY) {
                     program = m_skybox_program;
                     needs_skybox = true;
                 } else {
-                    if (texinfo->flags.native & Q2_SURF_TRANS33) {
+                    if (texinfo->flags.native_q2 & Q2_SURF_TRANS33) {
                         opacity = 0.33f;
                     }
-                    if (texinfo->flags.native & Q2_SURF_TRANS66) {
+                    if (texinfo->flags.native_q2 & Q2_SURF_TRANS66) {
                         opacity = 0.66f;
                     }
 
-                    if (texinfo->flags.native & Q2_SURF_ALPHATEST) {
+                    if (texinfo->flags.native_q2 & Q2_SURF_ALPHATEST) {
                         alpha_test = true;
                     }
                 }
             } else if (bsp.loadversion->game->id == GAME_SIN) {
-                if (texinfo->flags.native & SIN_SURF_NODRAW) {
+                if (texinfo->flags.native_q2 & SIN_SURF_NODRAW) {
                     continue;
                 } else if (t.ends_with("/trigger")) {
                     continue;
                 }
 
-                if (texinfo->flags.native & SIN_SURF_SKY) {
+                if (texinfo->flags.native_q2 & SIN_SURF_SKY) {
                     program = m_skybox_program;
                     needs_skybox = true;
                 } else {
                     alpha_test = true;
                 }
 
-                if (texinfo->flags.native & SIN_SURF_NONLIT) {
+                if (texinfo->flags.native_q2 & SIN_SURF_NONLIT) {
                     fullbright = true;
                 }
 

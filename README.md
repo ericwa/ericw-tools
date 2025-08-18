@@ -86,6 +86,13 @@ cd build
 cmake .. -DCMAKE_TOOLCHAIN_FILE="$(pwd)/../vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_GENERATOR_PLATFORM=Win32 -DSPHINX_EXECUTABLE="$(pwd)/../sphinx-venv/Scripts/sphinx-build.exe"
 ```
 
+#### IDE Tips - CLion
+
+- Modify the "Google Test" run/debug configuration template to have `--gtest_catch_exceptions=0`, otherwise the  
+  debugger doesn't stop on exceptions (segfaults etc.)
+
+  (see: https://youtrack.jetbrains.com/issue/CPP-29559/Clion-LLDB-does-not-break-on-SEH-exceptions-within-GTest)
+
 ### macOS 10.15
 
 ```

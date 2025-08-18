@@ -59,6 +59,7 @@ TEST(bsputil, extractTextures)
     // reload .wad
     fs::clear();
     img::clear();
+    img::init_palette(bspver_q1.game);
 
     auto ar = fs::addArchive("test.wad");
     ASSERT_TRUE(ar);

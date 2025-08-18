@@ -188,7 +188,7 @@ struct compiled_brush_t
 
             int native = bsp->loadversion->game->contents_to_native(contents);
 
-            if ((bsp->loadversion->game->id == GAME_QUAKE_II || bsp->loadversion->game->id == GAME_SIN) && (native || side.flags.native || side.value)) {
+            if ((bsp->loadversion->game->id == GAME_QUAKE_II || bsp->loadversion->game->id == GAME_SIN) && (native || side.flags.native_q2 || side.value)) {
                 wal_metadata_t *meta = nullptr;
 
                 if (bsp->loadversion->game->id == GAME_QUAKE_II) {
@@ -212,8 +212,8 @@ struct compiled_brush_t
 
                 if (!meta || !((meta->contents & ~(Q2_CONTENTS_SOLID | Q2_CONTENTS_WINDOW)) ==
                                      (native & ~(Q2_CONTENTS_SOLID | Q2_CONTENTS_WINDOW)) &&
-                                 meta->flags == side.flags.native && meta->value == side.value)) {
-                    ewt::print(stream, " {} {} {}", native, side.flags.native, side.value);
+                                 meta->flags == side.flags.native_q2 && meta->value == side.value)) {
+                    ewt::print(stream, " {} {} {}", native, static_cast<int32_t>(side.flags.native_q2), side.value);
                 }
             }
 
@@ -524,7 +524,7 @@ static void DefaultSkipSide(compiled_brush_side_t &side, const mbsp_t *bsp)
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         side.flags = {Q2_SURF_NODRAW};
     } else if (bsp->loadversion->game->id == GAME_SIN) {
-        side.flags = {SIN_SURF_NODRAW};
+        side.flags = {static_cast<q2_surf_flags_t>(SIN_SURF_NODRAW)};
     }
 }
 
@@ -640,13 +640,13 @@ static void OverrideTextureForContents(
         
         if (strstr(name, " ")) {
             side.texture_name = "GENERIC/misc/skip";
-            side.flags = {SIN_SURF_NODRAW};
+            side.flags = {static_cast<q2_surf_flags_t>(SIN_SURF_NODRAW)};
             return;
         }
 
         if (native & (Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP)) {
             side.texture_name = "GENERIC/misc/clip";
-            side.flags = {SIN_SURF_NODRAW};
+            side.flags = {static_cast<q2_surf_flags_t>(SIN_SURF_NODRAW)};
             return;
         }
     }
@@ -936,12 +936,13 @@ static std::vector<compiled_brush_t> DecompileLeafTask(const mbsp_t *bsp, const 
 
             if (bsp->loadversion->game->contents_to_native(brush.contents) == 0) {
                 // hint brush
-                side.texture_name = "e1u1/hint";
                 
                 if (bsp->loadversion->game->id == GAME_QUAKE_II) {
                     side.flags = {Q2_SURF_HINT};
+                    side.texture_name = "e1u1/hint";
                 } else if (bsp->loadversion->game->id == GAME_SIN) {
-                    side.flags = {SIN_SURF_HINT};
+                    side.flags = {static_cast<q2_surf_flags_t>(SIN_SURF_HINT)};
+                    side.texture_name = "GENERIC/misc/hint";
                 }
 
                 side.valve = finalSide.plane.normal;

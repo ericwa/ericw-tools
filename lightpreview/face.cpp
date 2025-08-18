@@ -109,6 +109,6 @@ void FacePanel::updateWithBSP(const mbsp_t *bsp, const std::vector<entdict_t> &e
     addStat(QStringLiteral("plane"), QString::fromStdString(fmt::format("{} {}", bsp->dplanes[bestFace->planenum].normal, bsp->dplanes[bestFace->planenum].dist)));
     addStat(QStringLiteral("texture"), bsp->texinfo[bestFace->texinfo].texture.data());
     addStat(QStringLiteral("lightofs"), bestFace->lightofs);
-    addStat(QStringLiteral("flags"), QString::fromStdString(fmt::format("{}", bsp->texinfo[bestFace->texinfo].flags.native)));
+    addStat(QStringLiteral("flags"), QString::fromStdString(fmt::format("{}", static_cast<int32_t>(bsp->texinfo[bestFace->texinfo].flags.native_q2))));
     addStat(QStringLiteral("translucence"), QString::fromStdString(fmt::format("{}", bsp->texinfo[bestFace->texinfo].translucence)));
 }

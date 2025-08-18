@@ -465,8 +465,7 @@ qbsp_settings::qbsp_settings()
           "change the subdivide threshold, in luxels. 0 will disable subdivision entirely"},
       nofill{this, "nofill", false, &debugging_group, "don't perform outside filling"},
       nomerge{this, "nomerge", false, &debugging_group, "don't perform face merging"},
-      nomergeacrossliquids{this, "nomergeacrossliquids", false, &common_format_group,
-          "block merging faces that cross above and below water"},
+      nomergeacrossliquids{this, "nomergeacrossliquids", false, &common_format_group, "deprecated, no effect"},
       noedgereuse{this, "noedgereuse", false, &debugging_group, "don't reuse edges (for debugging software rendering)"},
       noclip{this, "noclip", false, &common_format_group, "don't write clip nodes (Q1-like BSP formats)"},
       noskip{this, "noskip", false, &debugging_group, "don't remove faces with the 'skip' texture"},
@@ -642,7 +641,7 @@ void qbsp_settings::load_texture_def(const std::string &pathname)
             texinfo = extended_texinfo_t{.contents_native = native};
 
             if (parser.parse_token(PARSE_SAMELINE | PARSE_OPTIONAL)) {
-                texinfo->flags.native = std::stoi(parser.token);
+                texinfo->flags.native_q2 = static_cast<q2_surf_flags_t>(std::stoi(parser.token));
             }
 
             if (parser.parse_token(PARSE_SAMELINE | PARSE_OPTIONAL)) {
@@ -985,6 +984,24 @@ static void GatherLeafVolumes_r(node_t *node, bspbrush_t::container &container)
     GatherLeafVolumes_r(nodedata->children[1], container);
 }
 
+/* Returns true if the user requested to generate an entity bmodel clipnodes
+ * for a given hull. */
+static bool ShouldGenerateClipnodes(mapentity_t &entity, hull_index_t hullnum)
+{
+    // Default to generating clipnodes for all hulls.
+    if (!entity.epairs.has("_hulls")) {
+        return true;
+    }
+
+    const int hulls = entity.epairs.get_int("_hulls");
+    // Ensure 0 means all hulls even in the case we have more than 32 hulls.
+    if (hulls == 0) {
+        return true;
+    }
+
+    return hulls & (1 << hullnum.value_or(0));
+}
+
 /*
 ===============
 ProcessEntity
@@ -1077,13 +1094,31 @@ static void ProcessEntity(mapentity_t &entity, hull_index_t hullnum)
 
     // we're discarding the brush
     if (discarded_trigger) {
-        entity.epairs.set("mins", fmt::to_string(entity.bounds.mins()));
-        entity.epairs.set("maxs", fmt::to_string(entity.bounds.maxs()));
+        if (!hullnum.value_or(0)) {
+            entity.epairs.set("mins", fmt::to_string(entity.bounds.mins()));
+            entity.epairs.set("maxs", fmt::to_string(entity.bounds.maxs()));
+        }
         return;
     }
 
     // corner case, -omitdetail with all detail in an bmodel
     if (brushes.empty() && entity.bounds == aabb3d()) {
+        return;
+    }
+
+    // _hulls key
+    if (!ShouldGenerateClipnodes(entity, hullnum)) {
+        // We still need to emit an empty tree otherwise hull 0 will point past
+        // the clipnode array (FIXME?).
+        bspbrush_t::container empty;
+        tree_t tree;
+        BrushBSP(tree, entity, empty, tree_split_t::FAST);
+        if (hullnum.value_or(0)) {
+            ExportClipNodes(entity, tree.headnode, hullnum.value());
+        } else {
+            MakeTreePortals(tree); // needed to assign leaf bounds
+            ExportDrawNodes(entity, tree.headnode, map.bsp.dfaces.size());
+        }
         return;
     }
 
@@ -1514,7 +1549,7 @@ CreateHulls
 static void CreateHulls()
 {
     /* create the hulls sequentially */
-    auto &hulls = qbsp_options.target_game->get_hull_sizes();
+    auto hulls = qbsp_options.target_game->get_hull_sizes();
 
     // game has no hulls, so we have to export brush lists and stuff.
     if (!hulls.size()) {
@@ -1685,7 +1720,7 @@ static int MakeSkipTexinfo()
     maptexinfo_t mt{};
 
     mt.miptex = FindMiptex("skip", true);
-    mt.flags.is_nodraw = true;
+    mt.flags.native_q2 = static_cast<q2_surf_flags_t>(mt.flags.native_q2 | Q2_SURF_NODRAW);
 
     return FindTexinfo(mt, qplane3d{});
 }

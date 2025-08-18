@@ -278,7 +278,7 @@ void brush_side_t::parse_extended_texinfo(parser_t &parser)
             q2_info.contents = std::stoi(parser.token);
 
             if (parser.parse_token(PARSE_OPTIONAL)) {
-                q2_info.flags.native = std::stoi(parser.token);
+                q2_info.flags = std::stoi(parser.token);
             }
             if (parser.parse_token(PARSE_OPTIONAL)) {
                 q2_info.value = std::stoi(parser.token);
@@ -583,7 +583,7 @@ void brush_side_t::write_extended_info(std::ostream &stream)
 {
     if (std::holds_alternative<mapfile::texinfo_quake2_t>(extended_info)) {
         auto &q2 = std::get<mapfile::texinfo_quake2_t>(extended_info);
-        ewt::print(stream, " {} {} {}", q2.contents, q2.flags.native, q2.value);
+        ewt::print(stream, " {} {} {}", q2.contents, q2.flags, q2.value);
     } else if (std::holds_alternative<mapfile::texinfo_sin_t>(extended_info)) {
         auto &sin = std::get<mapfile::texinfo_sin_t>(extended_info);
 
@@ -1376,10 +1376,10 @@ static void convert_sin_to_q2(map_file_t &map, const gamedef_t *game, const sett
                             
                 if (std::holds_alternative<sin_contents_t>(flag.flag)) {
                     auto &contents = std::get<sin_contents_t>(flag.flag);
-                    q2.contents = flag.add ? (q2.contents | (int32_t) contents) : (q2.contents &= ~(int32_t) contents);
+                    q2.contents = flag.add ? (q2.contents | (int32_t) contents) : (q2.contents & ~(int32_t) contents);
                 } else {
                     auto &flags = std::get<sin_surfflags_t>(flag.flag);
-                    q2.flags.native = flag.add ? (q2.flags.native | (int32_t) flags) : (q2.flags.native &= ~(int32_t) flags);
+                    q2.flags = flag.add ? (q2.flags | (int32_t) flags) : (q2.flags & ~(int32_t) flags);
                 }
             }
         }
@@ -1393,7 +1393,7 @@ static void convert_sin_to_q2(map_file_t &map, const gamedef_t *game, const sett
                 // use swl as a base
                 if (auto swl_meta = std::get<0>(img::load_texture(face.texture, false, game, options))) {
                     q2.contents = swl_meta->meta.contents_native;
-                    q2.flags = swl_meta->meta.flags;
+                    q2.flags = swl_meta->meta.flags.native_q2;
                     q2.value = swl_meta->meta.value;
                 } else {
                     FError("{} is missing, needed for this to work properly", face.texture);

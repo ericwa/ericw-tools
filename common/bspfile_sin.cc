@@ -50,7 +50,7 @@ void sin_lightinfo_t::stream_read(std::istream &s)
 // convert from mbsp_t
 sin_texinfo_t::sin_texinfo_t(const mtexinfo_t &model)
     : vecs(model.vecs),
-      flags(model.flags.native),
+      flags(model.flags.native_q2),
       texture(model.texture),
       nexttexinfo(model.nexttexinfo),
       trans_mag(model.trans_mag),
@@ -68,7 +68,7 @@ sin_texinfo_t::sin_texinfo_t(const mtexinfo_t &model)
 
 sin_texinfo_t::operator mtexinfo_t() const
 {
-    return {vecs, {flags}, 0, 0, texture, nexttexinfo, trans_mag, trans_angle, base_angle, animtime, nonlit, translucence,
+    return {vecs, {.native_q2 = static_cast<q2_surf_flags_t>(flags)}, 0, 0, texture, nexttexinfo, trans_mag, trans_angle, base_angle, animtime, nonlit, translucence,
             friction, restitution, color, groupname};
 }
 

@@ -161,13 +161,13 @@ int32_t bsp29_dclipnode_t::upcast(const int16_t &v)
 texinfo_t::texinfo_t(const mtexinfo_t &model)
     : vecs(model.vecs),
       miptex(model.miptex),
-      flags(model.flags.native)
+      flags(model.flags.native_q1)
 {
 }
 
 texinfo_t::operator mtexinfo_t() const
 {
-    return {vecs, {flags}, miptex};
+    return {vecs, {.native_q1 = static_cast<q1_surf_flags_t>(flags)}, miptex};
 }
 
 void texinfo_t::stream_write(std::ostream &s) const

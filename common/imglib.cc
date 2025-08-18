@@ -99,6 +99,9 @@ void init_palette(const gamedef_t *game)
 static void convert_paletted_to_32_bit(
     const std::vector<uint8_t> &pixels, std::vector<qvec4b> &output, const std::vector<qvec3b> &pal)
 {
+    if (pal.size() != 256) {
+        FError("palette size {} != 256", pal.size());
+    }
     output.resize(pixels.size());
 
     for (size_t i = 0; i < pixels.size(); i++) {
@@ -145,7 +148,7 @@ std::optional<texture> load_wal(std::string_view name, const fs::data &file, boo
     tex.meta.width = tex.width = mt.width;
     tex.meta.height = tex.height = mt.height;
     tex.meta.contents_native = mt.contents;
-    tex.meta.flags = {mt.flags};
+    tex.meta.flags = {.native_q2 = static_cast<q2_surf_flags_t>(mt.flags)};
     tex.meta.value = mt.value;
     tex.meta.animation = mt.animname.data();
 
@@ -304,6 +307,7 @@ const texture *find(std::string_view str)
 
 void clear()
 {
+    palette.clear();
     textures.clear();
 }
 
@@ -416,22 +420,25 @@ std::optional<texture_meta> load_wal_json_meta(std::string_view name, const fs::
             }
         }
 
-        if (json.contains("flags")) {
+        // this only makes sense for q2
+        if (json.contains("flags") && game->id == GAME_QUAKE_II) {
             auto &flags = json["flags"];
 
+            int32_t intflags = 0;
             if (flags.is_number_integer()) {
-                meta.flags.native = flags.get<int32_t>();
+                intflags = flags.get<int32_t>();
             } else if (flags.is_string()) {
-                meta.flags.native = game->surfflags_from_string(flags.get<std::string>());
+                intflags = game->surfflags_from_string(flags.get<std::string>());
             } else if (flags.is_array()) {
                 for (auto &flag : flags) {
                     if (flag.is_number_integer()) {
-                        meta.flags.native |= flag.get<int32_t>();
+                        intflags |= flag.get<int32_t>();
                     } else if (flag.is_string()) {
-                        meta.flags.native |= game->surfflags_from_string(flag.get<std::string>());
+                        intflags |= game->surfflags_from_string(flag.get<std::string>());
                     }
                 }
             }
+            meta.flags.native_q2 = static_cast<q2_surf_flags_t>(intflags);
         }
 
         if (json.contains("animation") && json["animation"].is_string()) {
@@ -522,7 +529,7 @@ std::optional<texture> load_swl(std::string_view name, const fs::data &file, boo
     tex.meta.width = tex.width = mt.width;
     tex.meta.height = tex.height = mt.height;
     tex.meta.contents_native = mt.contents;
-    tex.meta.flags = {mt.flags};
+    tex.meta.flags = {static_cast<q2_surf_flags_t>(mt.flags)};
     tex.meta.value = mt.value;
     tex.meta.animation = mt.animname.data();
 
