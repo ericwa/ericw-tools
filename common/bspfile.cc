@@ -233,12 +233,6 @@ public:
         return 0;
     }
 
-    bool texinfo_is_hintskip(const surfflags_t &flags, const std::string &name) const override
-    {
-        // anything texname other than "hint" in a hint brush is treated as "hintskip", and discarded
-        return !string_iequals(name, "hint");
-    }
-
     contentflags_t create_contents_from_native(int32_t native) const override
     {
         switch (native) {
@@ -278,84 +272,10 @@ public:
         return CONTENTS_EMPTY;
     }
 
-    bool contents_clip_same_type(contentflags_t self, contentflags_t other) const override
-    {
-        if (!self.equals(this, other))
-            return false;
-
-        // they're equal types...
-
-        if (self.flags & EWT_CFLAG_SUPPRESS_CLIPPING_SAME_TYPE)
-            return false; // don't clip
-
-        return true;
-    }
-
-    bool contents_are_valid(contentflags_t contents, bool strict) const override
-    {
-        // fixme-brushbsp: document exactly what this is supposed to do
-        return true;
-    }
-
     int32_t contents_from_string(std::string_view str) const override
     {
         // Q1 doesn't get contents from files
         return 0;
-    }
-
-    bool portal_can_see_through(contentflags_t contents0, contentflags_t contents1, bool transwater) const override
-    {
-        contents_int_t bits_a = contents0.flags;
-        contents_int_t bits_b = contents1.flags;
-
-        // can't see through solid
-        if ((bits_a & EWT_VISCONTENTS_SOLID) || (bits_b & EWT_VISCONTENTS_SOLID)) {
-            return false;
-        }
-
-        bool a_translucent = transwater ? ((bits_a & EWT_ALL_LIQUIDS) != 0) : false;
-        bool b_translucent = transwater ? ((bits_b & EWT_ALL_LIQUIDS) != 0) : false;
-
-        if (((bits_a ^ bits_b) & EWT_ALL_VISIBLE_CONTENTS) == 0)
-            return true;
-
-        if ((bits_a & EWT_CFLAG_DETAIL) || a_translucent)
-            bits_a = 0;
-        if ((bits_b & EWT_CFLAG_DETAIL) || b_translucent)
-            bits_b = 0;
-
-        if ((bits_a ^ bits_b) == 0)
-            return true; // identical on both sides
-
-        if (((bits_a ^ bits_b) & EWT_ALL_VISIBLE_CONTENTS) == 0)
-            return true;
-        return false;
-    }
-
-    bool contents_are_opaque(contentflags_t contents, bool transwater) const override
-    {
-        auto bits = contents.visible_contents().flags;
-
-        if (bits == EWT_VISCONTENTS_SOLID)
-            return true;
-        else if (bits == EWT_VISCONTENTS_SKY)
-            return true;
-        else if (bits == EWT_VISCONTENTS_DETAIL_WALL)
-            return true;
-        else if (bits == EWT_VISCONTENTS_WINDOW)
-            return false;
-        else if (bits == EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER)
-            return true;
-        else if (bits == EWT_VISCONTENTS_LAVA)
-            return !transwater;
-        else if (bits == EWT_VISCONTENTS_SLIME)
-            return !transwater;
-        else if (bits == EWT_VISCONTENTS_WATER)
-            return !transwater;
-        else if (bits == EWT_VISCONTENTS_MIST)
-            return false;
-
-        return false;
     }
 
     contentflags_t contents_remap_for_export(contentflags_t contents, remap_type_t type) const override
@@ -383,88 +303,6 @@ public:
         return contents;
     }
 
-    contentflags_t combine_contents(contentflags_t a, contentflags_t b) const override
-    {
-        auto bits_a = a.flags;
-        auto bits_b = b.flags;
-
-        auto result = contentflags_t::make(bits_a | bits_b);
-
-        if (a.is_solid() || b.is_solid()) {
-            return contentflags_t::make(EWT_VISCONTENTS_SOLID);
-        }
-        if (a.is_sky() || b.is_sky()) {
-            return contentflags_t::make(EWT_VISCONTENTS_SKY);
-        }
-        if ((a.flags & EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER) || (b.flags & EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER)) {
-            // strip out detail flag, otherwise it breaks the visblocker feature
-            result = contentflags_t::make(result.flags & ~EWT_CFLAG_DETAIL);
-        }
-
-        return result;
-    }
-
-    contentflags_t portal_visible_contents(contentflags_t a, contentflags_t b) const override
-    {
-        auto bits_a = a.flags;
-        auto bits_b = b.flags;
-
-        // aviods spamming "sides not found" warning on Q1 maps with sky
-        if ((bits_a & (EWT_VISCONTENTS_SOLID | EWT_VISCONTENTS_SKY)) &&
-            (bits_b & (EWT_VISCONTENTS_SOLID | EWT_VISCONTENTS_SKY)))
-            return contentflags_t::make(EWT_VISCONTENTS_EMPTY);
-
-        contents_int_t result;
-
-        if ((bits_a & EWT_CFLAG_SUPPRESS_CLIPPING_SAME_TYPE) || (bits_b & EWT_CFLAG_SUPPRESS_CLIPPING_SAME_TYPE)) {
-            result = bits_a | bits_b;
-        } else {
-            result = bits_a ^ bits_b;
-        }
-
-        auto strongest_contents_change = contentflags_t::make(result).visible_contents();
-
-        return strongest_contents_change;
-    }
-
-    bool portal_generates_face(
-        contentflags_t portal_visible_contents, contentflags_t brushcontents, planeside_t brushside_side) const override
-    {
-        auto bits_portal = portal_visible_contents.flags;
-        auto bits_brush = brushcontents.flags;
-
-        // find the highest visible content bit set in portal
-        int32_t index = portal_visible_contents.visible_contents_index();
-        if (index == -1) {
-            return false;
-        }
-
-        // check if it's not set in the brush
-        if (!(bits_brush & nth_bit(index))) {
-            return false;
-        }
-
-        if (brushside_side == SIDE_BACK) {
-            // explicit override?
-            if (bits_brush & EWT_CFLAG_MIRROR_INSIDE_SET) {
-                return (bits_brush & EWT_CFLAG_MIRROR_INSIDE) != 0;
-            }
-
-            return (bits_brush & (EWT_ALL_LIQUIDS | EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER)) != 0;
-        }
-        return true;
-    }
-
-    void contents_make_valid(contentflags_t &contents) const override
-    {
-        // fixme-brushbsp: probably wrong?
-        // todo: anything smarter we can do here?
-        // think this can't even happen in Q1 anyways
-        if (!contents_are_valid(contents, false)) {
-            contents = contentflags_t::make(EWT_VISCONTENTS_SOLID);
-        }
-    }
-
     std::span<const aabb3d> get_hull_sizes() const override
     {
         static constexpr aabb3d hulls[] = {
@@ -474,7 +312,7 @@ public:
     }
 
     contentflags_t face_get_contents(
-        const std::string &texname, const surfflags_t &flags, contentflags_t) const override
+        const std::string &texname, const surfflags_t &flags, contentflags_t, bool transwater) const override
     {
         // check for strong content indicators
         if (!Q_strcasecmp(texname.data(), "origin")) {
@@ -484,12 +322,18 @@ public:
         } else if (!Q_strcasecmp(texname.data(), "clip")) {
             return contentflags_t::make(EWT_INVISCONTENTS_PLAYERCLIP);
         } else if (texname[0] == '*') {
+            // non-Q2: -transwater implies liquids are detail and translucent
+            contents_int_t liquid_flags = 0;
+            if (transwater) {
+                liquid_flags = EWT_CFLAG_DETAIL | EWT_CFLAG_TRANSLUCENT;
+            }
+
             if (!Q_strncasecmp(texname.data() + 1, "lava", 4)) {
-                return contentflags_t::make(EWT_VISCONTENTS_LAVA);
+                return contentflags_t::make(EWT_VISCONTENTS_LAVA | liquid_flags);
             } else if (!Q_strncasecmp(texname.data() + 1, "slime", 5)) {
-                return contentflags_t::make(EWT_VISCONTENTS_SLIME);
+                return contentflags_t::make(EWT_VISCONTENTS_SLIME | liquid_flags);
             } else {
-                return contentflags_t::make(EWT_VISCONTENTS_WATER);
+                return contentflags_t::make(EWT_VISCONTENTS_WATER | liquid_flags);
             }
         } else if (!Q_strncasecmp(texname.data(), "sky", 3)) {
             return contentflags_t::make(EWT_VISCONTENTS_SKY);
@@ -557,45 +401,6 @@ public:
 
         static const auto palette = make_palette(palette_bytes);
         return palette;
-    }
-
-private:
-    struct content_stats_t : public content_stats_base_t
-    {
-        std::mutex stat_mutex;
-        std::unordered_map<contents_t, size_t> native_types;
-        std::atomic<size_t> total_brushes;
-    };
-
-public:
-    std::unique_ptr<content_stats_base_t> create_content_stats() const override
-    {
-        return std::unique_ptr<content_stats_base_t>(new content_stats_t{});
-    }
-
-    void count_contents_in_stats(contentflags_t contents, content_stats_base_t &stats_any) const override
-    {
-        content_stats_t &stats = dynamic_cast<content_stats_t &>(stats_any);
-
-        {
-            std::unique_lock lock(stats.stat_mutex);
-            stats.native_types[contents.flags]++;
-        }
-
-        stats.total_brushes++;
-    }
-
-    void print_content_stats(const content_stats_base_t &stats_any, const char *what) const override
-    {
-        const content_stats_t &stats = dynamic_cast<const content_stats_t &>(stats_any);
-        logging::stat_tracker_t stat_print;
-
-        for (auto [bits, count] : stats.native_types) {
-            auto c = contentflags_t{.flags = bits};
-            stat_print.register_stat(fmt::format("{} {}", get_contents_display(c.flags), what)).count += count;
-        }
-
-        stat_print.register_stat(fmt::format("{} total", what)).count += stats.total_brushes;
     }
 };
 
@@ -744,12 +549,6 @@ struct gamedef_q2_t : public gamedef_t
         }
 
         return 0;
-    }
-
-    bool texinfo_is_hintskip(const surfflags_t &flags, const std::string &name) const override
-    {
-        // any face in a hint brush that isn't HINT are treated as "hintskip", and discarded
-        return !(flags.native_q2 & Q2_SURF_HINT);
     }
 
     contentflags_t create_contents_from_native(int32_t native) const override
@@ -918,31 +717,6 @@ struct gamedef_q2_t : public gamedef_t
         return contents.flags & (EWT_ALL_VISIBLE_CONTENTS | EWT_ALL_INVISCONTENTS);
     }
 
-    bool contents_clip_same_type(contentflags_t self, contentflags_t other) const override
-    {
-        if ((self.flags & EWT_ALL_VISIBLE_CONTENTS) != (other.flags & EWT_ALL_VISIBLE_CONTENTS))
-            return false; // not same type
-
-        if (self.flags & EWT_CFLAG_SUPPRESS_CLIPPING_SAME_TYPE)
-            return false;
-
-        return true;
-    }
-
-    bool contents_are_valid(contentflags_t contents, bool strict) const override
-    {
-        // check that we don't have more than one visible contents type
-        // FIXME: we don't do that
-        const int32_t x = contents.flags & EWT_ALL_VISIBLE_CONTENTS;
-
-        // TODO: check other invalid mixes
-        if (!x && strict) {
-            return false;
-        }
-
-        return true;
-    }
-
     static constexpr const char *bitflag_names[] = {"SOLID", "WINDOW", "AUX", "LAVA", "SLIME", "WATER", "MIST", "128",
         "256", "512", "1024", "2048", "4096", "8192", "16384", "AREAPORTAL", "PLAYERCLIP", "MONSTERCLIP", "CURRENT_0",
         "CURRENT_90", "CURRENT_180", "CURRENT_270", "CURRENT_UP", "CURRENT_DOWN", "ORIGIN", "MONSTER", "DEADMONSTER",
@@ -957,66 +731,6 @@ struct gamedef_q2_t : public gamedef_t
         }
 
         return 0;
-    }
-
-    contentflags_t portal_visible_contents(contentflags_t a, contentflags_t b) const override
-    {
-        auto bits_a = a.flags;
-        auto bits_b = b.flags;
-
-        contents_int_t result;
-
-        if ((bits_a & EWT_CFLAG_SUPPRESS_CLIPPING_SAME_TYPE) || (bits_b & EWT_CFLAG_SUPPRESS_CLIPPING_SAME_TYPE)) {
-            result = bits_a | bits_b;
-        } else {
-            result = bits_a ^ bits_b;
-        }
-
-        auto strongest_contents_change = contentflags_t::make(result).visible_contents();
-
-        return strongest_contents_change;
-    }
-
-    bool portal_can_see_through(contentflags_t contents0, contentflags_t contents1, bool) const override
-    {
-        contents_int_t c0 = contents0.flags, c1 = contents1.flags;
-
-        // can't see through solid
-        if ((c0 & EWT_VISCONTENTS_SOLID) || (c1 & EWT_VISCONTENTS_SOLID)) {
-            return false;
-        }
-
-        if (((c0 ^ c1) & EWT_ALL_VISIBLE_CONTENTS) == 0)
-            return true;
-
-        if ((c0 & EWT_CFLAG_TRANSLUCENT) || (c0 & EWT_CFLAG_DETAIL)) {
-            c0 = 0;
-        }
-        if ((c1 & EWT_CFLAG_TRANSLUCENT) || (c1 & EWT_CFLAG_DETAIL)) {
-            c1 = 0;
-        }
-
-        // identical on both sides
-        if (!(c0 ^ c1))
-            return true;
-
-        return (((c0 ^ c1) & EWT_ALL_VISIBLE_CONTENTS) == 0);
-    }
-
-    bool contents_are_opaque(contentflags_t contents, bool transwater) const override
-    {
-        int32_t c = contents.flags;
-
-        if (contents.visible_contents().flags == EWT_VISCONTENTS_EMPTY)
-            return false;
-
-        // it's visible..
-
-        if (c & EWT_CFLAG_TRANSLUCENT) {
-            return false;
-        }
-
-        return true;
     }
 
     contentflags_t contents_remap_for_export(contentflags_t contents, remap_type_t type) const override
@@ -1038,85 +752,10 @@ struct gamedef_q2_t : public gamedef_t
         return contents;
     }
 
-    contentflags_t combine_contents(contentflags_t a, contentflags_t b) const override
-    {
-        contents_int_t bits_a = a.flags;
-        contents_int_t bits_b = b.flags;
-
-        // structural solid eats detail flags
-        if (a.is_solid() || b.is_solid()) {
-            bits_a &= ~EWT_CFLAG_DETAIL;
-            bits_b &= ~EWT_CFLAG_DETAIL;
-        }
-        if ((bits_a & EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER) || (bits_b & EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER)) {
-            // strip out detail flag, otherwise it breaks the visblocker feature
-            bits_a &= ~EWT_CFLAG_DETAIL;
-            bits_b &= ~EWT_CFLAG_DETAIL;
-        }
-
-        return contentflags_t::make(bits_a | bits_b);
-    }
-
-    bool portal_generates_face(
-        contentflags_t portal_visible_contents, contentflags_t brushcontents, planeside_t brushside_side) const override
-    {
-        auto bits_portal = portal_visible_contents.flags;
-        auto bits_brush = brushcontents.flags;
-
-        // find the highest visible content bit set in portal
-        int32_t index = portal_visible_contents.visible_contents_index();
-        if (index == -1) {
-            return false;
-        }
-
-        // check if it's not set in the brush
-        if (!(bits_brush & nth_bit(index))) {
-            return false;
-        }
-
-        if (brushside_side == SIDE_BACK) {
-            // explicit override?
-            if (bits_brush & EWT_CFLAG_MIRROR_INSIDE_SET) {
-                return (bits_brush & EWT_CFLAG_MIRROR_INSIDE) != 0;
-            }
-            if (portal_visible_contents.flags & (EWT_VISCONTENTS_WINDOW | EWT_VISCONTENTS_AUX)) {
-                // windows or aux don't generate inside faces
-                return false;
-            }
-            // other types get mirrored by default
-            return true;
-        }
-        return true;
-    }
-
-    void contents_make_valid(contentflags_t &contents) const override
-    {
-        if (contents.is_valid(this, false)) {
-            return;
-        }
-
-        // clear all visible contents bits except the strongest one
-        bool got = false;
-        contents_int_t flags = contents.flags;
-
-        for (int32_t i = 0; i <= EWT_LAST_VISIBLE_CONTENTS_INDEX; i++) {
-            if (!got) {
-                if (flags & nth_bit(i)) {
-                    got = true;
-                    continue;
-                }
-            } else {
-                flags &= ~nth_bit(i);
-            }
-        }
-
-        contents = contentflags_t::make(flags);
-    }
-
     std::span<const aabb3d> get_hull_sizes() const override { return {}; }
 
     contentflags_t face_get_contents(
-        const std::string &texname, const surfflags_t &flags, contentflags_t contents) const override
+        const std::string &texname, const surfflags_t &flags, contentflags_t contents, bool transwater) const override
     {
         // hints and skips are never detail, and have no content
         if (flags.native_q2 & (Q2_SURF_HINT | Q2_SURF_SKIP)) {
@@ -1333,45 +972,6 @@ public:
             155, 167, 139, 119, 135, 107, 87, 159, 91, 83};
         static const auto palette = make_palette(palette_bytes);
         return palette;
-    }
-
-private:
-    struct content_stats_t : public content_stats_base_t
-    {
-        std::mutex stat_mutex;
-        std::unordered_map<contents_t, size_t> native_types;
-        std::atomic<size_t> total_brushes;
-    };
-
-public:
-    std::unique_ptr<content_stats_base_t> create_content_stats() const override
-    {
-        return std::unique_ptr<content_stats_base_t>(new content_stats_t{});
-    }
-
-    void count_contents_in_stats(contentflags_t contents, content_stats_base_t &stats_any) const override
-    {
-        content_stats_t &stats = dynamic_cast<content_stats_t &>(stats_any);
-
-        {
-            std::unique_lock lock(stats.stat_mutex);
-            stats.native_types[contents.flags]++;
-        }
-
-        stats.total_brushes++;
-    }
-
-    void print_content_stats(const content_stats_base_t &stats_any, const char *what) const override
-    {
-        const content_stats_t &stats = dynamic_cast<const content_stats_t &>(stats_any);
-        logging::stat_tracker_t stat_print;
-
-        for (auto [bits, count] : stats.native_types) {
-            auto c = contentflags_t{.flags = bits};
-            stat_print.register_stat(fmt::format("{} {}", get_contents_display(c.flags), what)).count += count;
-        }
-
-        stat_print.register_stat(fmt::format("{} total", what)).count += stats.total_brushes;
     }
 };
 

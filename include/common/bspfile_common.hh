@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include <atomic>
 #include <cstdint>
 #include <array>
 #include <tuple>
@@ -28,6 +29,7 @@
 #include <any>
 #include <optional>
 #include <span>
+#include <mutex>
 
 #include <common/bitflags.hh>
 #include <common/fs.hh>
@@ -146,8 +148,9 @@ struct contentflags_t
     static contentflags_t create_detail_illusionary_contents(contentflags_t original)
     {
         contents_int_t flags = original.flags;
-        flags &= ~EWT_VISCONTENTS_SOLID;
-        flags |= EWT_VISCONTENTS_MIST | EWT_CFLAG_DETAIL;
+        flags &= ~(EWT_VISCONTENTS_SOLID | EWT_CFLAG_MIRROR_INSIDE);
+        flags |= EWT_VISCONTENTS_MIST | EWT_CFLAG_TRANSLUCENT | EWT_CFLAG_DETAIL | EWT_CFLAG_MIRROR_INSIDE_SET;
+        // start with mirror_inside off; we'll turn it back on if the mapper requested it
         return contentflags_t::make(flags);
     }
 
@@ -155,8 +158,8 @@ struct contentflags_t
     {
         contents_int_t flags = original.flags;
         flags &= ~EWT_VISCONTENTS_SOLID;
-        // FIXME: why are we putting EWT_CFLAG_TRANSLUCENT here but not in create_detail_illusionary_contents?
-        flags |= (EWT_VISCONTENTS_WINDOW | EWT_CFLAG_TRANSLUCENT | EWT_CFLAG_DETAIL);
+        flags |= (EWT_VISCONTENTS_WINDOW | EWT_CFLAG_TRANSLUCENT | EWT_CFLAG_DETAIL | EWT_CFLAG_MIRROR_INSIDE_SET);
+        // start with mirror_inside off; we'll turn it back on if the mapper requested it
         return contentflags_t::make(flags);
     }
 
@@ -194,8 +197,6 @@ struct contentflags_t
     }
     contentflags_t &set_mirrored(const std::optional<bool> &mirror_inside_value);
 
-    inline bool will_clip_same_type(const gamedef_t *game) const { return will_clip_same_type(game, *this); }
-    bool will_clip_same_type(const gamedef_t *game, contentflags_t other) const;
     std::optional<bool> clips_same_type() const
     {
         if (flags & EWT_CFLAG_SUPPRESS_CLIPPING_SAME_TYPE) {
@@ -214,13 +215,10 @@ struct contentflags_t
     bool is_sky() const;
     // NOTE: unlike the other is_*() checks, this one checks the visible contents
     bool is_liquid() const;
-    bool is_valid(const gamedef_t *game, bool strict = true) const;
     // FIXME: checks for "clip" bits (player or monster), but is_clip() makes it sound like an exclusive check.
     bool is_clip() const;
     bool is_origin() const;
     bool is_opaque(const gamedef_t *game, bool transwater) const;
-
-    void make_valid(const gamedef_t *game);
 
     bool is_fence() const;
 
@@ -236,6 +234,16 @@ struct contentflags_t
     }
 
     contentflags_t cluster_contents(contentflags_t other) const;
+    static contentflags_t combine_contents(contentflags_t a, contentflags_t b);
+    static bool portal_can_see_through(contentflags_t contents0, contentflags_t contents1);
+    // for a portal with contents from `a` to `b`, returns what type of face should be rendered facing `a` and `b`
+    static contentflags_t portal_visible_contents(contentflags_t a, contentflags_t b);
+    // for a brush with the given contents touching a portal with the required `portal_visible_contents`, as determined
+    // by portal_visible_contents, should the `brushside_side` of the brushside generate a face? e.g. liquids generate
+    // front and back sides by default, but for q1 detail_wall/detail_illusionary the back side is opt-in with
+    // _mirrorinside
+    static bool portal_generates_face(
+        contentflags_t portal_visible_contents, contentflags_t brushcontents, planeside_t brushside_side);
 
     std::string to_string() const;
 
@@ -277,6 +285,9 @@ struct contentflags_t
 
     auto operator<=>(const contentflags_t &other) const = default;
 };
+
+// gtest support
+std::ostream &operator<<(std::ostream &os, contents_t flags);
 
 enum q1_surf_flags_t : int32_t;
 enum q2_surf_flags_t : int32_t;
@@ -416,15 +427,24 @@ enum gameid_t
     GAME_TOTAL
 };
 
-struct content_stats_base_t
+struct content_stats_t
 {
-    virtual ~content_stats_base_t() = default;
+private:
+    std::mutex stat_mutex;
+    std::unordered_map<contents_t, size_t> native_types;
+    std::atomic<size_t> total_brushes;
+
+public:
+    void count_contents_in_stats(contentflags_t contents);
+    void print_content_stats(const char *what) const;
 };
 
 // Game definition, which contains data specific to
 // the game a BSP version is being compiled for.
 struct gamedef_t
 {
+    virtual ~gamedef_t() = default;
+
     // friendly name, used for commands
     const char *friendly_name;
 
@@ -461,39 +481,20 @@ struct gamedef_t
      */
     virtual bool surfflags_may_phong(const surfflags_t &a, const surfflags_t &b) const = 0;
     virtual int32_t surfflags_from_string(std::string_view str) const = 0;
-    // FIXME: fix so that we don't have to pass a name here
-    virtual bool texinfo_is_hintskip(const surfflags_t &flags, const std::string &name) const = 0;
     virtual contentflags_t create_contents_from_native(int32_t native) const = 0;
     virtual int32_t contents_to_native(contentflags_t contents) const = 0;
-    virtual bool contents_clip_same_type(contentflags_t self, contentflags_t other) const = 0;
-    virtual bool contents_are_valid(contentflags_t contents, bool strict = true) const = 0;
     virtual int32_t contents_from_string(std::string_view str) const = 0;
-    virtual bool portal_can_see_through(contentflags_t contents0, contentflags_t contents1, bool transwater) const = 0;
-    virtual bool contents_are_opaque(contentflags_t contents, bool transwater) const = 0;
     enum class remap_type_t
     {
         brush,
         leaf
     };
     virtual contentflags_t contents_remap_for_export(contentflags_t contents, remap_type_t type) const = 0;
-    virtual contentflags_t combine_contents(contentflags_t a, contentflags_t b) const = 0;
-    // for a portal with contents from `a` to `b`, returns what type of face should be rendered facing `a` and `b`
-    virtual contentflags_t portal_visible_contents(contentflags_t a, contentflags_t b) const = 0;
-    // for a brush with the given contents touching a portal with the required `portal_visible_contents`, as determined
-    // by portal_visible_contents, should the `brushside_side` of the brushside generate a face? e.g. liquids generate
-    // front and back sides by default, but for q1 detail_wall/detail_illusionary the back side is opt-in with
-    // _mirrorinside
-    virtual bool portal_generates_face(
-        contentflags_t portal_visible_contents, contentflags_t brushcontents, planeside_t brushside_side) const = 0;
-    virtual void contents_make_valid(contentflags_t &contents) const = 0;
     virtual std::span<const aabb3d> get_hull_sizes() const = 0;
     virtual contentflags_t face_get_contents(
-        const std::string &texname, const surfflags_t &flags, contentflags_t contents) const = 0;
+        const std::string &texname, const surfflags_t &flags, contentflags_t contents, bool transwater) const = 0;
     virtual void init_filesystem(const fs::path &source, const settings::common_settings &settings) const = 0;
     virtual const std::vector<qvec3b> &get_default_palette() const = 0;
-    virtual std::unique_ptr<content_stats_base_t> create_content_stats() const = 0;
-    virtual void count_contents_in_stats(contentflags_t contents, content_stats_base_t &stats) const = 0;
-    virtual void print_content_stats(const content_stats_base_t &stats, const char *what) const = 0;
 };
 
 // Lump specification; stores the name and size

@@ -120,11 +120,6 @@ contentflags_t &contentflags_t::set_mirrored(const std::optional<bool> &mirror_i
     return *this;
 }
 
-bool contentflags_t::will_clip_same_type(const gamedef_t *game, contentflags_t other) const
-{
-    return game->contents_clip_same_type(*this, other);
-}
-
 contentflags_t &contentflags_t::set_clips_same_type(const std::optional<bool> &clips_same_type_value)
 {
     if (clips_same_type_value) {
@@ -165,11 +160,6 @@ bool contentflags_t::is_liquid() const
     return (visibleflags & EWT_ALL_LIQUIDS) != 0;
 }
 
-bool contentflags_t::is_valid(const gamedef_t *game, bool strict) const
-{
-    return game->contents_are_valid(*this, strict);
-}
-
 bool contentflags_t::is_clip() const
 {
     return (flags & (EWT_INVISCONTENTS_PLAYERCLIP | EWT_INVISCONTENTS_MONSTERCLIP)) != 0;
@@ -182,12 +172,16 @@ bool contentflags_t::is_origin() const
 
 bool contentflags_t::is_opaque(const gamedef_t *game, bool transwater) const
 {
-    return game->contents_are_opaque(*this, transwater);
-}
+    if (visible_contents().flags == EWT_VISCONTENTS_EMPTY)
+        return false;
 
-void contentflags_t::make_valid(const gamedef_t *game)
-{
-    game->contents_make_valid(*this);
+    // it's visible..
+
+    if (flags & EWT_CFLAG_TRANSLUCENT) {
+        return false;
+    }
+
+    return true;
 }
 
 bool contentflags_t::is_fence() const
@@ -208,6 +202,111 @@ contentflags_t contentflags_t::cluster_contents(contentflags_t other) const
     return contentflags_t::make(combined);
 }
 
+contentflags_t contentflags_t::combine_contents(contentflags_t a, contentflags_t b)
+{
+    contents_int_t bits_a = a.flags;
+    contents_int_t bits_b = b.flags;
+
+    // structural solid eats detail flags
+    if (a.is_solid() || b.is_solid()) {
+        bits_a &= ~(EWT_CFLAG_DETAIL | EWT_CFLAG_TRANSLUCENT);
+        bits_b &= ~(EWT_CFLAG_DETAIL | EWT_CFLAG_TRANSLUCENT);
+    }
+    if (a.is_sky() || b.is_sky()) {
+        bits_a &= ~(EWT_CFLAG_DETAIL | EWT_CFLAG_TRANSLUCENT);
+        bits_b &= ~(EWT_CFLAG_DETAIL | EWT_CFLAG_TRANSLUCENT);
+    }
+    if ((a.flags & EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER) || (b.flags & EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER)) {
+        // strip out detail flag, otherwise it breaks the visblocker feature
+        bits_a &= ~(EWT_CFLAG_DETAIL | EWT_CFLAG_TRANSLUCENT);
+        bits_b &= ~(EWT_CFLAG_DETAIL | EWT_CFLAG_TRANSLUCENT);
+    }
+
+    return contentflags_t::make(bits_a | bits_b);
+}
+
+bool contentflags_t::portal_can_see_through(contentflags_t contents0, contentflags_t contents1)
+{
+    contents_int_t c0 = contents0.flags, c1 = contents1.flags;
+
+    // can't see through solid
+    if ((c0 & EWT_VISCONTENTS_SOLID) || (c1 & EWT_VISCONTENTS_SOLID)) {
+        return false;
+    }
+
+    if (((c0 ^ c1) & EWT_ALL_VISIBLE_CONTENTS) == 0)
+        return true;
+
+    if ((c0 & EWT_CFLAG_TRANSLUCENT) || (c0 & EWT_CFLAG_DETAIL)) {
+        c0 = 0;
+    }
+    if ((c1 & EWT_CFLAG_TRANSLUCENT) || (c1 & EWT_CFLAG_DETAIL)) {
+        c1 = 0;
+    }
+
+    // identical on both sides
+    if (!(c0 ^ c1))
+        return true;
+
+    return (((c0 ^ c1) & EWT_ALL_VISIBLE_CONTENTS) == 0);
+}
+
+contentflags_t contentflags_t::portal_visible_contents(contentflags_t a, contentflags_t b)
+{
+    auto bits_a = a.flags;
+    auto bits_b = b.flags;
+
+    // aviods spamming "sides not found" warning on Q1 maps with sky
+    if ((bits_a & (EWT_VISCONTENTS_SOLID | EWT_VISCONTENTS_SKY)) &&
+        (bits_b & (EWT_VISCONTENTS_SOLID | EWT_VISCONTENTS_SKY)))
+        return contentflags_t::make(EWT_VISCONTENTS_EMPTY);
+
+    contents_int_t result;
+
+    if ((bits_a & EWT_CFLAG_SUPPRESS_CLIPPING_SAME_TYPE) || (bits_b & EWT_CFLAG_SUPPRESS_CLIPPING_SAME_TYPE)) {
+        result = bits_a | bits_b;
+    } else {
+        result = bits_a ^ bits_b;
+    }
+
+    auto strongest_contents_change = contentflags_t::make(result).visible_contents();
+
+    return strongest_contents_change;
+}
+
+bool contentflags_t::portal_generates_face(
+    contentflags_t portal_visible_contents, contentflags_t brushcontents, planeside_t brushside_side)
+{
+    auto bits_portal = portal_visible_contents.flags;
+    auto bits_brush = brushcontents.flags;
+
+    // find the highest visible content bit set in portal
+    int32_t index = portal_visible_contents.visible_contents_index();
+    if (index == -1) {
+        return false;
+    }
+
+    // check if it's not set in the brush
+    if (!(bits_brush & nth_bit(index))) {
+        return false;
+    }
+
+    if (brushside_side == SIDE_BACK) {
+        // explicit override?
+        if (bits_brush & EWT_CFLAG_MIRROR_INSIDE_SET) {
+            return (bits_brush & EWT_CFLAG_MIRROR_INSIDE) != 0;
+        }
+        if (portal_visible_contents.flags &
+            (EWT_VISCONTENTS_WINDOW | EWT_VISCONTENTS_AUX | EWT_VISCONTENTS_DETAIL_WALL)) {
+            // windows or aux don't generate inside faces
+            return false;
+        }
+        // other types get mirrored by default
+        return true;
+    }
+    return true;
+}
+
 std::string contentflags_t::to_string() const
 {
     std::string s = get_contents_display(flags);
@@ -223,6 +322,12 @@ nlohmann::json contentflags_t::to_json() const
 contentflags_t contentflags_t::from_json(const nlohmann::json &json)
 {
     return contentflags_t::make(set_contents_json(json));
+}
+
+std::ostream &operator<<(std::ostream &os, contents_t flags)
+{
+    os << get_contents_display(flags);
+    return os;
 }
 
 // surfflags_t
@@ -610,6 +715,30 @@ std::vector<contentflags_t> LoadExtendedContentFlags(const fs::path &sourcefilen
     }
 
     return result;
+}
+
+// content_stats_t
+
+void content_stats_t::count_contents_in_stats(contentflags_t contents)
+{
+    {
+        std::unique_lock lock(stat_mutex);
+        native_types[contents.flags]++;
+    }
+
+    ++total_brushes;
+}
+
+void content_stats_t::print_content_stats(const char *what) const
+{
+    logging::stat_tracker_t stat_print;
+
+    for (auto [bits, count] : native_types) {
+        auto c = contentflags_t{.flags = bits};
+        stat_print.register_stat(fmt::format("{} {}", get_contents_display(c.flags), what)).count += count;
+    }
+
+    stat_print.register_stat(fmt::format("{} total", what)).count += total_brushes;
 }
 
 // gamedef_t

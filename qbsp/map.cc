@@ -932,14 +932,6 @@ static void ParseTextureDef(const mapentity_t &entity, const mapfile::brush_side
         mapface.contents = contentflags_t::make(EWT_VISCONTENTS_EMPTY);
     tx->flags = {extinfo.info->flags};
     tx->value = extinfo.info->value;
-
-    if (!mapface.contents.is_valid(qbsp_options.target_game, false)) {
-        auto old_contents = mapface.contents;
-        qbsp_options.target_game->contents_make_valid(mapface.contents);
-        logging::print("WARNING: {}: face has invalid contents {}, remapped to {}\n", mapface.line,
-            old_contents.to_string(), mapface.contents.to_string());
-    }
-
     tx->vecs = input_side.vecs;
 }
 
@@ -1447,8 +1439,8 @@ static contentflags_t Brush_GetContents(const mapentity_t &entity, const mapbrus
     for (auto &mapface : mapbrush.faces) {
         const maptexinfo_t &texinfo = mapface.get_texinfo();
 
-        contentflags_t contents =
-            qbsp_options.target_game->face_get_contents(mapface.texname.data(), texinfo.flags, mapface.contents);
+        contentflags_t contents = qbsp_options.target_game->face_get_contents(
+            mapface.texname.data(), texinfo.flags, mapface.contents, qbsp_options.transwater.value());
 
         if (contents.is_empty()) {
             continue;
@@ -1466,9 +1458,6 @@ static contentflags_t Brush_GetContents(const mapentity_t &entity, const mapbrus
             break;
         }
     }
-
-    // make sure we found a valid type
-    Q_assert(base_contents.is_valid(qbsp_options.target_game, false));
 
     // extended flags
     if (entity.epairs.has("_mirrorinside")) {
@@ -1491,15 +1480,9 @@ static contentflags_t Brush_GetContents(const mapentity_t &entity, const mapbrus
         // - unset existing visible contents + detail
         // - set mist, mirrorinside, mirrorinside set
         // note this overrides the logic in face_get_contents() that normally forces mist to be detail
-        base_contents = contentflags_t::make((base_contents.flags & ~(EWT_ALL_VISIBLE_CONTENTS | EWT_CFLAG_DETAIL)) |
-                                             EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER);
-    }
-
-    // non-Q2: -transwater implies liquids are detail
-    if (qbsp_options.target_game->id != GAME_QUAKE_II && qbsp_options.transwater.value()) {
-        if (base_contents.is_liquid()) {
-            base_contents = contentflags_t::make(base_contents.flags | EWT_CFLAG_DETAIL);
-        }
+        base_contents = contentflags_t::make(
+            (base_contents.flags & ~(EWT_ALL_VISIBLE_CONTENTS | EWT_CFLAG_DETAIL | EWT_CFLAG_TRANSLUCENT)) |
+            EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER);
     }
 
     return base_contents;
@@ -1670,8 +1653,8 @@ static mapbrush_t ParseBrush(const mapfile::brush_t &in, mapentity_t &entity, te
     if (is_hint) {
 
         for (auto &face : brush.faces) {
-            if (qbsp_options.target_game->texinfo_is_hintskip(
-                    face.get_texinfo().flags, map.miptexTextureName(face.get_texinfo().miptex))) {
+            // any face in a hint brush that isn't HINT are treated as "hintskip", and discarded
+            if (!face.get_texinfo().flags.is_hint()) {
                 auto copy = face.get_texinfo();
                 copy.flags.set_hintskip(true);
                 face.texinfo = FindTexinfo(copy, face.get_plane());

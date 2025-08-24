@@ -36,7 +36,7 @@ TEST(common, q1Contents)
         EXPECT_EQ(game_q1->contents_to_native(solid), CONTENTS_SOLID);
 
         for (const auto &c : test_contents) {
-            auto combined = game_q1->combine_contents(solid, c);
+            auto combined = contentflags_t::combine_contents(solid, c);
 
             EXPECT_EQ(game_q1->contents_to_native(combined), CONTENTS_SOLID);
             EXPECT_TRUE(combined.is_solid());
@@ -48,7 +48,7 @@ TEST(common, q1Contents)
     {
         SCOPED_TRACE("detail_illusionary plus water");
         auto combined =
-            game_q1->combine_contents(detail_illusionary, game_q1->create_contents_from_native(CONTENTS_WATER));
+            contentflags_t::combine_contents(detail_illusionary, game_q1->create_contents_from_native(CONTENTS_WATER));
 
         EXPECT_EQ(game_q1->contents_to_native(combined), CONTENTS_WATER);
         EXPECT_TRUE(combined.is_detail_illusionary());
@@ -56,7 +56,7 @@ TEST(common, q1Contents)
 
     {
         SCOPED_TRACE("detail_solid plus water");
-        auto combined = game_q1->combine_contents(detail_solid, game_q1->create_contents_from_native(CONTENTS_WATER));
+        auto combined = contentflags_t::combine_contents(detail_solid, game_q1->create_contents_from_native(CONTENTS_WATER));
 
         EXPECT_TRUE(combined.is_any_solid());
         EXPECT_TRUE(combined.is_detail_solid());
@@ -66,11 +66,11 @@ TEST(common, q1Contents)
 
     {
         SCOPED_TRACE("detail_solid plus sky");
-        auto combined = game_q1->combine_contents(detail_solid, game_q1->create_contents_from_native(CONTENTS_SKY));
+        auto combined = contentflags_t::combine_contents(detail_solid, game_q1->create_contents_from_native(CONTENTS_SKY));
 
         EXPECT_FALSE(combined.is_detail_solid());
         EXPECT_TRUE(combined.is_sky());
-        EXPECT_FALSE(combined.is_solid());
+        EXPECT_TRUE(combined.is_solid());
     }
 }
 
@@ -103,7 +103,7 @@ TEST(common, clusterContents)
             EXPECT_TRUE(solid_empty_cluster.is_any_detail());
 
             // check portal_can_see_through
-            EXPECT_FALSE(game->portal_can_see_through(empty, solid_detail, true));
+            EXPECT_FALSE(contentflags_t::portal_can_see_through(empty, solid_detail));
         }
     }
 }
@@ -112,7 +112,7 @@ TEST(common, q1Origin)
 {
     auto *game = bspver_q1.game;
 
-    auto origin = game->face_get_contents("origin", {}, {});
+    auto origin = game->face_get_contents("origin", {}, {}, false);
 
     EXPECT_TRUE(origin.is_origin());
     EXPECT_FALSE(origin.is_empty());
@@ -122,7 +122,7 @@ TEST(common, q2Origin)
 {
     auto *game = bspver_q2.game;
 
-    auto origin = game->face_get_contents("", {}, game->create_contents_from_native(Q2_CONTENTS_ORIGIN));
+    auto origin = game->face_get_contents("", {}, game->create_contents_from_native(Q2_CONTENTS_ORIGIN), false);
 
     EXPECT_TRUE(origin.is_origin());
     EXPECT_FALSE(origin.is_empty());
@@ -261,7 +261,7 @@ TEST(common, q2Contents)
         for (const auto &[before, after] : before_after_adding_solid) {
 
             auto combined = game_q2->contents_remap_for_export(
-                game_q2->combine_contents(game_q2->create_contents_from_native(before), solid),
+                contentflags_t::combine_contents(game_q2->create_contents_from_native(before), solid),
                 gamedef_t::remap_type_t::leaf);
 
             EXPECT_EQ(game_q2->contents_to_native(combined), after);
@@ -290,7 +290,7 @@ TEST(common, q2Contents)
             {Q2_CONTENTS_DETAIL | Q2_CONTENTS_WATER, Q2_CONTENTS_WATER | Q2_CONTENTS_DETAIL},
             {Q2_CONTENTS_DETAIL | Q2_CONTENTS_MIST, Q2_CONTENTS_WATER | Q2_CONTENTS_DETAIL | Q2_CONTENTS_MIST}};
         for (const auto &[before, after] : before_after_adding_water) {
-            auto combined = game_q2->combine_contents(game_q2->create_contents_from_native(before), water);
+            auto combined = contentflags_t::combine_contents(game_q2->create_contents_from_native(before), water);
 
             {
                 SCOPED_TRACE(
@@ -358,8 +358,8 @@ TEST(common, q2PortalCanSeeThrough)
 {
     auto *game_q2 = bspver_q2.game;
 
-    EXPECT_TRUE(game_q2->portal_can_see_through(contentflags_t::make(EWT_VISCONTENTS_DETAIL_WALL | EWT_CFLAG_DETAIL),
-        contentflags_t::make(EWT_INVISCONTENTS_PLAYERCLIP), false));
+    EXPECT_TRUE(contentflags_t::portal_can_see_through(contentflags_t::make(EWT_VISCONTENTS_DETAIL_WALL | EWT_CFLAG_DETAIL),
+        contentflags_t::make(EWT_INVISCONTENTS_PLAYERCLIP)));
 }
 
 TEST(imglib, png)
