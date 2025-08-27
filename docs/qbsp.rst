@@ -797,19 +797,25 @@ Model Entity Keys
    Generates an LMSHIFT bspx lump for use by a light util. Note that
    both scaled and unscaled lighting will normally be used.
 
+   .. todo:: This is broken since 2.0.0-alpha1
+
 .. bmodel-key:: "_mirrorinside" "n"
 
    Set to 1 to save mirrored inside faces for bmodels, so when the
    player view is inside the bmodel, they will still see the faces.
-   (e.g. for func_water, or func_illusionary)
+   (e.g. for func_water, func_illusionary, :classname:`func_detail_illusionary`, :classname:`func_detail_fence`, etc.)
 
 .. bmodel-key:: "_chop_order" "n"
 
-   Customize the brush order, which affects which brush "wins" in the CSG phase when there are multiple overlapping
-   brushes, since most .map editors don't directly expose the brush order.
+   Override the order of brushes in the map file, which affects which face "wins" in the CSG phase when there are
+   multiple overlapping coplanar brushes. Provided since most .map editors don't directly expose the brush order.
 
-   Defaults to 0, brushes with higher values (equivalent to appearing later in the .map file) will clip away lower
-   valued brushes.
+   All brushes are initially 0; setting this to 1 would make a brush appear after anything in the map file, and so
+   clip away coplanar faces from other brushes.
+
+   For example, you could make a :classname:`func_group` with "_chop_order" "1", and apply it to a light fixture
+   which is coplanar with a floor or ceiling, to ensure the light fixture is visible in-game, without going to the
+   trouble of cutting a hole in the floor/ceiling for it.
 
 .. bmodel-key:: "_hulls" "n"
 
@@ -824,10 +830,21 @@ Model Entity Keys
 
 .. bmodel-key:: "_chop" "n"
 
-   Set to 0 to prevent these brushes from being chopped.
+   Set to 0 to prevent these brushes from being chopped; this is an alias for setting :bmodel-key:`_chop_order` to 1.
 
    .. deprecated:: 2.0.0
       Prefer the more flexible :bmodel-key:`_chop_order` instead.
+
+.. bmodel-key:: "_noclipfaces" "n"
+
+   Set to 1 to suppress the usual qbsp behaviour where two touching brushes of the same content type will have the
+   touching portion clipped away.
+
+   This is useful for things that can be seen inside, such as :classname:`func_detail_illusionary`,
+   :classname:`func_detail_fence`, liquids, bmodels, etc.
+
+   Behaviour is unspecified for coplanar faces; in 0.18 it caused z-fighting, and in 2.0.0-alpha it doesn't currently.
+
 
 Other Special-Purpose Entities
 ------------------------------
