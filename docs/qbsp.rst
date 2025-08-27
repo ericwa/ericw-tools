@@ -758,8 +758,18 @@ extra information needed by vis to compute the potentially visible set
 (PVS) for the map/bsp. So you will also need a vis util capable of
 processing the PRT2 file format.
 
-Detail Variants
----------------
+Compiler-internal bmodels
+-------------------------
+
+.. classname:: func_group
+
+   Bmodel that has no effect; qbsp moves the brushes back into the worldspawn entity.
+
+   The usefulness comes from the ability to set :ref:`model-entity-keys` on the brushes inside the func_group.
+
+.. classname:: func_detail
+
+   Solid detail. Can't be seen inside, splits world faces. Doesn't seal map.
 
 .. classname:: func_detail_illusionary
 
@@ -788,6 +798,9 @@ Detail Variants
    solid and block gunfire.
 
    Intersecting func_detail_fence brushes don't clip each other.
+
+
+.. _model-entity-keys:
 
 Model Entity Keys
 -----------------
