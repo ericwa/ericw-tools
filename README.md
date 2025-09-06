@@ -1,5 +1,8 @@
 ## ericw-tools
  - Website:         http://ericwa.github.io/ericw-tools
+ - Documentation:
+   - 2.0.0-alpha: https://ericw-tools.readthedocs.io
+   - 0.18: [qbsp](https://ericwa.github.io/ericw-tools/doc/qbsp.html), [vis](https://ericwa.github.io/ericw-tools/doc/vis.html), [light](https://ericwa.github.io/ericw-tools/doc/light.html), [bspinfo](https://ericwa.github.io/ericw-tools/doc/bspinfo.html), [bsputil](https://ericwa.github.io/ericw-tools/doc/bsputil.html)
  - Maintainer:      Eric Wasylishen (AKA ericw)
  - Email:           ewasylishen@gmail.com
 
