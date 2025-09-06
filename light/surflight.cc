@@ -222,7 +222,7 @@ std::optional<std::tuple<int32_t, int32_t, qvec3f, light_t *>> IsSurfaceLitFace(
     for (const auto &surflight : GetSurfaceLightTemplates()) {
         if (FaceMatchesSurfaceLightTemplate(
                 bsp, face, ModelInfoForFace(bsp, face - bsp->dfaces.data()), *surflight, SURFLIGHT_RAD)) {
-            return std::make_tuple(surflight->light.value(), surflight->style.value(),
+            return std::make_tuple(surflight->light.value()[3], surflight->style.value(),
                 surflight->color.is_changed() ? surflight->color.value() : qvec3f(Face_LookupTextureColor(bsp, face)),
                 surflight.get());
         }
@@ -269,7 +269,7 @@ static void MakeSurfaceLightsThread(const mbsp_t *bsp, const settings::worldspaw
                 !surflight->epairs->has("_surface_spotlight") ? true
                                                               : !!surflight->epairs->get_int("_surface_spotlight"),
                 surflight->epairs->get_int("_surface_is_sky"), surflight->epairs->get_int("style"),
-                surflight->light.value());
+                surflight->light.value()[3]);
         }
     }
 }

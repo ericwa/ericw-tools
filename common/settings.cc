@@ -430,6 +430,58 @@ std::string setting_vec3::format() const
     return "x y z";
 }
 
+// setting_vec4
+
+qvec4f setting_vec4::transform_vec4_value(const qvec4f &val) const
+{
+    return val;
+}
+
+setting_vec4::setting_vec4(setting_container *dictionary, const nameset &names, float a, float b, float c, float d,
+    const setting_group *group, const char *description)
+    : setting_value(dictionary, names, transform_vec4_value({a, b, c}), group, description)
+{
+}
+
+void setting_vec4::set_value(const qvec4f &f, source new_source)
+{
+    setting_value::set_value(transform_vec4_value(f), new_source);
+}
+
+bool setting_vec4::parse(const std::string &setting_name, parser_base_t &parser, source source)
+{
+    qvec4f vec;
+
+    _num_parsed = 0;
+    for (int i = 0; i < 4; i++) {
+        if (!parser.parse_token()) {
+            return false;
+        }
+
+        try {
+            vec[i] = std::stod(parser.token);
+        } catch (std::exception &) {
+            return false;
+        }
+
+        _num_parsed++;
+    }
+
+    set_value(vec, source);
+
+    return true;
+}
+
+std::string setting_vec4::string_value() const
+{
+    return fmt::format("{}", _value);
+}
+
+std::string setting_vec4::format() const
+{
+    return "x y z w";
+}
+
 // setting_mangle
 
 qvec3f setting_mangle::transform_vec3_value(const qvec3f &val) const

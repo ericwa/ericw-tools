@@ -884,14 +884,14 @@ static float GetLightValueWithAngle(const settings::worldspawn_keys &cfg, const 
 // returns the light contribution at a given distance, without regard for angle
 static float GetLightValue(const settings::worldspawn_keys &cfg, const light_t *entity, const float dist)
 {
-    return GetLightValue(cfg, entity->getFormula(), entity->light.value(), entity->falloff.value(),
+    return GetLightValue(cfg, entity->getFormula(), entity->light.value()[3], entity->falloff.value(),
         entity->atten.value(), dist, LF_SCALE);
 }
 
 static float GetLightValueWithAngle(const settings::worldspawn_keys &cfg, const light_t *entity, const qvec3f &surfnorm,
     bool use_surfnorm, const qvec3f &surfpointToLightDir, float dist, bool twosided)
 {
-    float value = GetLightValueWithAngle(cfg, entity->formula.value(), entity->light.value(), entity->falloff.value(),
+    float value = GetLightValueWithAngle(cfg, entity->formula.value(), entity->light.value()[3], entity->falloff.value(),
         entity->atten.value(), entity->bleed.value(), entity->anglescale.value(), surfnorm, use_surfnorm,
         surfpointToLightDir, dist, twosided, LF_SCALE);
 
@@ -1751,7 +1751,7 @@ static void LightFace_LocalMin(
 
             const lightsample_t &sample = lightmap->samples[i];
             const qvec3f &surfpoint = surf_sample.point;
-            if (cfg.addminlight.value() || LightSample_Brightness(sample.color) < entity->light.value()) {
+            if (cfg.addminlight.value() || LightSample_Brightness(sample.color) < entity->light.value()[3]) {
                 qvec3f surfpointToLightDir;
                 const float surfpointToLightDist = GetDir(surfpoint, entity->origin.value(), surfpointToLightDir);
 
@@ -1773,7 +1773,7 @@ static void LightFace_LocalMin(
 
             const ray_io &ray = rs.getRay(j);
             int i = ray.index;
-            float value = entity->light.value();
+            float value = entity->light.value()[3];
             lightsample_t &sample = lightmap->samples[i];
 
             value *= Dirt_GetScaleFactor(
@@ -2623,7 +2623,7 @@ void DirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::
                     continue;
                 if (entity->nostaticlight.value())
                     continue;
-                if (entity->light.value() > 0)
+                if (entity->light.value()[3] > 0)
                     LightFace_Entity(bsp, entity.get(), &lightsurf, lightmaps);
             }
             for (const sun_t &sun : GetSuns())
@@ -2740,7 +2740,7 @@ void PostProcessLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const setti
                     continue;
                 if (entity->nostaticlight.value())
                     continue;
-                if (entity->light.value() < 0)
+                if (entity->light.value()[3] < 0)
                     LightFace_Entity(bsp, entity.get(), &lightsurf, lightmaps);
             }
             for (const sun_t &sun : GetSuns())
@@ -2901,7 +2901,7 @@ lightgrid_samples_t CalcLightgridAtPoint(const mbsp_t *bsp, const qvec3f &world_
             continue;
         if (entity->nostaticlight.value())
             continue;
-        if (entity->light.value() > 0)
+        if (entity->light.value()[3] > 0)
             LightPoint_Entity(bsp, rs, entity.get(), world_point, result);
     }
 
@@ -2932,7 +2932,7 @@ lightgrid_samples_t CalcLightgridAtPoint(const mbsp_t *bsp, const qvec3f &world_
             continue;
         if (entity->nostaticlight.value())
             continue;
-        if (entity->light.value() < 0)
+        if (entity->light.value()[3] < 0)
             LightPoint_Entity(bsp, rs, entity.get(), world_point, result);
     }
     for (const sun_t &sun : GetSuns())
