@@ -439,7 +439,7 @@ qvec4f setting_vec4::transform_vec4_value(const qvec4f &val) const
 
 setting_vec4::setting_vec4(setting_container *dictionary, const nameset &names, float a, float b, float c, float d,
     const setting_group *group, const char *description)
-    : setting_value(dictionary, names, transform_vec4_value({a, b, c}), group, description)
+    : setting_value(dictionary, names, transform_vec4_value({a, b, c, d}), group, description)
 {
 }
 
@@ -450,12 +450,12 @@ void setting_vec4::set_value(const qvec4f &f, source new_source)
 
 bool setting_vec4::parse(const std::string &setting_name, parser_base_t &parser, source source)
 {
-    qvec4f vec;
+    qvec4f vec{};
 
     _num_parsed = 0;
     for (int i = 0; i < 4; i++) {
         if (!parser.parse_token()) {
-            return false;
+            break;
         }
 
         try {

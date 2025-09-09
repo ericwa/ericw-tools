@@ -277,6 +277,55 @@ TEST(settings, vec3Stray)
     ASSERT_THROW(settings.parse(p), settings::parse_exception);
 }
 
+TEST(settings, vec4parse)
+{
+    settings::setting_container settings;
+    settings::setting_vec4 vec4Setting(&settings, "light", 1, 2, 3, 4);
+
+    // check default
+    ASSERT_EQ(qvec4f(1, 2, 3, 4), vec4Setting.value());
+
+    // check parsing empty string
+    {
+        std::string input = "";
+        parser_t p(input, parser_source_location());
+
+        ASSERT_TRUE(vec4Setting.parse("light", p, settings::source::MAP));
+        ASSERT_EQ(qvec4f(0, 0, 0, 0), vec4Setting.value());
+        ASSERT_EQ(0, vec4Setting.num_parsed());
+    }
+
+    // check parsing one float
+    {
+        std::string input = "10.0";
+        parser_t p(input, parser_source_location());
+
+        ASSERT_TRUE(vec4Setting.parse("light", p, settings::source::MAP));
+        ASSERT_EQ(qvec4f(10, 0, 0, 0), vec4Setting.value());
+        ASSERT_EQ(1, vec4Setting.num_parsed());
+    }
+
+    // check parsing two floats
+    {
+        std::string input = "10.0 20.0";
+        parser_t p(input, parser_source_location());
+
+        ASSERT_TRUE(vec4Setting.parse("light", p, settings::source::MAP));
+        ASSERT_EQ(qvec4f(10, 20, 0, 0), vec4Setting.value());
+        ASSERT_EQ(2, vec4Setting.num_parsed());
+    }
+
+    // check parsing four floats
+    {
+        std::string input = "10.0 20.0 30.0 40.0";
+        parser_t p(input, parser_source_location());
+
+        ASSERT_TRUE(vec4Setting.parse("light", p, settings::source::MAP));
+        ASSERT_EQ(qvec4f(10, 20, 30, 40), vec4Setting.value());
+        ASSERT_EQ(4, vec4Setting.num_parsed());
+    }
+}
+
 // test string formatting
 TEST(settings, stringSimple)
 {
