@@ -61,6 +61,8 @@ enum class source
 {
     DEFAULT,
     GAME_TARGET,
+    // implied by another setting.
+    IMPLIED,
     MAP,
     COMMANDLINE
 };
@@ -505,18 +507,24 @@ public:
     using setting_vec3::setting_vec3;
 };
 
-class setting_vec4 : public setting_value<qvec4f>
+/**
+ * Setting that can either parse:
+ *
+ * "light" "{brightness}" (usual Q1/Q2 format)
+ *
+ * or:
+ *
+ * "light" "{r} {g} {b} {brightness}" (HL format) - stores in the provided "color" setting
+ */
+class setting_light : public setting_value<float>
 {
-protected:
-    virtual qvec4f transform_vec4_value(const qvec4f &val) const;
-    int _num_parsed;
+private:
+    settings::setting_color *_color;
 
 public:
-    setting_vec4(setting_container *dictionary, const nameset &names, float a, float b, float c, float d,
+    setting_light(setting_container *dictionary, const nameset &names, settings::setting_color *color, float a,
         const setting_group *group = nullptr, const char *description = "");
 
-    const int num_parsed() const { return _num_parsed; }
-    void set_value(const qvec4f &f, source new_source) override;
     bool parse(const std::string &setting_name, parser_base_t &parser, source source) override;
     std::string string_value() const override;
     std::string format() const override;

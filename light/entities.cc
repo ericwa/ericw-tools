@@ -97,7 +97,7 @@ static void MakeSurfaceLights(const mbsp_t *bsp);
 
 // light_t
 light_t::light_t()
-    : light{this, "light", 255.0, 255.0, 255.0, DEFAULTLIGHTLEVEL},
+    : light{this, "light", &color, DEFAULTLIGHTLEVEL},
       atten{this, "wait", 1.0f, 0.0f, std::numeric_limits<float>::max()},
       formula{this, "delay", LF_LINEAR,
           {{"linear", LF_LINEAR}, {"inverse", LF_INVERSE}, {"inverse2", LF_INVERSE2}, {"infinite", LF_INFINITE},
@@ -318,28 +318,8 @@ static void SetupSpotlights(const mbsp_t *bsp, const settings::worldspawn_keys &
 
 static void CheckEntityFields(const mbsp_t *bsp, const settings::worldspawn_keys &cfg, light_t *entity)
 {
-    // erysdren: support the _light field from Half-Life and other qrad2 things
-    if (!entity->light.is_changed()) {
-        entity->light.set_value({0.0f, 0.0f, 0.0f, DEFAULTLIGHTLEVEL}, settings::source::MAP);
-    } else if (entity->light.num_parsed() < 3) {
-        // only one value parsed, which means its from Q1/Q2/etc
-        // the color value doesnt matter, other code reads it from light_t::color
-        const qvec4f &value = entity->light.value();
-        entity->light.set_value({0.0f, 0.0f, 0.0f, value[0]}, settings::source::MAP);
-    } else {
-        // atleast three values parsed, so it has a color to set
-        if (!entity->color.is_changed()) {
-            // _color takes precdence over _light
-            const qvec4f &value = entity->light.value();
-            qvec3f color = {value[0], value[1], value[2]};
-            entity->color.set_value(color, settings::source::MAP);
-        }
-        if (entity->light.num_parsed() < 4) {
-            // no brightness value parsed, so assume default
-            // the color value doesnt matter, other code reads it from light_t::color
-            entity->light.set_value({0.0f, 0.0f, 0.0f, DEFAULTLIGHTLEVEL}, settings::source::MAP);
-        }
-    }
+    if (!entity->light.is_changed())
+        entity->light.set_value(DEFAULTLIGHTLEVEL, settings::source::MAP);
 
     if (entity->atten.value() <= 0.0)
         entity->atten.set_value(1.0, settings::source::MAP);
@@ -358,7 +338,7 @@ static void CheckEntityFields(const mbsp_t *bsp, const settings::worldspawn_keys
         logging::print("WARNING: unknown delay {} on {} at [{}]\n", static_cast<int>(entity->getFormula()),
             entity->classname(), entity->origin.value());
         entity->formula.set_value(LF_LINEAR, settings::source::MAP);
-        entity->light.set_value({0.0f, 0.0f, 0.0f, 0.0f}, settings::source::MAP);
+        entity->light.set_value(0.0f, settings::source::MAP);
     }
 
     /* set up deviance and samples defaults */
@@ -376,7 +356,7 @@ static void CheckEntityFields(const mbsp_t *bsp, const settings::worldspawn_keys
     if (entity->getFormula() == LF_INVERSE || entity->getFormula() == LF_INVERSE2 ||
         entity->getFormula() == LF_INFINITE || (entity->getFormula() == LF_LOCALMIN && cfg.addminlight.value()) ||
         entity->getFormula() == LF_INVERSE2A) {
-        entity->light.set_value({0.0f, 0.0f, 0.0f, entity->light.value()[3] / entity->samples.value()}, settings::source::MAP);
+        entity->light.set_value(entity->light.value() / entity->samples.value(), settings::source::MAP);
     }
 
     // shadow_channel_mask defaults to light_channel_mask
@@ -513,7 +493,7 @@ static void SetupSuns(const settings::worldspawn_keys &cfg)
 {
     for (auto &entity : all_lights) {
         // mxd. Arghrad-style sun setup
-        if (entity->sun.value() && entity->light.value()[3] > 0) {
+        if (entity->sun.value() && entity->light.value() > 0) {
             // Set sun vector
             qvec3f sunvec;
             if (entity->targetent) {
@@ -528,11 +508,11 @@ static void SetupSuns(const settings::worldspawn_keys &cfg)
             }
 
             // Add the sun
-            SetupSun(cfg, entity->light.value()[3], entity->color.value(), sunvec, entity->anglescale.value(),
+            SetupSun(cfg, entity->light.value(), entity->color.value(), sunvec, entity->anglescale.value(),
                 entity->deviance.value(), entity->dirt.value(), entity->style.value(), entity->suntexture.value());
 
             // Disable the light itself...
-            entity->light.set_value({0.0f, 0.0f, 0.0f, 0.0f}, settings::source::MAP);
+            entity->light.set_value(0.0f, settings::source::MAP);
         }
     }
 
@@ -646,20 +626,20 @@ static void SetupSkyDomes(const settings::worldspawn_keys &cfg)
 
     // new per-entity sunlight2/3 skydomes
     for (auto &entity : all_lights) {
-        if ((entity->sunlight2.value() || entity->sunlight3.value()) && entity->light.value()[3] > 0) {
+        if ((entity->sunlight2.value() || entity->sunlight3.value()) && entity->light.value() > 0) {
             if (entity->sunlight2.value()) {
                 // Add the upper dome, like sunlight2 (pointing down)
-                SetupSkyDome(cfg, entity->light.value()[3], entity->color.value(), entity->dirt.value(),
+                SetupSkyDome(cfg, entity->light.value(), entity->color.value(), entity->dirt.value(),
                     entity->anglescale.value(), entity->style.value(), entity->suntexture.value(), 0, {}, 0, 0, 0, "");
             } else {
                 // Add the lower dome, like sunlight3 (pointing up)
-                SetupSkyDome(cfg, 0, {}, 0, 0, 0, "", entity->light.value()[3], entity->color.value(),
+                SetupSkyDome(cfg, 0, {}, 0, 0, 0, "", entity->light.value(), entity->color.value(),
                     entity->dirt.value(), entity->anglescale.value(), entity->style.value(),
                     entity->suntexture.value());
             }
 
             // Disable the light itself...
-            entity->light.set_value({0.0f, 0.0f, 0.0f, 0.0f}, settings::source::MAP);
+            entity->light.set_value(0.0f, settings::source::MAP);
         }
     }
 }
@@ -1139,7 +1119,7 @@ std::tuple<qvec3f, bool> FixLightOnFace(const mbsp_t *bsp, const qvec3f &point, 
 void FixLightsOnFaces(const mbsp_t *bsp)
 {
     for (auto &entity : all_lights) {
-        if (entity->light.value()[3] != 0 && !entity->nonudge.value() &&
+        if (entity->light.value() != 0 && !entity->nonudge.value() &&
             entity->light_channel_mask.value() == CHANNEL_MASK_DEFAULT &&
             entity->shadow_channel_mask.value() == CHANNEL_MASK_DEFAULT) {
             auto [fixed_pos, success] = FixLightOnFace(bsp, entity->origin.value());
@@ -1563,7 +1543,7 @@ static void MakeSurfaceLights(const mbsp_t *bsp)
             surfacelight_templates.push_back(DuplicateEntity(*entity)); // makes a copy
 
             // Hack: clear templates light value to 0 so they don't cast light
-            entity->light.set_value({0.0f, 0.0f, 0.0f, 0.0f}, settings::source::MAP);
+            entity->light.set_value(0, settings::source::MAP);
 
             logging::print("Creating surface lights for texture \"{}\" from template at ({})\n", tex,
                 entity->epairs->get("origin"));

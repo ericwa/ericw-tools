@@ -250,6 +250,7 @@ const char *setting_base::sourceString() const
     switch (_source) {
         case source::DEFAULT: return "default";
         case source::GAME_TARGET: return "game target";
+        case source::IMPLIED: return "implied";
         case source::MAP: return "map";
         case source::COMMANDLINE: return "command line";
         default: FError("Error: unknown setting source");
@@ -430,29 +431,21 @@ std::string setting_vec3::format() const
     return "x y z";
 }
 
-// setting_vec4
+// setting_light
 
-qvec4f setting_vec4::transform_vec4_value(const qvec4f &val) const
-{
-    return val;
-}
-
-setting_vec4::setting_vec4(setting_container *dictionary, const nameset &names, float a, float b, float c, float d,
-    const setting_group *group, const char *description)
-    : setting_value(dictionary, names, transform_vec4_value({a, b, c, d}), group, description)
+setting_light::setting_light(setting_container *dictionary, const nameset &names, settings::setting_color *color,
+    float a, const setting_group *group, const char *description)
+    : setting_value(dictionary, names, a, group, description),
+      _color(color)
 {
 }
 
-void setting_vec4::set_value(const qvec4f &f, source new_source)
+bool setting_light::parse(const std::string &setting_name, parser_base_t &parser, source source)
 {
-    setting_value::set_value(transform_vec4_value(f), new_source);
-}
-
-bool setting_vec4::parse(const std::string &setting_name, parser_base_t &parser, source source)
-{
+    // first, parse into a vec4 and record how many components we got
     qvec4f vec{};
+    int num_parsed = 0;
 
-    _num_parsed = 0;
     for (int i = 0; i < 4; i++) {
         if (!parser.parse_token()) {
             break;
@@ -464,22 +457,42 @@ bool setting_vec4::parse(const std::string &setting_name, parser_base_t &parser,
             return false;
         }
 
-        _num_parsed++;
+        num_parsed++;
     }
 
-    set_value(vec, source);
+    if (num_parsed == 4) {
+        // color and brightness
+        _color->set_value(vec.xyz(), settings::source::IMPLIED);
 
-    return true;
+        // set our brightness
+        set_value(vec[3], source);
+
+        return true;
+    } else if (num_parsed == 3) {
+        // rgb, missing last value
+        _color->set_value(vec.xyz(), settings::source::IMPLIED);
+
+        // reset brightness
+        reset();
+
+        return true;
+    } else if (num_parsed == 1) {
+        // set our brightness
+        set_value(vec[0], source);
+
+        return true;
+    }
+    return false;
 }
 
-std::string setting_vec4::string_value() const
+std::string setting_light::string_value() const
 {
     return fmt::format("{}", _value);
 }
 
-std::string setting_vec4::format() const
+std::string setting_light::format() const
 {
-    return "x y z w";
+    return "[r g b] [n]";
 }
 
 // setting_mangle

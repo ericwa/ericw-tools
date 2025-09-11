@@ -277,53 +277,95 @@ TEST(settings, vec3Stray)
     ASSERT_THROW(settings.parse(p), settings::parse_exception);
 }
 
-TEST(settings, vec4parse)
+TEST(settings, lightParse)
 {
     settings::setting_container settings;
-    settings::setting_vec4 vec4Setting(&settings, "light", 1, 2, 3, 4);
+    settings::setting_color color(&settings, "color", 255, 255, 255);
+    settings::setting_light light(&settings, "light", &color, 1);
 
     // check default
-    ASSERT_EQ(qvec4f(1, 2, 3, 4), vec4Setting.value());
+    ASSERT_EQ(1, light.value());
 
-    // check parsing empty string
     {
+        SCOPED_TRACE("check parsing empty string");
+
         std::string input = "";
         parser_t p(input, parser_source_location());
 
-        ASSERT_TRUE(vec4Setting.parse("light", p, settings::source::MAP));
-        ASSERT_EQ(qvec4f(0, 0, 0, 0), vec4Setting.value());
-        ASSERT_EQ(0, vec4Setting.num_parsed());
+        ASSERT_FALSE(light.parse("light", p, settings::source::MAP));
+
+        // light value is unchanged
+        ASSERT_EQ(1, light.value());
+        ASSERT_EQ(settings::source::DEFAULT, light.get_source());
+
+        // color is unchanged
+        ASSERT_EQ(qvec3f(255, 255, 255), color.value());
+        ASSERT_EQ(settings::source::DEFAULT, color.get_source());
     }
 
-    // check parsing one float
     {
+        SCOPED_TRACE("check parsing one float");
+
         std::string input = "10.0";
         parser_t p(input, parser_source_location());
 
-        ASSERT_TRUE(vec4Setting.parse("light", p, settings::source::MAP));
-        ASSERT_EQ(qvec4f(10, 0, 0, 0), vec4Setting.value());
-        ASSERT_EQ(1, vec4Setting.num_parsed());
+        ASSERT_TRUE(light.parse("light", p, settings::source::MAP));
+
+        // light was parsed
+        ASSERT_EQ(10, light.value());
+        ASSERT_EQ(settings::source::MAP, light.get_source());
+
+        // color is unchanged
+        ASSERT_EQ(qvec3f(255, 255, 255), color.value());
+        ASSERT_EQ(settings::source::DEFAULT, color.get_source());
     }
 
-    // check parsing two floats
     {
-        std::string input = "10.0 20.0";
+        SCOPED_TRACE("check parsing 3 floats");
+        std::string input = "0.1 0.1 0.1";
         parser_t p(input, parser_source_location());
 
-        ASSERT_TRUE(vec4Setting.parse("light", p, settings::source::MAP));
-        ASSERT_EQ(qvec4f(10, 20, 0, 0), vec4Setting.value());
-        ASSERT_EQ(2, vec4Setting.num_parsed());
+        ASSERT_TRUE(light.parse("light", p, settings::source::MAP));
+
+        // light value is unchanged
+        ASSERT_EQ(1, light.value());
+        ASSERT_EQ(settings::source::DEFAULT, light.get_source());
+
+        // color was parsed
+        ASSERT_EQ(qvec3f(25.5, 25.5, 25.5), color.value());
+        ASSERT_EQ(settings::source::IMPLIED, color.get_source());
     }
 
-    // check parsing four floats
     {
+        SCOPED_TRACE("check parsing four floats");
+
         std::string input = "10.0 20.0 30.0 40.0";
         parser_t p(input, parser_source_location());
 
-        ASSERT_TRUE(vec4Setting.parse("light", p, settings::source::MAP));
-        ASSERT_EQ(qvec4f(10, 20, 30, 40), vec4Setting.value());
-        ASSERT_EQ(4, vec4Setting.num_parsed());
+        ASSERT_TRUE(light.parse("light", p, settings::source::MAP));
+
+        // light was parsed
+        ASSERT_EQ(40, light.value());
+        ASSERT_EQ(settings::source::MAP, light.get_source());
+
+        // color was parsed
+        ASSERT_EQ(qvec3f(10, 20, 30), color.value());
+        ASSERT_EQ(settings::source::IMPLIED, color.get_source());
     }
+}
+
+TEST(settings, impliedSettingPriority)
+{
+    settings::setting_container settings;
+    settings::setting_scalar value(&settings, "value", 1.0);
+
+    // set to implied
+    value.set_value(2.0, settings::source::IMPLIED);
+    EXPECT_EQ(2, value.value());
+
+    // map is higher priority
+    value.set_value(3.0, settings::source::MAP);
+    EXPECT_EQ(3, value.value());
 }
 
 // test string formatting
