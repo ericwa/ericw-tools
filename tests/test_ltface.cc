@@ -1312,3 +1312,21 @@ TEST(ltfaceQ1, q1LightSkipShadow)
         CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0}, {552, 1392, 944}, {0, 0, 1}, &lit, &bspx);
     }
 }
+
+// tests "light" key with a color (HL form)
+TEST(ltfaceQ1, q1LightHLForm)
+{
+    auto [bsp, bspx, lit] = QbspVisLight_Q1("q1_light_hlform.map", {"-lit"});
+
+    {
+        SCOPED_TRACE(R"(under "light" "255 127 0")");
+
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {113, 56, 0}, {512, 1152, 944}, {0, 0, 1}, &lit, &bspx);
+    }
+
+    {
+        SCOPED_TRACE(R"(under "light" "1 0.5 0 100")");
+
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {14, 7, 0}, {512, 1280, 944}, {0, 0, 1}, &lit, &bspx);
+    }
+}

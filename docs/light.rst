@@ -833,11 +833,17 @@ with the first five letters "light". E.g. "light", "light_globe",
 Point Lights
 ------------
 
-.. light-key:: "light" "n"
+.. light-key:: "light" "[r g b] [n]"
 
-   Set the light intensity. Negative values are also allowed and will
+   The common form is one value, n, which sets the light intensity.
+   Negative values are also allowed and will
    cause the entity to subtract light cast by other entities. Default
    300.
+
+   For Half-Life compatibility, you can specify a color here before the light value,
+   in the same format as :light-key:`_color`.
+
+   ``_color`` takes priority if a color is set in both places.
 
 .. light-key:: "wait" "n"
 

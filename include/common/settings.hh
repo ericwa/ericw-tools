@@ -61,6 +61,8 @@ enum class source
 {
     DEFAULT,
     GAME_TARGET,
+    // implied by another setting.
+    IMPLIED,
     MAP,
     COMMANDLINE
 };
@@ -503,6 +505,29 @@ protected:
 
 public:
     using setting_vec3::setting_vec3;
+};
+
+/**
+ * Setting that can either parse:
+ *
+ * "light" "{brightness}" (usual Q1/Q2 format)
+ *
+ * or:
+ *
+ * "light" "{r} {g} {b} {brightness}" (HL format) - stores in the provided "color" setting
+ */
+class setting_light : public setting_value<float>
+{
+private:
+    settings::setting_color *_color;
+
+public:
+    setting_light(setting_container *dictionary, const nameset &names, settings::setting_color *color, float a,
+        const setting_group *group = nullptr, const char *description = "");
+
+    bool parse(const std::string &setting_name, parser_base_t &parser, source source) override;
+    std::string string_value() const override;
+    std::string format() const override;
 };
 
 // a simple wrapper type that allows you to provide

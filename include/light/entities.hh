@@ -78,7 +78,7 @@ public:
 
     aabb3f bounds;
 
-    settings::setting_scalar light;
+    settings::setting_light light;
     settings::setting_scalar atten;
     settings::setting_enum<light_formula_t> formula;
     settings::setting_scalar cone; // Q2
