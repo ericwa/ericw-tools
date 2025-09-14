@@ -230,7 +230,7 @@ static int l_load_json(lua_State *state)
 
     try
     {
-        auto json = parse_json(result->data(), result->data() + result->size());
+        Json::Value json = parse_json(result->data(), result->data() + result->size());
 
         json_to_lua(state, json);
     } catch (std::exception &e) {

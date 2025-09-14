@@ -142,32 +142,32 @@ std::string get_contents_display(contents_t bits)
     return s;
 }
 
-nlohmann::json get_contents_json(contents_t bits)
+Json::Value get_contents_json(contents_t bits)
 {
-    nlohmann::json result = nlohmann::json::array();
+    Json::Value result = Json::Value(Json::arrayValue);
 
     for (uint32_t i = 0; i < std::size(bitflag_names); i++) {
         if (bits & nth_bit<contents_int_t>(i)) {
-            result.push_back(bitflag_names[i]);
+            result.append(bitflag_names[i]);
         }
     }
 
     return result;
 }
 
-contents_int_t set_contents_json(const nlohmann::json &json)
+contents_int_t set_contents_json(const Json::Value &json)
 {
     contents_int_t result = EWT_VISCONTENTS_EMPTY;
 
-    if (!json.is_array()) {
+    if (!json.isArray()) {
         return result;
     }
 
-    for (const nlohmann::json &entry : json) {
-        if (!entry.is_string())
+    for (const Json::Value &entry : json) {
+        if (!entry.isString())
             continue;
 
-        const std::string entry_str = entry.get<std::string>();
+        const std::string entry_str = entry.asString();
 
         for (uint32_t i = 0; i < std::size(bitflag_names); i++) {
             if (!Q_strcasecmp(entry_str.c_str(), bitflag_names[i]))

@@ -374,7 +374,7 @@ std::optional<texture_meta> load_wal_meta(std::string_view name, const fs::data 
 std::optional<texture_meta> load_wal_json_meta(std::string_view name, const fs::data &file, const gamedef_t *game)
 {
     try {
-        auto json = parse_json(file->data(), file->data() + file->size());
+        Json::Value json = parse_json(file->data(), file->data() + file->size());
 
         texture_meta meta{};
 

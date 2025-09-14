@@ -72,12 +72,11 @@ Json::Value json_array(std::initializer_list<T> args)
     return j;
 }
 
-template<typename T, size_t N>
-qvec<T, N> from_json(const Json::Value &j)
+static qvec3b to_qvec3b(const Json::Value &j)
 {
-    qvec<T, N> p;
-    for (unsigned int i = 0; i < N; i++) {
-        p[i] = j[i].as<T>();
+    qvec3b p;
+    for (unsigned int i = 0; i < 3; i++) {
+        p[i] = j[i].asInt();
     }
     return p;
 }
@@ -87,7 +86,6 @@ static Json::Value parse_json(const uint8_t *begin, const uint8_t *end)
     Json::Value result;
     Json::CharReaderBuilder rbuilder;
     auto reader = std::unique_ptr<Json::CharReader>(rbuilder.newCharReader());
-    reader->parse(reinterpret_cast<const char*>(begin),
-        reinterpret_cast<const char*>(end), &result, nullptr);
+    reader->parse(reinterpret_cast<const char *>(begin), reinterpret_cast<const char *>(end), &result, nullptr);
     return result;
 }

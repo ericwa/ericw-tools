@@ -105,10 +105,8 @@ static Json::Value serialize_bspx_decoupled_lm(const std::vector<uint8_t> &lump)
         model["lmwidth"] = src_face.lmwidth;
         model["lmheight"] = src_face.lmheight;
         model["offset"] = src_face.offset;
-        model["world_to_lm_space"] = json_array({
-            to_json(src_face.world_to_lm_space.row(0)),
-            to_json(src_face.world_to_lm_space.row(1))
-        });
+        model["world_to_lm_space"] =
+            json_array({to_json(src_face.world_to_lm_space.row(0)), to_json(src_face.world_to_lm_space.row(1))});
     }
 
     return j;
@@ -708,7 +706,7 @@ void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &
             auto &node = nodes.append(Json::Value(Json::objectValue));
 
             node["planenum"] = src_node.planenum;
-            node["children"] = to_json(src_node.children); // fixme: json::array({src_node.children[0], src_node.children[1]})}
+            node["children"] = json_array({src_node.children[0], src_node.children[1]});
             node["mins"] = to_json(src_node.mins);
             node["maxs"] = to_json(src_node.maxs);
             node["firstface"] = src_node.firstface;
@@ -727,14 +725,12 @@ void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &
             auto &texinfo = texinfos.append(Json::Value(Json::objectValue));
 
             texinfo["vecs"] = json_array({json_array({src_texinfo.vecs.at(0, 0), src_texinfo.vecs.at(0, 1),
-                                                        src_texinfo.vecs.at(0, 2), src_texinfo.vecs.at(0, 3)}),
-                json_array({src_texinfo.vecs.at(1, 0), src_texinfo.vecs.at(1, 1),
-                                               src_texinfo.vecs.at(1, 2), src_texinfo.vecs.at(1, 3)})});
+                                              src_texinfo.vecs.at(0, 2), src_texinfo.vecs.at(0, 3)}),
+                json_array({src_texinfo.vecs.at(1, 0), src_texinfo.vecs.at(1, 1), src_texinfo.vecs.at(1, 2),
+                    src_texinfo.vecs.at(1, 3)})});
 
-            // fixme: texinfo.push_back({"flags", bspdata.loadversion->game->id == GAME_QUAKE_II ? src_texinfo.flags.native_q2
-            // : src_texinfo.flags.native_q1});
-
-            texinfo["flags"] = src_texinfo.flags.native;
+            texinfo["flags"] = bspdata.loadversion->game->id == GAME_QUAKE_II ? src_texinfo.flags.native_q2
+                                                                              : src_texinfo.flags.native_q1;
             texinfo["miptex"] = src_texinfo.miptex;
             texinfo["value"] = src_texinfo.value;
             texinfo["texture"] = std::string(src_texinfo.texture.data());
@@ -779,9 +775,8 @@ void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &
         for (auto &src_clipnodes : bsp.dclipnodes) {
             auto &clipnode = clipnodes.append(Json::Value(Json::objectValue));
 
-            // fixme: json::array({src_clipnodes.children[0], src_clipnodes.children[1]})});
             clipnode["planenum"] = src_clipnodes.planenum;
-            clipnode["children"] = to_json(src_clipnodes.children);
+            clipnode["children"] = json_array({src_clipnodes.children[0], src_clipnodes.children[1]});
         }
     }
 

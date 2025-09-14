@@ -46,11 +46,7 @@ export ASAN_OPTIONS=detect_leaks=false
 make -j8 VERBOSE=1 package || exit 1
 
 # run tests
-if [ "$USE_ASAN" != "YES" ]; then
-  ./tests/tests --no-skip || exit 1 # run hidden tests (releaseonly)
-else
-  ./tests/tests || exit 1
-fi
+./tests/tests || exit 1
 
 # check rpath
 readelf -d ./light/light
