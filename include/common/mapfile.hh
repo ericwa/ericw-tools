@@ -28,10 +28,12 @@ See file, 'COPYING', for details.
 #include <string>
 #include <variant>
 #include <optional>
+#include <string_view>
 
 // this file declares some names that clash with names elsewhere in the project and lead to ODR violations
 // (e.g. texdef_valve_t). For now just wrap everything in a namespace to avoid issues.
-namespace mapfile {
+namespace mapfile
+{
 
 // main brush style; technically these can be mixed
 enum class texcoord_style_t
@@ -69,7 +71,7 @@ struct texdef_etp_t : texdef_quake_ed_t
 struct texinfo_quake2_t
 {
     int contents;
-    surfflags_t flags;
+    int flags;
     int value;
 };
 
@@ -81,10 +83,10 @@ struct texture_axis_t
     qvec3d snapped_normal;
 
     // use_new_axis = !qbsp_options.oldaxis.value()
-    constexpr texture_axis_t(const qplane3d &plane, bool use_new_axis = false) :
-        xv(), // gcc C++20 bug workaround
-        yv(),
-        snapped_normal()
+    constexpr texture_axis_t(const qplane3d &plane, bool use_new_axis = false)
+        : xv(), // gcc C++20 bug workaround
+          yv(),
+          snapped_normal()
     {
         constexpr qvec3d baseaxis[18] = {
             {0, 0, 1}, {1, 0, 0}, {0, -1, 0}, // floor
@@ -117,21 +119,21 @@ struct texture_axis_t
 struct brush_side_t
 {
     // source location
-    parser_source_location              location;
+    parser_source_location location;
 
     // raw texture name
-    std::string                                                                  texture;
+    std::string texture;
     // stores the original values that we loaded with, even if they were invalid.
-    std::variant<texdef_quake_ed_t, texdef_valve_t, texdef_etp_t, texdef_bp_t>   raw;
+    std::variant<texdef_quake_ed_t, texdef_valve_t, texdef_etp_t, texdef_bp_t> raw;
     // raw plane points
-    std::array<qvec3d, 3>                                                        planepts;
+    std::array<qvec3d, 3> planepts;
     // Q2/Q3 data, if available
-    std::optional<texinfo_quake2_t>                                              extended_info = std::nullopt;
+    std::optional<texinfo_quake2_t> extended_info = std::nullopt;
 
     // calculated texture vecs
-    texvecf                             vecs;
+    texvecf vecs;
     // calculated plane
-    qplane3d                            plane;
+    qplane3d plane;
 
     // TODO move to qv? keep local?
     static bool is_valid_texture_projection(const qvec3f &faceNormal, const qvec3f &s_vec, const qvec3f &t_vec);
@@ -208,5 +210,7 @@ struct map_file_t
 
     void convert_to(texcoord_style_t style, const gamedef_t *game, const settings::common_settings &options);
 };
+
+map_file_t parse(std::string_view view, parser_source_location base_location);
 
 } // namespace mapfile

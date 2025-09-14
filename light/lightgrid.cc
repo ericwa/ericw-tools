@@ -235,7 +235,7 @@ static std::vector<uint8_t> MakeOctreeLump(const mbsp_t &bsp, const lightgrid_ra
     const uint32_t root_node = build_octree(qvec3i{0, 0, 0}, data.grid_size, 0);
 
     // visualize the leafs
-    {
+    if (light_options.debug_lightgrid_octree.value()) {
         std::vector<polylib::winding_t> windings;
 
         for (auto &leaf : octree_leafs) {
@@ -366,7 +366,7 @@ static std::vector<uint8_t> MakeOctreeLump(const mbsp_t &bsp, const lightgrid_ra
 
 std::tuple<lightgrid_samples_t, bool> FixPointAndCalcLightgrid(const mbsp_t *bsp, qvec3f world_point)
 {
-    bool occluded = Light_PointInWorld(bsp, world_point);
+    bool occluded = Light_PointInWorld(bsp, extended_content_flags, world_point);
     if (occluded) {
         // search for a nearby point
         auto [fixed_pos, success] = FixLightOnFace(bsp, world_point, false, 2.0f);

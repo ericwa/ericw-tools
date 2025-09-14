@@ -1,8 +1,11 @@
 #include <common/bspfile.hh>
 #include <common/prtfile.hh>
+#include <common/litfile.hh>
+
 #include <string>
 #include <vector>
 #include <map>
+#include <variant>
 
 class mapbrush_t;
 struct mapface_t;
@@ -39,7 +42,7 @@ struct testresults_lit_t
 {
     mbsp_t bsp;
     bspxentries_t bspx;
-    std::vector<uint8_t> lit;
+    lit_variant_t lit;
 };
 
 enum class runvis_t
@@ -52,5 +55,7 @@ testresults_lit_t QbspVisLight_Q1(
     const std::filesystem::path &name, std::vector<std::string> extra_light_args, runvis_t run_vis = runvis_t::no);
 testresults_t QbspVisLight_Q2(
     const std::filesystem::path &name, std::vector<std::string> extra_light_args, runvis_t run_vis = runvis_t::no);
+testresults_lit_t QbspVisLight_Q2_Lit(
+    const std::filesystem::path &name, std::vector<std::string> extra_light_args, runvis_t run_vis = runvis_t::no);
 testresults_t QbspVisLight_HL(
-        const std::filesystem::path &name, std::vector<std::string> extra_light_args, runvis_t run_vis = runvis_t::no);
+    const std::filesystem::path &name, std::vector<std::string> extra_light_args, runvis_t run_vis = runvis_t::no);

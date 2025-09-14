@@ -165,13 +165,31 @@ enum class debugmodes
     mottle
 };
 
-enum class lightfile
+enum class lightfile_t
+{
+    // no auxiliary lighting formats
+    none = 0,
+    // write .lit (version 1) file with RGB lighting
+    lit = 1,
+    // write RGBLIGHTING BSPX lump
+    bspx = 2,
+    // write .lit (version 2) file
+    lit2 = 4,
+    // write .lit (version LIT_VERSION_E5BGR9) file with HDR lighting
+    lithdr = 8,
+    // write LIGHTING_E5BGR9 BSPX lump
+    bspxhdr = 16,
+    // bitmask for all HDR formats
+    all_hdr_formats = (lithdr | bspxhdr)
+};
+
+enum class luxfile_t
 {
     none = 0,
-    external = 1,
-    bspx = 2,
-    both = external | bspx,
-    lit2 = 4
+    // write .lux file
+    lux = 1,
+    // write LIGHTINGDIR BSPX lump
+    bspx = 2
 };
 
 /* tracelist is a std::vector of pointers to modelinfo_t to use for LOS tests */
@@ -223,6 +241,7 @@ public:
     settings::setting_scalar lightcolorscale;
     settings::setting_int32 object_channel_mask;
     settings::setting_scalar surflight_minlight_scale;
+    settings::setting_scalar surflight_atten;
     settings::setting_bool autominlight;
     settings::setting_string autominlight_target;
 
@@ -313,6 +332,7 @@ public:
     // "choplight" - arghrad3 name
     setting_scalar surflightsubdivision;
     setting_scalar surflight_minlight_scale;
+    setting_scalar surflight_atten;
 
     /* sunlight */
     /* sun_light, sun_color, sun_angle for http://www.bspquakeeditor.com/arghrad/ compatibility */
@@ -393,6 +413,8 @@ public:
     setting_func bspxlux;
     setting_func bspxonly;
     setting_func bspx;
+    setting_func hdr;
+    setting_func bspxhdr;
     setting_scalar world_units_per_luxel;
     setting_bool litonly;
     setting_bool nolights;
@@ -411,19 +433,23 @@ public:
     setting_func debugoccluded;
     setting_func debugneighbours;
     setting_func debugmottle;
+    setting_bool debug_lightgrid_octree;
 
     light_settings();
 
     fs::path sourceMap;
 
-    bitflags<lightfile> write_litfile = lightfile::none;
-    bitflags<lightfile> write_luxfile = lightfile::none;
+    bitflags<lightfile_t> write_litfile = lightfile_t::none;
+    bitflags<luxfile_t> write_luxfile = luxfile_t::none;
     debugmodes debugmode = debugmodes::none;
 
     void set_parameters(int argc, const char **argv) override;
     void initialize(int argc, const char **argv) override;
-    void postinitialize(int argc, const char **argv) override;
     void reset() override;
+
+    // nb: split out because we want to print the summary later
+    // since light loads stuff from worldspawn
+    void light_postinitialize(int argc, const char **argv);
 };
 }; // namespace settings
 
@@ -434,9 +460,10 @@ const std::unordered_map<int, std::vector<uint8_t>> &UncompressedVis();
 bool IsOutputtingSupplementaryData();
 
 std::span<lightsurf_t> &LightSurfaces();
-std::vector<lightsurf_t*> &EmissiveLightSurfaces();
+std::vector<lightsurf_t *> &EmissiveLightSurfaces();
 
 extern std::vector<surfflags_t> extended_texinfo_flags;
+extern std::vector<contentflags_t> extended_content_flags;
 
 lightmap_t *Lightmap_ForStyle(lightmapdict_t *lightmaps, const int style, const lightsurf_t *lightsurf);
 
@@ -451,6 +478,7 @@ const modelinfo_t *ModelInfoForFace(const mbsp_t *bsp, int facenum);
 const img::texture *Face_Texture(const mbsp_t *bsp, const mface_t *face);
 const qvec3b &Face_LookupTextureColor(const mbsp_t *bsp, const mface_t *face);
 const qvec3f &Face_LookupTextureBounceColor(const mbsp_t *bsp, const mface_t *face);
+void SetLitNeeded(const bspdata_t &bspdata);
 void light_reset();
 int light_main(int argc, const char **argv);
 int light_main(const std::vector<std::string> &args);

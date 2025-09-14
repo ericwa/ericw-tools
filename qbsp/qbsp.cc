@@ -321,11 +321,7 @@ qbsp_plane_t &qbsp_plane_t::operator=(const qplane3d &plane) noexcept
 {
     return type;
 }
-[[nodiscard]] const double &qbsp_plane_t::get_dist() const
-{
-    return plane.dist;
-}
-[[nodiscard]] double &qbsp_plane_t::get_dist()
+[[nodiscard]] double qbsp_plane_t::get_dist() const
 {
     return plane.dist;
 }
@@ -404,7 +400,8 @@ bool qbsp_plane_t::normalize(bool flip) noexcept
 
 namespace qv
 {
-[[nodiscard]] bool epsilonEqual(const qbsp_plane_t &p1, const qbsp_plane_t &p2, double normalEpsilon, double distEpsilon)
+[[nodiscard]] bool epsilonEqual(
+    const qbsp_plane_t &p1, const qbsp_plane_t &p2, double normalEpsilon, double distEpsilon)
 {
     // axial planes will never match on normal, so we can skip that check entirely
     if (p1.get_type() < plane_type_t::PLANE_ANYX && p2.get_type() < plane_type_t::PLANE_ANYX) {
@@ -456,15 +453,19 @@ qbsp_settings::qbsp_settings()
       qbism{this, "qbism", false, &game_target_group, "target Qbism's extended Quake II BSP format"},
       bsp2{this, "bsp2", false, &game_target_group, "target Quake's extended BSP2 format"},
       bsp2rmq{this, "2psb", false, &game_target_group, "target Quake's extended 2PSB format (RMQ compatible)"},
-      nosubdivide{this, "nosubdivide", [&](source src) { subdivide.set_value(0, src); }, &common_format_group,
-          "disable subdivision"},
+      nosubdivide{this, "nosubdivide",
+          [&](const std::string &, parser_base_t &, source src) {
+              subdivide.set_value(0, src);
+              return true;
+          },
+          &common_format_group, "disable subdivision"},
       software{this, "software", true, &common_format_group,
           "change settings to allow for (or make adjustments to optimize for the lack of) software support"},
       subdivide{this, "subdivide", 240, &common_format_group,
           "change the subdivide threshold, in luxels. 0 will disable subdivision entirely"},
       nofill{this, "nofill", false, &debugging_group, "don't perform outside filling"},
       nomerge{this, "nomerge", false, &debugging_group, "don't perform face merging"},
-      nomergeacrossliquids{this, "nomergeacrossliquids", false, &common_format_group, "block merging faces that cross above and below water"},
+      nomergeacrossliquids{this, "nomergeacrossliquids", false, &common_format_group, "deprecated, no effect"},
       noedgereuse{this, "noedgereuse", false, &debugging_group, "don't reuse edges (for debugging software rendering)"},
       noclip{this, "noclip", false, &common_format_group, "don't write clip nodes (Q1-like BSP formats)"},
       noskip{this, "noskip", false, &debugging_group, "don't remove faces with the 'skip' texture"},
@@ -480,8 +481,8 @@ qbsp_settings::qbsp_settings()
       transwater{this, "transwater", true, &common_format_group, "compute portal information for transparent water"},
       notextures{this, "notex", false, &common_format_group,
           "write only placeholder textures to depend upon replacements, keep file sizes down, or to skirt copyrights"},
-      missing_textures_as_zero_size{this, "missing_textures_as_zero_size", false, &common_format_group,
-          "write missing textures as 0x0"},
+      missing_textures_as_zero_size{
+          this, "missing_textures_as_zero_size", false, &common_format_group, "write missing textures as 0x0"},
       convertmapformat{this, "convert", conversion_t::none,
           {{"quake", conversion_t::quake}, {"quake2", conversion_t::quake2}, {"valve", conversion_t::valve},
               {"bp", conversion_t::bp}},
@@ -522,6 +523,8 @@ qbsp_settings::qbsp_settings()
       objexport{
           this, "objexport", false, &debugging_group, "export the map file as .OBJ models during various CSG phases"},
       noextendedsurfflags{this, "noextendedsurfflags", false, &debugging_group, "suppress writing a .texinfo file"},
+      noextendedcontentflags{
+          this, "noextendedcontentflags", false, &debugging_group, "suppress writing a .content.json file"},
       wrbrushes{this, {"wrbrushes", "bspx"}, false, &common_format_group,
           "includes a list of brushes for brush-based collision"},
       wrbrushesonly{this, {"wrbrushesonly", "bspxonly"}, {&wrbrushes, &noclip}, &common_format_group,
@@ -562,7 +565,10 @@ qbsp_settings::qbsp_settings()
       scale{this, "scale", 1.0, &map_development_group,
           "scales the map brushes and point entity origins by a give factor"},
       loghulls{this, {"loghulls"}, false, &logging_group, "print log output for collision hulls"},
-      logbmodels{this, {"logbmodels"}, false, &logging_group, "print log output for bmodels"}
+      logbmodels{this, {"logbmodels"}, false, &logging_group, "print log output for bmodels"},
+      debug_missing_portal_sides{this, {"debug_missing_portal_sides"}, false, &logging_group,
+          "output debug .prt files for missing portal sides"},
+      fixupdetailfence{this, {"fixupdetailfence"}, true, &debugging_group, "fixup detail fence"}
 {
 }
 
@@ -583,11 +589,10 @@ void qbsp_settings::initialize(int argc, const char **argv)
     }
 
     try {
-        token_parser_t p(argc - 1, argv + 1, {"command line"});
-        auto remainder = parse(p);
+        common_settings::initialize(argc - 1, argv + 1);
 
         if (remainder.size() <= 0 || remainder.size() > 2) {
-            print_help();
+            print_help(true);
         }
 
         qbsp_options.map_path = remainder[0];
@@ -596,8 +601,11 @@ void qbsp_settings::initialize(int argc, const char **argv)
             qbsp_options.bsp_path = remainder[1];
         }
     } catch (parse_exception &ex) {
+        print_help(false);
+        logging::print("ERROR OCCURRED WHEN TRYING TO PARSE ARGUMENTS:\n");
         logging::print(ex.what());
-        print_help();
+        logging::print("\n\n");
+        throw settings::quit_after_help_exception();
     }
 }
 
@@ -636,7 +644,7 @@ void qbsp_settings::load_texture_def(const std::string &pathname)
             texinfo = extended_texinfo_t{.contents_native = native};
 
             if (parser.parse_token(PARSE_SAMELINE | PARSE_OPTIONAL)) {
-                texinfo->flags.native = std::stoi(parser.token);
+                texinfo->flags.native_q2 = static_cast<q2_surf_flags_t>(std::stoi(parser.token));
             }
 
             if (parser.parse_token(PARSE_SAMELINE | PARSE_OPTIONAL)) {
@@ -805,7 +813,7 @@ static void ExportBrushList_r(const mapentity_t &entity, node_t *node, brush_lis
     if (node->is_leaf()) {
         auto *leafdata = node->get_leafdata();
         int native = qbsp_options.target_game->contents_to_native(
-                qbsp_options.target_game->contents_remap_for_export(leafdata->contents, gamedef_t::remap_type_t::leaf));
+            qbsp_options.target_game->contents_remap_for_export(leafdata->contents, gamedef_t::remap_type_t::leaf));
         if (native) {
             if (leafdata->original_brushes.size()) {
                 leafdata->numleafbrushes = leafdata->original_brushes.size();
@@ -816,8 +824,9 @@ static void ExportBrushList_r(const mapentity_t &entity, node_t *node, brush_lis
                     if (!b->mapbrush->outputnumber.has_value()) {
                         b->mapbrush->outputnumber = {static_cast<uint32_t>(map.bsp.dbrushes.size())};
 
-                        int brushcontents = qbsp_options.target_game->contents_to_native(qbsp_options.target_game
-                                ->contents_remap_for_export(b->contents, gamedef_t::remap_type_t::brush));
+                        int brushcontents = qbsp_options.target_game->contents_to_native(
+                            qbsp_options.target_game->contents_remap_for_export(
+                                b->contents, gamedef_t::remap_type_t::brush));
 
                         dbrush_t &brush = map.bsp.dbrushes.emplace_back(
                             dbrush_t{.firstside = static_cast<int32_t>(map.bsp.dbrushsides.size()),
@@ -835,7 +844,7 @@ static void ExportBrushList_r(const mapentity_t &entity, node_t *node, brush_lis
                                 maptexinfo_t copy = texinfo;
                                 mapfile::brush_side_t temp;
                                 temp.plane = side.get_plane();
-                                temp.set_texinfo(mapfile::texdef_quake_ed_t{ { 0, 0 }, 0, { 1, 1 }});
+                                temp.set_texinfo(mapfile::texdef_quake_ed_t{{0, 0}, 0, {1, 1}});
                                 copy.vecs = temp.vecs;
 
                                 texinfo_id = FindTexinfo(copy, temp.plane, false);
@@ -895,10 +904,10 @@ static bool IsTrigger(const mapentity_t &entity)
     return trigger_pos == (tex.size() - strlen("trigger"));
 }
 
-static void CountLeafs_r(node_t *node, content_stats_base_t &stats)
+static void CountLeafs_r(node_t *node, content_stats_t &stats)
 {
     if (auto *leafdata = node->get_leafdata()) {
-        qbsp_options.target_game->count_contents_in_stats(leafdata->contents, stats);
+        stats.count_contents_in_stats(leafdata->contents);
         return;
     }
 
@@ -930,9 +939,9 @@ void CountLeafs(node_t *headnode)
 {
     logging::funcheader();
 
-    auto stats = qbsp_options.target_game->create_content_stats();
-    CountLeafs_r(headnode, *stats);
-    qbsp_options.target_game->print_content_stats(*stats, "leafs");
+    auto stats = content_stats_t();
+    CountLeafs_r(headnode, stats);
+    stats.print_content_stats("leafs");
 
     // count the heights of the tree at each leaf
     logging::stat_tracker_t stat_print;
@@ -967,7 +976,7 @@ static void GatherBspbrushes_r(node_t *node, bspbrush_t::container &container)
 static void GatherLeafVolumes_r(node_t *node, bspbrush_t::container &container)
 {
     if (auto *leafdata = node->get_leafdata()) {
-        if (!leafdata->contents.is_empty(qbsp_options.target_game)) {
+        if (!leafdata->contents.is_empty()) {
             container.push_back(node->volume);
         }
         return;
@@ -976,6 +985,24 @@ static void GatherLeafVolumes_r(node_t *node, bspbrush_t::container &container)
     auto *nodedata = node->get_nodedata();
     GatherLeafVolumes_r(nodedata->children[0], container);
     GatherLeafVolumes_r(nodedata->children[1], container);
+}
+
+/* Returns true if the user requested to generate an entity bmodel clipnodes
+ * for a given hull. */
+static bool ShouldGenerateClipnodes(mapentity_t &entity, hull_index_t hullnum)
+{
+    // Default to generating clipnodes for all hulls.
+    if (!entity.epairs.has("_hulls")) {
+        return true;
+    }
+
+    const int hulls = entity.epairs.get_int("_hulls");
+    // Ensure 0 means all hulls even in the case we have more than 32 hulls.
+    if (hulls == 0) {
+        return true;
+    }
+
+    return hulls & (1 << hullnum.value_or(0));
 }
 
 /*
@@ -1059,28 +1086,42 @@ static void ProcessEntity(mapentity_t &entity, hull_index_t hullnum)
     logging::print(
         logging::flag::STAT, "INFO: calculating BSP for {} brushes with {} sides\n", brushes.size(), num_sides);
 
+    // sort by ascending (chop_index, line_number) pair
+    std::ranges::sort(
+        brushes, [](const auto &a, const auto &b) { return a->mapbrush->sort_key() < b->mapbrush->sort_key(); });
+
     // always chop the other hulls to reduce brush tests
     if (qbsp_options.chop.value() || hullnum.value_or(0)) {
-        std::sort(brushes.begin(), brushes.end(), [](const bspbrush_t::ptr &a, const bspbrush_t::ptr &b) -> bool {
-            if (a->mapbrush->chop_index == b->mapbrush->chop_index) {
-                return a->mapbrush->line.line_number < b->mapbrush->line.line_number;
-            }
-
-            return a->mapbrush->chop_index < b->mapbrush->chop_index;
-        });
-
         ChopBrushes(brushes, qbsp_options.chopfragment.value());
     }
 
     // we're discarding the brush
     if (discarded_trigger) {
-        entity.epairs.set("mins", fmt::to_string(entity.bounds.mins()));
-        entity.epairs.set("maxs", fmt::to_string(entity.bounds.maxs()));
+        if (!hullnum.value_or(0)) {
+            entity.epairs.set("mins", fmt::to_string(entity.bounds.mins()));
+            entity.epairs.set("maxs", fmt::to_string(entity.bounds.maxs()));
+        }
         return;
     }
 
     // corner case, -omitdetail with all detail in an bmodel
     if (brushes.empty() && entity.bounds == aabb3d()) {
+        return;
+    }
+
+    // _hulls key
+    if (!ShouldGenerateClipnodes(entity, hullnum)) {
+        // We still need to emit an empty tree otherwise hull 0 will point past
+        // the clipnode array (FIXME?).
+        bspbrush_t::container empty;
+        tree_t tree;
+        BrushBSP(tree, entity, empty, tree_split_t::FAST);
+        if (hullnum.value_or(0)) {
+            ExportClipNodes(entity, tree.headnode, hullnum.value());
+        } else {
+            MakeTreePortals(tree); // needed to assign leaf bounds
+            ExportDrawNodes(entity, tree.headnode, map.bsp.dfaces.size());
+        }
         return;
     }
 
@@ -1250,6 +1291,7 @@ static void ProcessEntity(mapentity_t &entity, hull_index_t hullnum)
 
     // needs to come after any face creation
     MakeMarkFaces(tree.headnode);
+    FixupDetailFence(tree);
 
     CountLeafs(tree.headnode);
 
@@ -1362,7 +1404,7 @@ static bspxbrushes_permodel BSPX_Brushes_AddModel(int modelnum, const std::vecto
             case CONTENTS_SLIME:
             case CONTENTS_LAVA:
             case CONTENTS_SKY:
-                if (contents.is_clip(qbsp_options.target_game)) {
+                if (contents.is_clip()) {
                     perbrush.contents = BSPXBRUSHES_CONTENTS_CLIP;
                 } else {
                     perbrush.contents = native;
@@ -1372,11 +1414,10 @@ static bspxbrushes_permodel BSPX_Brushes_AddModel(int modelnum, const std::vecto
             //                      perbrush.contents = -16;
             //                      break;
             default: {
-                if (contents.is_clip(qbsp_options.target_game)) {
+                if (contents.is_clip()) {
                     perbrush.contents = BSPXBRUSHES_CONTENTS_CLIP;
                 } else {
-                    logging::print("WARNING: Unknown contents: {}. Translating to solid.\n",
-                        contents.to_string(qbsp_options.target_game));
+                    logging::print("WARNING: Unknown contents: {}. Translating to solid.\n", contents.to_string());
                     perbrush.contents = CONTENTS_SOLID;
                 }
                 break;
@@ -1512,7 +1553,7 @@ CreateHulls
 static void CreateHulls()
 {
     /* create the hulls sequentially */
-    auto &hulls = qbsp_options.target_game->get_hull_sizes();
+    auto hulls = qbsp_options.target_game->get_hull_sizes();
 
     // game has no hulls, so we have to export brush lists and stuff.
     if (!hulls.size()) {
@@ -1540,7 +1581,11 @@ static void LoadTextureData()
         miptex.name = map.miptex[i].name;
 
         {
-            auto [tex, pos, file] = img::load_texture(map.miptex[i].name, true, qbsp_options.target_game, qbsp_options, false, true);
+            // i.e. only allow loose (non-.wad) textures if -notex is in use
+            const bool mip_only = !qbsp_options.notextures.value();
+
+            auto [tex, pos, file] =
+                img::load_texture(map.miptex[i].name, true, qbsp_options.target_game, qbsp_options, false, mip_only);
 
             if (!tex) {
                 if (pos.archive) {
@@ -1639,13 +1684,14 @@ ProcessFile
 */
 void ProcessFile()
 {
-    // load brushes and entities
-    LoadMapFile();
-
     if (qbsp_options.convertmapformat.value() != conversion_t::none) {
         ConvertMapFile();
         return;
     }
+
+    // load brushes and entities
+    LoadMapFile();
+
     if (qbsp_options.onlyents.value()) {
         UpdateEntLump();
         return;
@@ -1678,7 +1724,7 @@ static int MakeSkipTexinfo()
     maptexinfo_t mt{};
 
     mt.miptex = FindMiptex("skip", true);
-    mt.flags.is_nodraw = true;
+    mt.flags.native_q2 = static_cast<q2_surf_flags_t>(mt.flags.native_q2 | Q2_SURF_NODRAW);
 
     return FindTexinfo(mt, qplane3d{});
 }
@@ -1694,7 +1740,9 @@ void InitQBSP(int argc, const char **argv)
     map.reset();
     qbsp_options.reset();
 
-    qbsp_options.run(argc, argv);
+    qbsp_options.preinitialize(argc, argv);
+    qbsp_options.initialize(argc, argv);
+    qbsp_options.postinitialize(argc, argv);
 
     qbsp_options.map_path.replace_extension("map");
 
@@ -1704,6 +1752,8 @@ void InitQBSP(int argc, const char **argv)
 
     /* Start logging to <bspname>.log */
     logging::init(fs::path(qbsp_options.bsp_path).replace_extension("log"), qbsp_options);
+
+    qbsp_options.print_summary();
 
     // Remove already existing files
     if (!qbsp_options.onlyents.value() && qbsp_options.convertmapformat.value() == conversion_t::none) {

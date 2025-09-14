@@ -331,6 +331,14 @@ Experimental options
 
    Writes both rgb and directions data *only* into the bsp itself.
 
+.. option:: -hdr
+
+   Write .lit file with e5bgr9 data.
+
+.. option:: -bspxhdr
+
+   Writes e5bgr9 data into the bsp itself.
+
 .. option:: -novanilla
 
    Fallback scaled lighting will be omitted. Standard grey lighting will
@@ -550,6 +558,14 @@ The following keys can be added to the *worldspawn* entity:
 
    Scales the surface light emission from Q2 surface lights (excluding sky faces) by this amount.
 
+.. worldspawn-key:: "_surflight_atten" "n"
+
+   Float, default 1.0.
+
+   .. todo::
+
+      Document this.
+
 .. worldspawn-key:: "_surflightskyscale" "n"
 
    Scales the surface light emission from Q2 sky faces by this amount.
@@ -657,6 +673,11 @@ If used on func_detail* or func_group, a full qbsp pass need to be run.
    through the switchable shadow casters, regardless of whether the shadow
    is off or on.
 
+   .. seealso::
+
+      The light entity key :light-key:`_switchableshadow_target` allows using switchable
+      shadows in ID1 Quake, without custom QC, although the setup is more awkward.
+
 .. bmodel-key:: "_dirt" "n"
 
    For brush models, -1 prevents dirtmapping on the brush model. Useful
@@ -726,6 +747,10 @@ If used on func_detail* or func_group, a full qbsp pass need to be run.
                 "_splitturb" "n"
 
    Overrides the worldspawn/command line option :option:`qbsp -litwater` for these specific brushes.
+
+.. bmodel-key:: "_surflight_atten" "n"
+
+   Overrides the worldspawn key :worldspawn-key:`_surflight_atten` for these brushes.
 
 .. bmodel-key:: "_surflight_rescale" "n"
 
@@ -808,11 +833,17 @@ with the first five letters "light". E.g. "light", "light_globe",
 Point Lights
 ------------
 
-.. light-key:: "light" "n"
+.. light-key:: "light" "[r g b] [n]"
 
-   Set the light intensity. Negative values are also allowed and will
+   The common form is one value, n, which sets the light intensity.
+   Negative values are also allowed and will
    cause the entity to subtract light cast by other entities. Default
    300.
+
+   For Half-Life compatibility, you can specify a color here before the light value,
+   in the same format as :light-key:`_color`.
+
+   ``_color`` takes priority if a color is set in both places.
 
 .. light-key:: "wait" "n"
 
@@ -909,6 +940,21 @@ Point Lights
 
    Set to 1 to make the light compiler ignore this entity (prevents it
    from casting any light). e.g. could be useful with rtlights.
+
+.. light-key:: "_switchableshadow_target" "name"
+
+   Calculate lighting with and without bmodels with a "targetname" equal to "name",
+   and stores the resulting switchable shadow data in a light style which is stored in this light
+   entity's "style" key.
+
+   You should give this light a :light-key:`targetname` and typically set "spawnflags" "1" (start off).
+
+   Implies :light-key:`_nostaticlight` (this entity itself does not cast any light).
+
+   .. hint::
+
+      If your mod supports it, you should prefer to use bmodel key :bmodel-key:`_switchableshadow`
+      to enable switchable shadows.
 
 Spotlights
 ----------

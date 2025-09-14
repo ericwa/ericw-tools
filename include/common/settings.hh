@@ -61,6 +61,8 @@ enum class source
 {
     DEFAULT,
     GAME_TARGET,
+    // implied by another setting.
+    IMPLIED,
     MAP,
     COMMANDLINE
 };
@@ -104,7 +106,7 @@ protected:
     bool change_source(source new_source);
 
 public:
-    ~setting_base() = default;
+    virtual ~setting_base() = default;
 
     // copy constructor is deleted. the trick we use with:
     //
@@ -143,11 +145,13 @@ public:
 // be careful because this won't show up in summary.
 class setting_func : public setting_base
 {
+    using func_type = std::function<bool(const std::string &, parser_base_t &, source)>;
+
 protected:
-    std::function<void(source)> _func;
+    func_type _func;
 
 public:
-    setting_func(setting_container *dictionary, const nameset &names, std::function<void(source)> func,
+    setting_func(setting_container *dictionary, const nameset &names, func_type func,
         const setting_group *group = nullptr, const char *description = "");
     bool copy_from(const setting_base &other) override;
     void reset() override;
@@ -242,7 +246,9 @@ public:
     std::string format() const override;
 };
 
-class can_omit_argument_tag {};
+class can_omit_argument_tag
+{
+};
 
 template<typename T>
 class setting_numeric : public setting_value<T>
@@ -253,6 +259,7 @@ protected:
     T _min, _max;
     bool _can_omit_argument = false;
     T _omitted_argument_value = static_cast<T>(0);
+
 public:
     inline setting_numeric(setting_container *dictionary, const nameset &names, T v, T minval, T maxval,
         const setting_group *group = nullptr, const char *description = "")
@@ -274,8 +281,8 @@ public:
     }
 
     inline setting_numeric(setting_container *dictionary, const nameset &names, T v, T minval, T maxval,
-                           can_omit_argument_tag tag, T omitted_argument_value,
-                           const setting_group *group = nullptr, const char *description = "")
+        can_omit_argument_tag tag, T omitted_argument_value, const setting_group *group = nullptr,
+        const char *description = "")
         : setting_numeric(dictionary, names, v, minval, maxval, group, description)
     {
         _can_omit_argument = true;
@@ -337,6 +344,8 @@ class setting_enum : public setting_value<T>
 {
 private:
     std::map<std::string, T, natural_case_insensitive_less> _values;
+    bool _can_omit_argument = false;
+    T _omitted_argument_value = static_cast<T>(0);
 
 public:
     inline setting_enum(setting_container *dictionary, const nameset &names, T v,
@@ -345,6 +354,15 @@ public:
         : setting_value<T>(dictionary, names, v, group, description),
           _values(enum_values.begin(), enum_values.end())
     {
+    }
+
+    inline setting_enum(setting_container *dictionary, const nameset &names, T v,
+        const std::initializer_list<std::pair<const char *, T>> &enum_values, can_omit_argument_tag tag,
+        T omitted_argument_value, const setting_group *group = nullptr, const char *description = "")
+        : setting_enum(dictionary, names, v, enum_values, group, description)
+    {
+        _can_omit_argument = true;
+        _omitted_argument_value = omitted_argument_value;
     }
 
     std::string string_value() const override
@@ -375,24 +393,34 @@ public:
 
     bool parse(const std::string &setting_name, parser_base_t &parser, source source) override
     {
-        if (!parser.parse_token()) {
-            return false;
+        if (parser.parse_token(PARSE_PEEK)) {
+            // see if it's a string enum case label
+            if (auto it = _values.find(parser.token); it != _values.end()) {
+                this->set_value(it->second, source);
+
+                // consume the token we peeked above
+                Q_assert(parser.parse_token());
+                return true;
+            }
+
+            // see if it's an integer
+            try {
+                const int i = std::stoi(parser.token);
+
+                this->set_value(static_cast<T>(i), source);
+
+                // consume the token we peeked above
+                Q_assert(parser.parse_token());
+                return true;
+            } catch (std::invalid_argument &) {
+            } catch (std::out_of_range &) {
+            }
         }
 
-        // see if it's a string enum case label
-        if (auto it = _values.find(parser.token); it != _values.end()) {
-            this->set_value(it->second, source);
+        // either there is nothing to parse, or it failed to parse as a case label/int
+        if (_can_omit_argument) {
+            this->set_value(_omitted_argument_value, source);
             return true;
-        }
-
-        // see if it's an integer
-        try {
-            const int i = std::stoi(parser.token);
-
-            this->set_value(static_cast<T>(i), source);
-            return true;
-        } catch (std::invalid_argument &) {
-        } catch (std::out_of_range &) {
         }
 
         return false;
@@ -406,7 +434,7 @@ private:
 
 public:
     setting_string(setting_container *dictionary, const nameset &names, std::string v,
-        const std::string_view &format = "\"str\"", const setting_group *group = nullptr, const char *description = "");
+        std::string_view format = "\"str\"", const setting_group *group = nullptr, const char *description = "");
     bool parse(const std::string &setting_name, parser_base_t &parser, source source) override;
     [[deprecated("use value()")]] std::string string_value() const override;
     std::string format() const override;
@@ -430,7 +458,7 @@ private:
 
 public:
     setting_set(setting_container *dictionary, const nameset &names,
-        const std::string_view &format = "\"str\" <multiple allowed>", const setting_group *group = nullptr,
+        std::string_view format = "\"str\" <multiple allowed>", const setting_group *group = nullptr,
         const char *description = "");
 
     const std::unordered_set<std::string> &values() const;
@@ -477,6 +505,29 @@ protected:
 
 public:
     using setting_vec3::setting_vec3;
+};
+
+/**
+ * Setting that can either parse:
+ *
+ * "light" "{brightness}" (usual Q1/Q2 format)
+ *
+ * or:
+ *
+ * "light" "{r} {g} {b} {brightness}" (HL format) - stores in the provided "color" setting
+ */
+class setting_light : public setting_value<float>
+{
+private:
+    settings::setting_color *_color;
+
+public:
+    setting_light(setting_container *dictionary, const nameset &names, settings::setting_color *color, float a,
+        const setting_group *group = nullptr, const char *description = "");
+
+    bool parse(const std::string &setting_name, parser_base_t &parser, source source) override;
+    std::string string_value() const override;
+    std::string format() const override;
 };
 
 // a simple wrapper type that allows you to provide
@@ -575,7 +626,7 @@ public:
 
     inline auto grouped() const { return _grouped_settings; }
 
-    void print_help();
+    void print_help(bool fatal);
     void print_summary();
     void print_rst_documentation();
 
@@ -587,6 +638,9 @@ public:
      * eaten by the options).
      */
     std::vector<std::string> parse(parser_base_t &parser);
+
+    // convenience, for tests
+    std::vector<std::string> parse_string(std::string_view string);
 };
 
 // global groups
@@ -619,6 +673,8 @@ public:
     setting_bool q2rtx;
     setting_invertible_bool defaultpaths;
     setting_scalar tex_saturation_boost;
+    setting_string logfile;
+    setting_bool logappend;
 
     common_settings();
 
@@ -631,7 +687,8 @@ public:
     // after parsing has concluded, handle the side effects
     virtual void postinitialize(int argc, const char **argv);
 
-    // run all three steps
-    void run(int argc, const char **argv);
+    // left-over settings that weren't parsed (everything
+    // after the last setting)
+    std::vector<std::string> remainder;
 };
 }; // namespace settings

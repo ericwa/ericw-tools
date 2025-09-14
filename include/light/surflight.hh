@@ -62,6 +62,7 @@ struct surfacelight_t
         int32_t style = 0; // style ID
         float intensity = 0; // Surface light strength for each point
         float totalintensity = 0; // Total surface light strength
+        float atten = 1.0f; // attenuation
         qvec3f color; // Surface color
     };
 

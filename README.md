@@ -1,5 +1,8 @@
 ## ericw-tools
  - Website:         http://ericwa.github.io/ericw-tools
+ - Documentation:
+   - 2.0.0-alpha: https://ericw-tools.readthedocs.io
+   - 0.18: [qbsp](https://ericwa.github.io/ericw-tools/doc/qbsp.html), [vis](https://ericwa.github.io/ericw-tools/doc/vis.html), [light](https://ericwa.github.io/ericw-tools/doc/light.html), [bspinfo](https://ericwa.github.io/ericw-tools/doc/bspinfo.html), [bsputil](https://ericwa.github.io/ericw-tools/doc/bsputil.html)
  - Maintainer:      Eric Wasylishen (AKA ericw)
  - Email:           ewasylishen@gmail.com
 
@@ -8,8 +11,6 @@
  - Website: http://disenchant.net
  - Author:  Kevin Shanahan (AKA Tyrann)
  - Email:   tyrann@disenchant.net
-
-[![Build status](https://ci.appveyor.com/api/projects/status/7lpdcy7l3e840u70?svg=true)](https://ci.appveyor.com/project/EricWasylishen/ericw-tools)
 
 ## About
 
@@ -85,6 +86,13 @@ cd build
 # otherwise, replace with absolute path to "vcpkg/scripts/buildsystems/vcpkg.cmake"
 cmake .. -DCMAKE_TOOLCHAIN_FILE="$(pwd)/../vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_GENERATOR_PLATFORM=Win32 -DSPHINX_EXECUTABLE="$(pwd)/../sphinx-venv/Scripts/sphinx-build.exe"
 ```
+
+#### IDE Tips - CLion
+
+- Modify the "Google Test" run/debug configuration template to have `--gtest_catch_exceptions=0`, otherwise the  
+  debugger doesn't stop on exceptions (segfaults etc.)
+
+  (see: https://youtrack.jetbrains.com/issue/CPP-29559/Clion-LLDB-does-not-break-on-SEH-exceptions-within-GTest)
 
 ### macOS 10.15
 

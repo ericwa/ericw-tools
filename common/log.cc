@@ -63,17 +63,40 @@ void preinitialize()
 #endif
 }
 
-void init(const fs::path &filename, const settings::common_settings &settings)
+void init(std::optional<fs::path> filename, const settings::common_settings &settings)
 {
-    if (settings.log.value()) {
-        logfile.open(filename);
+    if (!settings.log.value()) {
+        return;
+    }
+
+    if (settings.logfile.is_changed()) {
+        filename = settings.logfile.value();
+    }
+
+    if (!filename.has_value()) {
+        return;
+    }
+
+    fs::path p = fs::absolute(filename.value());
+
+    if (logfile) {
+        logfile.close();
+    }
+
+    logfile.open(p, settings.logappend.value() ? std::ios_base::app : std::ios_base::trunc);
+
+    if (logfile) {
+        print(flag::PROGRESS, "logging to {} ({})\n", p.string(), settings.logappend.value() ? "append" : "truncate");
         fmt::print(logfile, "---- {} / ericw-tools {} ----\n", settings.program_name, ERICWTOOLS_VERSION);
+    } else {
+        print(flag::PROGRESS, "WARNING: can't log to {}\n", p.string());
     }
 }
 
 void close()
 {
     if (logfile) {
+        fmt::print(logfile, "\n\n");
         logfile.close();
     }
 }
@@ -114,7 +137,7 @@ void print(flag logflag, const char *str)
 
     if (logflag != flag::PERCENT) {
         // log file, if open
-        if (logfile) {
+        if (logfile && logflag != flag::PROGRESS) {
             logfile << str;
             logfile.flush();
         }
@@ -156,11 +179,37 @@ void vprint(fmt::string_view format, fmt::format_args args)
     vprint(flag::DEFAULT, format, args);
 }
 
-static time_point start_time;
+static qtime_point start_time;
 static bool is_timing = false;
 static uint64_t last_count = -1;
-static time_point last_indeterminate_time;
+static qtime_point last_indeterminate_time;
 static std::atomic_bool locked = false;
+static std::array<duration, 10> one_percent_times;
+static size_t num_percent_times, percent_time_index;
+static qtime_point last_percent_time;
+
+static duration average_times_for_one_percent()
+{
+    duration pt{};
+
+    for (size_t i = 0; i < num_percent_times; i++) {
+        pt += one_percent_times[i];
+    }
+
+    pt /= num_percent_times;
+
+    return pt;
+}
+
+static void register_average_time(duration dt)
+{
+    one_percent_times[percent_time_index] = dt;
+    percent_time_index = (percent_time_index + 1) % one_percent_times.size();
+
+    if (num_percent_times < one_percent_times.size()) {
+        num_percent_times++;
+    }
+}
 
 void header(const char *name)
 {
@@ -210,6 +259,9 @@ void percent(uint64_t count, uint64_t max, bool displayElapsed)
         is_timing = true;
         last_count = -1;
         last_indeterminate_time = {};
+        num_percent_times = 0;
+        percent_time_index = 0;
+        last_percent_time = I_FloatTime();
     }
 
     if (count == max) {
@@ -220,13 +272,13 @@ void percent(uint64_t count, uint64_t max, bool displayElapsed)
                 if (active_percent_callback) {
                     active_percent_callback(std::nullopt, elapsed);
                 } else {
-                    print(flag::PERCENT, "[done] time elapsed: {:.3}\n", elapsed);
+                    print(flag::PERCENT, "[done] time elapsed: {:%H:%M:%S}\n", elapsed);
                 }
             } else {
                 if (active_percent_callback) {
                     active_percent_callback(100u, elapsed);
                 } else {
-                    print(flag::PERCENT, "[100%] time elapsed: {:.3}\n", elapsed);
+                    print(flag::PERCENT, "[100%] time elapsed: {:%H:%M:%S}\n", elapsed);
                 }
             }
         }
@@ -238,7 +290,20 @@ void percent(uint64_t count, uint64_t max, bool displayElapsed)
                 if (active_percent_callback) {
                     active_percent_callback(pct, std::nullopt);
                 } else {
-                    print(flag::PERCENT, "[{:>3}%]\r", pct);
+                    if (pct) {
+                        // we shifted from some other percent value to a non-zero value;
+                        // calculate the time it took to get a 1% change
+                        uint64_t diff = pct - last_count; // should always be >= 1
+                        duration dt = I_FloatTime() - last_percent_time;
+                        dt /= diff;
+                        register_average_time(dt);
+                        last_percent_time = I_FloatTime();
+                        print(flag::PERCENT, "[{:>3}%]  est: {:%H:%M:%S}\r", pct,
+                            std::chrono::duration_cast<std::chrono::duration<long long>>(
+                                average_times_for_one_percent() * (100 - pct)));
+                    } else {
+                        print(flag::PERCENT, "[{:>3}%]  ...\r", pct);
+                    }
                 }
                 last_count = pct;
             }

@@ -188,7 +188,7 @@ struct compiled_brush_t
 
             int native = bsp->loadversion->game->contents_to_native(contents);
 
-            if (bsp->loadversion->game->id == GAME_QUAKE_II && (native || side.flags.native || side.value)) {
+            if (bsp->loadversion->game->id == GAME_QUAKE_II && (native || side.flags.native_q2 || side.value)) {
                 wal_metadata_t *meta = nullptr;
 
                 auto it = wals.find(side.texture_name);
@@ -210,8 +210,8 @@ struct compiled_brush_t
 
                 if (!meta || !((meta->contents & ~(Q2_CONTENTS_SOLID | Q2_CONTENTS_WINDOW)) ==
                                      (native & ~(Q2_CONTENTS_SOLID | Q2_CONTENTS_WINDOW)) &&
-                                 meta->flags == side.flags.native && meta->value == side.value)) {
-                    ewt::print(stream, " {} {} {}", native, side.flags.native, side.value);
+                                 meta->flags == side.flags.native_q2 && meta->value == side.value)) {
+                    ewt::print(stream, " {} {} {}", native, static_cast<int32_t>(side.flags.native_q2), side.value);
                 }
             }
 
@@ -440,10 +440,10 @@ struct decomp_brush_side_t
         for (auto &face : faces) {
             auto [faceFront, faceBack] = face.clipToPlane(plane);
             if (faceFront.winding) {
-                frontfaces.emplace_back(std::move(faceFront));
+                frontfaces.push_back(std::move(faceFront));
             }
             if (faceBack.winding) {
-                backfaces.emplace_back(std::move(faceBack));
+                backfaces.push_back(std::move(faceBack));
             }
         }
 
@@ -549,7 +549,7 @@ static const char *DefaultOriginTexture(const mbsp_t *bsp)
     }
 }
 
-static const char *DefaultTextureForContents(const mbsp_t *bsp, const contentflags_t &contents)
+static const char *DefaultTextureForContents(const mbsp_t *bsp, contentflags_t contents)
 {
     int native = bsp->loadversion->game->contents_to_native(contents);
 
@@ -566,6 +566,8 @@ static const char *DefaultTextureForContents(const mbsp_t *bsp, const contentfla
             return "e1u1/clip";
         } else if (native & Q2_CONTENTS_MONSTERCLIP) {
             return "e1u1/clip_mon";
+        } else if (native & Q2_CONTENTS_PROJECTILECLIP) {
+            return "e1u1/clip_proj";
         } else if (native & Q2_CONTENTS_AREAPORTAL) {
             return "e1u1/trigger";
         }
@@ -586,14 +588,18 @@ static const char *DefaultTextureForContents(const mbsp_t *bsp, const contentfla
 // don't actually have a rendered face to pull in, so we're gonna
 // replace the texture here with something more appropriate.
 static void OverrideTextureForContents(
-    compiled_brush_side_t &side, const mbsp_t *bsp, const char *name, const contentflags_t &contents)
+    compiled_brush_side_t &side, const mbsp_t *bsp, const char *name, contentflags_t contents)
 {
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         int native = bsp->loadversion->game->contents_to_native(contents);
 
-        if (native & (Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP)) {
-            if (!(native & Q2_CONTENTS_PLAYERCLIP)) {
+        if (native & (Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_PROJECTILECLIP)) {
+            if ((native & Q2_CONTENTS_PLAYERCLIP) == Q2_CONTENTS_PLAYERCLIP) {
+                side.texture_name = "e1u1/clip_player";
+            } else if ((native & Q2_CONTENTS_MONSTERCLIP) == Q2_CONTENTS_MONSTERCLIP) {
                 side.texture_name = "e1u1/clip_mon";
+            } else if ((native & Q2_CONTENTS_PROJECTILECLIP) == Q2_CONTENTS_PROJECTILECLIP) {
+                side.texture_name = "e1u1/clip_proj";
             } else {
                 side.texture_name = "e1u1/clip";
             }
@@ -633,7 +639,7 @@ static decomp_brush_t BuildInitialBrush(
         // NOTE: side may have had all of its faces clipped away, but we still need to keep it
         // as it's one of the final boundaries of the brush
 
-        sides.emplace_back(std::move(side));
+        sides.push_back(std::move(side));
     }
 
     return decomp_brush_t(sides);
@@ -688,8 +694,7 @@ static decomp_brush_t BuildInitialBrush_Q2(
 
         auto side = decomp_brush_side_t(bsp, task, plane);
         side.winding = std::move(*winding);
-
-        sides.emplace_back(side);
+        sides.push_back(std::move(side));
     }
 
     return decomp_brush_t(sides);
@@ -813,9 +818,9 @@ static std::vector<compiled_brush_t> DecompileLeafTaskGeometryOnly(
     compiled_brush_t brush;
     brush.source = task.brush;
     brush.brush_offset = brush_offset;
-    brush.contents = bsp->loadversion->game->create_contents_from_native(
-            task.brush ? task.brush->contents : task.leaf ? task.leaf->contents : task.contents.value()
-            );
+    brush.contents = bsp->loadversion->game->create_contents_from_native(task.brush  ? task.brush->contents
+                                                                         : task.leaf ? task.leaf->contents
+                                                                                     : task.contents.value());
 
     brush.sides.reserve(task.allPlanes.size());
 
@@ -832,8 +837,8 @@ static std::vector<compiled_brush_t> DecompileLeafTaskGeometryOnly(
     return result;
 }
 
-static std::vector<compiled_brush_t> DecompileLeafTask(
-    const mbsp_t *bsp, const decomp_options &options, leaf_decompile_task &task, const std::optional<qvec3d> &brush_offset)
+static std::vector<compiled_brush_t> DecompileLeafTask(const mbsp_t *bsp, const decomp_options &options,
+    leaf_decompile_task &task, const std::optional<qvec3d> &brush_offset)
 {
     std::vector<decomp_brush_t> finalBrushes;
     if (bsp->loadversion->game->id == GAME_QUAKE_II && !options.ignoreBrushes) {
@@ -875,7 +880,9 @@ static std::vector<compiled_brush_t> DecompileLeafTask(
         compiled_brush_t brush;
         brush.source = task.brush;
         brush.brush_offset = brush_offset;
-        brush.contents = bsp->loadversion->game->create_contents_from_native(task.brush ? task.brush->contents : task.leaf ? task.leaf->contents : task.contents.value());
+        brush.contents = bsp->loadversion->game->create_contents_from_native(task.brush  ? task.brush->contents
+                                                                             : task.leaf ? task.leaf->contents
+                                                                                         : task.contents.value());
 
         for (auto &finalSide : finalBrush.sides) {
             compiled_brush_side_t &side = brush.sides.emplace_back();
@@ -967,8 +974,7 @@ static std::vector<compiled_brush_t> DecompileLeafTaskLeafVisualization(
         brush.source = task.brush;
         brush.brush_offset = brush_offset;
         brush.contents = bsp->loadversion->game->create_contents_from_native(
-                task.leaf ? task.leaf->contents : task.contents.value()
-                );
+            task.leaf ? task.leaf->contents : task.contents.value());
 
         for (auto &finalSide : finalBrush.sides) {
             compiled_brush_side_t &side = brush.sides.emplace_back();
@@ -1088,8 +1094,8 @@ static void AddMapBoundsToStack(std::vector<decomp_plane_t> &planestack, const m
     }
 }
 
-static std::vector<compiled_brush_t> DecompileBrushTask(
-    const mbsp_t *bsp, const decomp_options &options, leaf_decompile_task &task, const std::optional<qvec3d> &brush_offset)
+static std::vector<compiled_brush_t> DecompileBrushTask(const mbsp_t *bsp, const decomp_options &options,
+    leaf_decompile_task &task, const std::optional<qvec3d> &brush_offset)
 {
     for (size_t i = 0; i < task.brush->numsides; i++) {
         const q2_dbrushside_qbism_t *side = &bsp->dbrushsides[task.brush->firstside + i];
@@ -1195,9 +1201,8 @@ static void DecompileEntity(
 
             // decompile the leafs in parallel
             compiledBrushes.resize(tasks.size());
-            tbb::parallel_for(static_cast<size_t>(0), tasks.size(), [&](const size_t &i) {
-                compiledBrushes[i] = DecompileLeafTaskGeometryOnly(bsp, tasks[i], brush_offset);
-            });
+            tbb::parallel_for(static_cast<size_t>(0), tasks.size(),
+                [&](size_t i) { compiledBrushes[i] = DecompileLeafTaskGeometryOnly(bsp, tasks[i], brush_offset); });
         } else if (bsp->loadversion->game->id == GAME_QUAKE_II && !options.ignoreBrushes) {
             std::unordered_map<const dbrush_t *, leaf_decompile_task> brushes;
 
@@ -1246,7 +1251,7 @@ static void DecompileEntity(
             compiledBrushes.resize(brushes.size());
             size_t t = brushes.size();
 
-            tbb::parallel_for(static_cast<size_t>(0), brushes.size(), [&](const size_t &i) {
+            tbb::parallel_for(static_cast<size_t>(0), brushes.size(), [&](size_t i) {
                 compiledBrushes[i] = DecompileBrushTask(bsp, options, brushesVector[i], brush_offset);
                 t--;
             });
@@ -1262,7 +1267,7 @@ static void DecompileEntity(
 
             // decompile the leafs in parallel
             compiledBrushes.resize(tasks.size());
-            tbb::parallel_for(static_cast<size_t>(0), tasks.size(), [&](const size_t &i) {
+            tbb::parallel_for(static_cast<size_t>(0), tasks.size(), [&](size_t i) {
                 if (options.geometryOnly) {
                     compiledBrushes[i] = DecompileLeafTaskGeometryOnly(bsp, tasks[i], brush_offset);
                 } else {
@@ -1373,7 +1378,8 @@ void DecompileBSP(const mbsp_t *bsp, const decomp_options &options, std::ofstrea
 
 // MARK: - leaf visualization
 
-static std::vector<leaf_visualization_t> CompiledBrushesToLeafVisualization(std::vector<std::vector<compiled_brush_t>> in)
+static std::vector<leaf_visualization_t> CompiledBrushesToLeafVisualization(
+    std::vector<std::vector<compiled_brush_t>> in)
 {
     std::vector<leaf_visualization_t> result;
 
@@ -1422,9 +1428,8 @@ std::vector<leaf_visualization_t> VisualizeLeafs(const mbsp_t &bsp, int modelnum
 
     // decompile the leafs in parallel
     compiledBrushes.resize(tasks.size());
-    tbb::parallel_for(static_cast<size_t>(0), tasks.size(), [&](const size_t &i) {
-        compiledBrushes[i] = DecompileLeafTaskLeafVisualization(&bsp,  tasks[i], std::nullopt);
-    });
+    tbb::parallel_for(static_cast<size_t>(0), tasks.size(),
+        [&](size_t i) { compiledBrushes[i] = DecompileLeafTaskLeafVisualization(&bsp, tasks[i], std::nullopt); });
 
     return CompiledBrushesToLeafVisualization(std::move(compiledBrushes));
 }

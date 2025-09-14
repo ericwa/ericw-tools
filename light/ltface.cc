@@ -89,7 +89,7 @@ public:
         : m_unoccluded(true),
           m_actualFace(actualFace),
           m_position(position),
-          m_interpolatedNormal(interpolatedNormal){};
+          m_interpolatedNormal(interpolatedNormal) { };
 };
 
 static constexpr float sampleOffPlaneDist = 1.0f;
@@ -300,12 +300,12 @@ static void CalcPoints_Debug(const lightsurf_t *surf, const mbsp_t *bsp)
 /// This is used for marking sample points as occluded.
 static bool Light_PointInAnySolid(const mbsp_t *bsp, const dmodelh2_t *self, const qvec3f &point)
 {
-    if (Light_PointInSolid(bsp, self, point))
+    if (Light_PointInSolid(bsp, self, extended_content_flags, point))
         return true;
 
     auto *self_modelinfo = ModelInfoForModel(bsp, self - bsp->dmodels.data());
     if (self_modelinfo->object_channel_mask.value() == CHANNEL_MASK_DEFAULT) {
-        if (Light_PointInWorld(bsp, point))
+        if (Light_PointInWorld(bsp, extended_content_flags, point))
             return true;
     }
 
@@ -313,7 +313,7 @@ static bool Light_PointInAnySolid(const mbsp_t *bsp, const dmodelh2_t *self, con
         if (modelinfo->object_channel_mask.value() != self_modelinfo->object_channel_mask.value())
             continue;
 
-        if (Light_PointInSolid(bsp, modelinfo->model, point - modelinfo->offset)) {
+        if (Light_PointInSolid(bsp, modelinfo->model, extended_content_flags, point - modelinfo->offset)) {
             // Only mark occluded if the bmodel is fully opaque
             if (modelinfo->alpha.value() == 1.0f)
                 return true;
@@ -488,8 +488,7 @@ static bool Mod_LeafPvs(const mbsp_t *bsp, const mleaf_t *leaf, uint8_t *out)
 
 static const std::vector<uint8_t> *Mod_LeafPvs(const mbsp_t *bsp, const mleaf_t *leaf)
 {
-    if (bsp->loadversion->game->contents_are_liquid(
-            bsp->loadversion->game->create_contents_from_native(leaf->contents))) {
+    if (bsp->loadversion->game->create_contents_from_native(leaf->contents).is_liquid()) {
         // the liquid case is because leaf->contents might be in an opaque liquid,
         // which we typically want light to pass through, but visdata would report that
         // there's no visibility across the opaque liquid. so, skip culling and do the raytracing.
@@ -508,7 +507,7 @@ static void CalcPvs(const mbsp_t *bsp, lightsurf_t *lightsurf)
     if (!bsp->dvis.bits.size()) {
         return;
     }
-    
+
     const int pvssize = DecompressedVisSize(bsp);
 
     // set lightsurf->pvs
@@ -539,8 +538,7 @@ static void CalcPvs(const mbsp_t *bsp, lightsurf_t *lightsurf)
         /* copy the pvs for this leaf into pointpvs */
         Mod_LeafPvs(bsp, leaf, pointpvs);
 
-        if (bsp->loadversion->game->contents_are_liquid(
-                bsp->loadversion->game->create_contents_from_native(leaf->contents))) {
+        if (bsp->loadversion->game->create_contents_from_native(leaf->contents).is_liquid()) {
             // hack for when the sample point might be in an opaque liquid, blocking vis,
             // but we typically want light to pass through these.
             // see also VisCullEntity() which handles the case when the light emitter is in liquid.
@@ -693,7 +691,8 @@ static lightsurf_t Lightsurf_Init(const modelinfo_t *modelinfo, const settings::
 
         /* Set up the surface points */
         if (light_options.world_units_per_luxel.is_changed()) {
-            if (bsp->loadversion->game->id == GAME_QUAKE_II && (Face_Texinfo(bsp, face)->flags.native & Q2_SURF_SKY)) {
+            if (bsp->loadversion->game->id == GAME_QUAKE_II &&
+                (Face_Texinfo(bsp, face)->flags.native_q2 & Q2_SURF_SKY)) {
                 lightsurf.extents = faceextents_t(*face, *bsp, world_units_per_luxel_t{}, 512.f);
             } else if (extended_flags.world_units_per_luxel) {
                 lightsurf.extents =
@@ -805,44 +804,56 @@ static void Lightmap_Save(
  */
 
 // returns the light contribution at a given distance, without regard for angle
-float GetLightValue(const settings::worldspawn_keys &cfg, const light_t *entity, float dist)
+static float GetLightValue(const settings::worldspawn_keys &cfg, const light_formula_t formula, const float light,
+    const float falloff, const float atten, const float dist, const float hotspot_clamp)
 {
-    const float light = entity->light.value();
+    if (formula == LF_INFINITE || formula == LF_LOCALMIN)
+        return light;
 
     // mxd. Apply falloff?
-    const float lightdistance = entity->falloff.value();
-    if (lightdistance > 0.0f) {
-        if (entity->getFormula() == LF_LINEAR) {
+    if (falloff > 0.0f) {
+        if (formula == LF_LINEAR) {
             // Light can affect surface?
-            if (lightdistance > dist)
-                return light * (1.0f - (dist / lightdistance));
+            if (falloff > dist)
+                return light * (1.0f - (dist / falloff));
             else
                 return 0.0f; // Surface is unaffected
         }
     }
 
-    if (entity->getFormula() == LF_INFINITE || entity->getFormula() == LF_LOCALMIN)
-        return light;
+    float value = cfg.scaledist.value() * atten * dist;
 
-    float value = cfg.scaledist.value() * entity->atten.value() * dist;
-
-    switch (entity->getFormula()) {
-        case LF_INVERSE: return light / (value / LF_SCALE);
+    switch (formula) {
+        case LF_INVERSE: return light / (value / hotspot_clamp);
         case LF_INVERSE2A:
-            value += LF_SCALE;
+            value += hotspot_clamp;
             /* Fall through */
-        case LF_INVERSE2: return light / ((value * value) / (LF_SCALE * LF_SCALE));
+        case LF_INVERSE2: return light / ((value * value) / (hotspot_clamp * hotspot_clamp));
         case LF_LINEAR:
             if (light > 0)
                 return (light - value > 0) ? light - value : 0;
             else
                 return (light + value < 0) ? light + value : 0;
+        case LF_QRAD3: {
+            const float d = std::max(value, hotspot_clamp); // Clamp away hotspots, also avoid division by 0...
+            return light / (d * d);
+        }
         default: Error("Internal error: unknown light formula");
     }
 }
 
-static float GetLightValueWithAngle(const settings::worldspawn_keys &cfg, const light_t *entity, const qvec3f &surfnorm,
-    bool use_surfnorm, const qvec3f &surfpointToLightDir, float dist, bool twosided)
+// mxd. Surface light falloff. Returns color in [0,255]
+inline qvec3f SurfaceLight_ColorAtDist(const settings::worldspawn_keys &cfg, float surf_scale, float intensity,
+    const qvec3f &color, float dist, float atten, float hotspot_clamp)
+{
+    const float v = GetLightValue(cfg, LF_QRAD3, intensity, 0.0f, atten, dist, hotspot_clamp) * surf_scale;
+    return color * v;
+}
+
+static float GetLightValueWithAngle(const settings::worldspawn_keys &cfg, const light_formula_t formula,
+    const float light, const float falloff, const float atten, const bool bleed, const float anglescale,
+    const qvec3f &surfnorm, bool use_surfnorm, const qvec3f &surfpointToLightDir, const float dist, bool twosided,
+    const float hotspot_clamp)
 {
     float angle;
 
@@ -852,7 +863,7 @@ static float GetLightValueWithAngle(const settings::worldspawn_keys &cfg, const 
         angle = 1.0f;
     }
 
-    if (entity->bleed.value() || twosided) {
+    if (bleed || twosided) {
         if (angle < 0) {
             angle = -angle; // ericw -- support "_bleed" option
         }
@@ -865,7 +876,24 @@ static float GetLightValueWithAngle(const settings::worldspawn_keys &cfg, const 
     }
 
     /* Apply anglescale */
-    angle = (1.0 - entity->anglescale.value()) + (entity->anglescale.value() * angle);
+    angle = (1.0 - anglescale) + (anglescale * angle);
+
+    return GetLightValue(cfg, formula, light, falloff, atten, dist, hotspot_clamp) * angle;
+}
+
+// returns the light contribution at a given distance, without regard for angle
+static float GetLightValue(const settings::worldspawn_keys &cfg, const light_t *entity, const float dist)
+{
+    return GetLightValue(cfg, entity->getFormula(), entity->light.value(), entity->falloff.value(),
+        entity->atten.value(), dist, LF_SCALE);
+}
+
+static float GetLightValueWithAngle(const settings::worldspawn_keys &cfg, const light_t *entity, const qvec3f &surfnorm,
+    bool use_surfnorm, const qvec3f &surfpointToLightDir, float dist, bool twosided)
+{
+    float value = GetLightValueWithAngle(cfg, entity->formula.value(), entity->light.value(), entity->falloff.value(),
+        entity->atten.value(), entity->bleed.value(), entity->anglescale.value(), surfnorm, use_surfnorm,
+        surfpointToLightDir, dist, twosided, LF_SCALE);
 
     /* Check spotlight cone */
     float spotscale = 1;
@@ -883,8 +911,7 @@ static float GetLightValueWithAngle(const settings::worldspawn_keys &cfg, const 
         }
     }
 
-    float add = GetLightValue(cfg, entity, dist) * angle * spotscale;
-    return add;
+    return value * spotscale;
 }
 
 template<typename T>
@@ -1012,7 +1039,7 @@ constexpr bool Light_ClampMin(lightsample_t &sample, const float light, const qv
     return changed;
 }
 
-constexpr float fraction(const float &min, const float &val, const float &max)
+constexpr float fraction(float min, float val, float max)
 {
     if (val >= max)
         return 1.0;
@@ -1156,9 +1183,7 @@ static bool VisCullEntity(const mbsp_t *bsp, const std::vector<uint8_t> &pvs, co
 
     auto contents = bsp->loadversion->game->create_contents_from_native(entleaf->contents);
 
-    if (bsp->loadversion->game->contents_are_solid(contents) ||
-        bsp->loadversion->game->contents_are_sky(contents) ||
-        bsp->loadversion->game->contents_are_liquid(contents)) {
+    if (contents.is_solid() || contents.is_sky() || contents.is_liquid()) {
         // the liquid case is because entleaf->contents might be in an opaque liquid,
         // which we typically want light to pass through, but visdata would report that
         // there's no visibility across the opaque liquid. so, skip culling and do the raytracing.
@@ -1450,7 +1475,7 @@ static void LightFace_Sky(const mbsp_t *bsp, const sun_t *sun, lightsurf_t *ligh
                 continue;
             }
         }
-        
+
         const ray_io &ray = rs.getRay(j);
         const int i = ray.index;
 
@@ -1745,7 +1770,7 @@ static void LightFace_LocalMin(
             if (rs.getPushedRayOccluded(j)) {
                 continue;
             }
-            
+
             const ray_io &ray = rs.getRay(j);
             int i = ray.index;
             float value = entity->light.value();
@@ -1759,7 +1784,7 @@ static void LightFace_LocalMin(
             } else {
                 hit = Light_ClampMin(sample, value, entity->color.value()) || hit;
             }
-            
+
 #if 0
             total_light_ray_hits++;
 #endif
@@ -1902,25 +1927,12 @@ static void LightFace_DebugMottle(const mbsp_t *bsp, const lightsurf_t *lightsur
     Lightmap_Save(bsp, lightmaps, lightsurf, lightmap, 0);
 }
 
-// mxd. Surface light falloff. Returns color in [0,255]
-constexpr qvec3f SurfaceLight_ColorAtDist(const settings::worldspawn_keys &cfg, const float &surf_scale,
-    const float &intensity, const qvec3f &color, const float &dist, const float &hotspot_clamp)
-{
-    // Exponential falloff
-    const float d = std::max(dist, hotspot_clamp); // Clamp away hotspots, also avoid division by 0...
-    const float scaledintensity = intensity * surf_scale;
-    const float scale = (1.0f / (d * d));
-
-    return color * scaledintensity * scale;
-}
-
 // dir: vpl -> sample point direction
 // mxd. returns color in [0,255]
 inline qvec3f GetSurfaceLighting(const settings::worldspawn_keys &cfg, const surfacelight_t &vpl,
     const surfacelight_t::per_style_t &vpl_settings, const qvec3f &dir, float dist, const qvec3f &normal,
-    bool use_normal, const float &standard_scale, const float &sky_scale, const float &hotspot_clamp)
+    bool use_normal, float standard_scale, float sky_scale, float hotspot_clamp)
 {
-    qvec3f result;
     float dotProductFactor = 1.0f;
 
     float dp1 = qv::dot(vpl.surfnormal, dir);
@@ -1957,19 +1969,13 @@ inline qvec3f GetSurfaceLighting(const settings::worldspawn_keys &cfg, const sur
     }
 
     // Get light contribution
-    result = SurfaceLight_ColorAtDist(cfg, vpl_settings.omnidirectional ? sky_scale : standard_scale,
-        vpl_settings.intensity, vpl_settings.color, dist, hotspot_clamp);
-
-    // Apply angle scale
-    const qvec3f resultscaled = result * dotProductFactor;
-
-    //Q_assert(!std::isnan(resultscaled[0]) && !std::isnan(resultscaled[1]) && !std::isnan(resultscaled[2]));
-    return resultscaled;
+    return SurfaceLight_ColorAtDist(cfg, (vpl_settings.omnidirectional ? sky_scale : standard_scale) * dotProductFactor,
+        vpl_settings.intensity, vpl_settings.color, dist, vpl_settings.atten, hotspot_clamp);
 }
 
 static bool // mxd
 SurfaceLight_SphereCull(const surfacelight_t *vpl, const lightsurf_t *lightsurf,
-    const surfacelight_t::per_style_t &vpl_settings, const float &bouncelight_gate, const float &hotspot_clamp)
+    const surfacelight_t::per_style_t &vpl_settings, float bouncelight_gate, float hotspot_clamp)
 {
     if (light_options.visapprox.value() == visapprox_t::RAYS &&
         vpl->bounds.disjoint(lightsurf->extents.bounds, 0.001f)) {
@@ -1985,13 +1991,12 @@ SurfaceLight_SphereCull(const surfacelight_t *vpl, const lightsurf_t *lightsurf,
     // Get light contribution
     const qvec3f color = SurfaceLight_ColorAtDist(cfg,
         vpl_settings.omnidirectional ? cfg.surflightskyscale.value() : cfg.surflightscale.value(),
-        vpl_settings.totalintensity, vpl_settings.color, dist, hotspot_clamp);
+        vpl_settings.totalintensity, vpl_settings.color, dist, vpl_settings.atten, hotspot_clamp);
 
     return qv::gate(color, (float)bouncelight_gate);
 }
 
-static bool
-SurfaceLight_VisCull(const mbsp_t *bsp, const std::vector<uint8_t> *pvs, const lightsurf_t *lightsurf_b)
+static bool SurfaceLight_VisCull(const mbsp_t *bsp, const std::vector<uint8_t> *pvs, const lightsurf_t *lightsurf_b)
 {
     if (pvs && light_options.visapprox.value() == visapprox_t::VIS) {
         for (auto &leaf : lightsurf_b->leaves) {
@@ -2005,8 +2010,8 @@ SurfaceLight_VisCull(const mbsp_t *bsp, const std::vector<uint8_t> *pvs, const l
 }
 
 static void // mxd
-LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t *lightmaps, std::optional<size_t> bounce_depth,
-    const float &standard_scale, const float &sky_scale, const float &hotspot_clamp)
+LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t *lightmaps,
+    std::optional<size_t> bounce_depth, float standard_scale, float sky_scale, float hotspot_clamp)
 {
     const settings::worldspawn_keys &cfg = *lightsurf->cfg;
     const float surflight_gate = light_options.emissivequality.value() == emissivequality_t::HIGH ? 0.0f : 0.01f;
@@ -2080,12 +2085,12 @@ LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t
                 for (int j = 0; j < numrays; j++) {
                     if (rs.getPushedRayOccluded(j))
                         continue;
-                
+
                     const ray_io &ray = rs.getRay(j);
                     const int i = ray.index;
                     qvec3f indirect = rs.getPushedRayColor(j);
 
-                    //Q_assert(!std::isnan(indirect[0]));
+                    // Q_assert(!std::isnan(indirect[0]));
 
                     // Use dirt scaling on the surface lighting.
                     const float dirtscale =
@@ -2112,8 +2117,7 @@ LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t
 
 static void // mxd
 LightPoint_SurfaceLight(const mbsp_t *bsp, const std::vector<uint8_t> *pvs, raystream_occlusion_t &rs, bool bounce,
-    const float &standard_scale, const float &sky_scale, const float &hotspot_clamp, const qvec3f &surfpoint,
-    lightgrid_samples_t &result)
+    float standard_scale, float sky_scale, float hotspot_clamp, const qvec3f &surfpoint, lightgrid_samples_t &result)
 {
     const settings::worldspawn_keys &cfg = light_options;
     const float surflight_gate = light_options.emissivequality.value() == emissivequality_t::HIGH ? 0 : 0.01f;
@@ -2181,7 +2185,7 @@ LightPoint_SurfaceLight(const mbsp_t *bsp, const std::vector<uint8_t> *pvs, rays
 
                     qvec3f indirect = rs.getPushedRayColor(j);
 
-                    //Q_assert(!std::isnan(indirect[0]));
+                    // Q_assert(!std::isnan(indirect[0]));
 
                     result.add(indirect, vpl_settings.style);
                 }
@@ -2237,7 +2241,7 @@ static void LightFace_DebugNeighbours(const mbsp_t *bsp, lightsurf_t *lightsurf,
     /* Overwrite each point */
     for (int i = 0; i < lightsurf->samples.size(); i++) {
         lightsample_t &sample = lightmap->samples[i];
-        const int &sample_face = lightsurf->samples[i].realfacenum;
+        const int sample_face = lightsurf->samples[i].realfacenum;
 
         if (sample_face == dump_facenum) {
             /* Red - the sample is on the selected face */
@@ -2408,7 +2412,7 @@ static void LightFace_CalculateDirt(lightsurf_t *lightsurf)
             const ray_io &ray = rs.getRay(k);
             const int i = ray.index;
             if (rs.getPushedRayHitType(k) == hittype_t::SOLID) {
-                const float &dist = rs.getPushedRayHitDist(k);
+                const float dist = rs.getPushedRayHitDist(k);
                 lightsurf->samples[i].occlusion += std::min(cfg.dirtdepth.value(), dist);
             } else {
                 lightsurf->samples[i].occlusion += cfg.dirtdepth.value();
@@ -2418,7 +2422,7 @@ static void LightFace_CalculateDirt(lightsurf_t *lightsurf)
 
     // process the results.
     for (int i = 0; i < lightsurf->samples.size(); i++) {
-        float avgHitdist = lightsurf->samples[i].occlusion / (float) numDirtVectors;
+        float avgHitdist = lightsurf->samples[i].occlusion / (float)numDirtVectors;
         lightsurf->samples[i].occlusion = 1.0f - (avgHitdist / cfg.dirtdepth.value());
     }
 }
@@ -2452,14 +2456,6 @@ static void LightPoint_ScaleAndClamp(qvec3f &color)
         for (auto &c : color) {
             c = pow(c / 255.0f, 1.0f / cfg.lightmapgamma.value()) * 255.0f;
         }
-    }
-
-    // clamp
-    // FIXME: should this be a brightness clamp?
-    float maxcolor = qv::max(color);
-
-    if (maxcolor > 255.0f) {
-        color *= (255.0f / maxcolor);
     }
 }
 
@@ -2636,8 +2632,8 @@ void DirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::
 
             // mxd. Add surface lights...
             // FIXME: negative surface lights
-            LightFace_SurfaceLight(
-                bsp, &lightsurf, lightmaps, std::nullopt, cfg.surflightscale.value(), cfg.surflightskyscale.value(), 16.0f);
+            LightFace_SurfaceLight(bsp, &lightsurf, lightmaps, std::nullopt, cfg.surflightscale.value(),
+                cfg.surflightskyscale.value(), 16.0f);
         }
 
         LightFace_LocalMin(bsp, face, &lightsurf, lightmaps);
@@ -2662,7 +2658,8 @@ void DirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::
  * IndirectLightFace
  * ============
  */
-void IndirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::worldspawn_keys &cfg, size_t bounce_depth)
+void IndirectLightFace(
+    const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::worldspawn_keys &cfg, size_t bounce_depth)
 {
     auto face = lightsurf.face;
     const modelinfo_t *modelinfo = ModelInfoForFace(bsp, Face_GetNum(bsp, face));
@@ -2676,8 +2673,8 @@ void IndirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings
 
             /* add bounce lighting */
             // note: scale here is just to keep it close-ish to the old code
-            LightFace_SurfaceLight(
-                bsp, &lightsurf, lightmaps, bounce_depth, cfg.bouncescale.value() * 0.5, cfg.bouncescale.value(), 128.0f);
+            LightFace_SurfaceLight(bsp, &lightsurf, lightmaps, bounce_depth, cfg.bouncescale.value() * 0.5,
+                cfg.bouncescale.value(), 128.0f);
         }
     }
 }
@@ -2842,7 +2839,7 @@ bool lightgrid_sample_t::operator==(const lightgrid_sample_t &other) const
         return false;
 
     // color check requires special handling for nan
-    for (int i=0; i<3; ++i) {
+    for (int i = 0; i < 3; ++i) {
         if (std::isnan(color[i])) {
             if (!std::isnan(other.color[i]))
                 return false;

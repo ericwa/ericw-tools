@@ -38,7 +38,7 @@
 #include <common/qvec.hh>
 #include <tbb/parallel_for_each.h>
 
-face_cache_t::face_cache_t(){};
+face_cache_t::face_cache_t() { };
 
 face_cache_t::face_cache_t(const mbsp_t *bsp, const mface_t *face, const std::vector<face_normal_t> &normals)
     : m_points(Face_Points(bsp, face)),
@@ -401,7 +401,7 @@ int Q2_FacePhongValue(const mbsp_t *bsp, const mface_t *face)
             // Q1 _phong_group syntax (also works in Q2 maps)
             return phong_group;
         }
-        if (texinfo->value != 0 && ((texinfo->flags.native & Q2_SURF_LIGHT) == 0)) {
+        if (texinfo->value != 0 && ((texinfo->flags.native_q2 & Q2_SURF_LIGHT) == 0)) {
             return texinfo->value;
         }
     }
@@ -483,9 +483,6 @@ void CalculateVertexNormals(const mbsp_t *bsp)
         if (!f_wants_phong)
             continue;
 
-        if (extended_texinfo_flags[f.texinfo].no_phong)
-            continue;
-
         for (int j = 0; j < f.numedges; j++) {
             const int v = Face_VertexAtIndex(bsp, &f, j);
             // walk over all faces incident to f (we will walk over neighbours multiple times, doesn't matter)
@@ -507,9 +504,6 @@ void CalculateVertexNormals(const mbsp_t *bsp)
                 const bool f2_wants_phong = (f2_phong_angle || f2_phong_angle_concave);
 
                 if (!f2_wants_phong)
-                    continue;
-
-                if (extended_texinfo_flags[f2->texinfo].no_phong)
                     continue;
 
                 auto *f2_texinfo = Face_Texinfo(bsp, f2);

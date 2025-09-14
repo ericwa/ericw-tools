@@ -10,6 +10,7 @@ add_library(common STATIC
     cmdlib.cc
     decompile.cc
     entdata.cc
+    litfile.cc
     log.cc
     mathlib.cc
     parser.cc
@@ -36,6 +37,7 @@ add_library(common STATIC
     ../include/common/decompile.hh
     ../include/common/entdata.h
     ../include/common/iterators.hh
+    ../include/common/litfile.hh
     ../include/common/log.hh
     ../include/common/mathlib.hh
     ../include/common/numeric_cast.hh
@@ -54,9 +56,7 @@ add_library(common STATIC
     ../include/common/mapfile.hh
 )
 
-find_package(jsoncpp CONFIG REQUIRED)
-
-target_link_libraries(common ${CMAKE_THREAD_LIBS_INIT} TBB::tbb TBB::tbbmalloc fmt::fmt JsonCpp::JsonCpp pareto)
+target_link_libraries(common ${CMAKE_THREAD_LIBS_INIT} TBB::tbb TBB::tbbmalloc fmt::fmt jsoncpp_static pareto)
 
 target_precompile_headers(common INTERFACE
         <filesystem>

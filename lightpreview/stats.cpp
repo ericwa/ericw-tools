@@ -5,13 +5,14 @@
 #include <QHeaderView>
 
 #include <QtGlobal> // for qDebug()
-#include <QDebug>  // for QDebug
+#include <QDebug> // for QDebug
 
 #include <common/bspfile.hh>
 
 StatsPanel::StatsPanel(QWidget *parent)
-    : QWidget(parent) {
-    QVBoxLayout* layout = new QVBoxLayout(this);
+    : QWidget(parent)
+{
+    QVBoxLayout *layout = new QVBoxLayout(this);
 
     m_table = new QTableWidget(this);
     m_table->setColumnCount(2);

@@ -13,7 +13,8 @@ jobs:
       matrix:
         os: 
           - ubuntu-22.04
-          - macos-12
+          - ubuntu-24.04
+          - macos-14
           - windows-2022
         use-asan: 
           - YES
@@ -23,24 +24,22 @@ jobs:
             use-asan: YES
     env:
       USE_ASAN: ${{ matrix.use-asan }}
-      VCPKG_CMAKE_FILE: '${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake'
     steps:
     - uses: actions/checkout@v4
       with:
         submodules: recursive
 
-    - name: 'Install vcpkg + the packages specified in vcpkg.json'
-      uses: lukka/run-vcpkg@v11
-      with:
-        vcpkgDirectory: '${{ github.workspace }}/vcpkg'
-        vcpkgGitCommitId: cf4ebef2294e164875ce17d7937f44d3e3ea156e
-        runVcpkgInstall: true
-
-    - name: 'Linux: Install Qt5'
+    - name: 'Linux: Install Qt6'
       if: startsWith(matrix.os, 'ubuntu-')
       run: |
         sudo apt update
-        sudo apt install qtbase5-dev libqt5svg5-dev
+        sudo apt install qt6-base-dev
+        sudo apt install libgl1-mesa-dev
+    - name: 'Linux: Install TBB and Embree, if using distro packages'
+      if: ${{ matrix.os == 'ubuntu-24.04' }}
+      run: |
+        sudo apt install libtbb-dev libembree-dev
+        echo "USE_SYSTEM_TBB_AND_EMBREE=1" >> $GITHUB_ENV
     - name: 'Linux: Build the artifact'
       if: startsWith(matrix.os, 'ubuntu-')
       run: ./build-linux-64.sh
@@ -50,7 +49,7 @@ jobs:
         mkdir ericw-tools-linux
         unzip build-linux/*-Linux.zip -d ericw-tools-linux
     - name: 'Linux: Upload the artifact'
-      if: ${{ startsWith(matrix.os, 'ubuntu-') && matrix.use-asan == 'NO' }}
+      if: ${{ matrix.os == 'ubuntu-22.04' && matrix.use-asan == 'NO' }}
       uses: actions/upload-artifact@v4
       with:
         path: ericw-tools-linux/
@@ -58,7 +57,7 @@ jobs:
         if-no-files-found: error
     - name: 'Linux: Create GitHub Release and upload build'
       uses: softprops/action-gh-release@v1
-      if: ${{ startsWith(matrix.os, 'ubuntu-') && matrix.use-asan == 'NO' && startsWith(github.ref, 'refs/tags/') }}
+      if: ${{ matrix.os == 'ubuntu-22.04' && matrix.use-asan == 'NO' && startsWith(github.ref, 'refs/tags/') }}
       with:
         draft: true
         files: |
@@ -66,11 +65,14 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: 'macOS: Install Qt5'
+    - name: 'macOS: Install Qt6'
       if: ${{ startsWith(matrix.os, 'macos-') }}
-      uses: jurplel/install-qt-action@v3
+      uses: jurplel/install-qt-action@v4
       with:
-        version: 5.15.2
+        # 6.4.3 is the latest version supporting macOS 10.15
+        # see: https://doc.qt.io/archives/qt-6.4/macos.html
+        # and: https://wiki.qt.io/Qt_6.4_Release
+        version: 6.4.3
     - name: 'macOS: Build the artifact'
       if: startsWith(matrix.os, 'macos-')
       run: ./build-osx.sh
@@ -99,12 +101,11 @@ jobs:
     - name: 'Windows: Setup MSVC environment'
       if: startsWith(matrix.os, 'windows-')
       uses: ilammy/msvc-dev-cmd@v1
-    - name: 'Windows: Install Qt5'
+    - name: 'Windows: Install Qt6'
       if: ${{ startsWith(matrix.os, 'windows-') }}
-      uses: jurplel/install-qt-action@v3
+      uses: jurplel/install-qt-action@v4
       with:
-        version: 5.15.2
-        arch: win64_msvc2019_64
+        version: 6.7.0
     - name: 'Windows: Build the artifact'
       if: startsWith(matrix.os, 'windows-')
       run: .\build-windows.ps1

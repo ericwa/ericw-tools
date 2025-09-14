@@ -31,9 +31,9 @@ See file, 'COPYING', for details.
 #ifdef USE_LUA
 extern "C"
 {
-    #include <lua.h>
-    #include <lualib.h>
-    #include <lauxlib.h>
+#include <lua.h>
+#include <lualib.h>
+#include <lauxlib.h>
 }
 #endif
 
@@ -42,7 +42,68 @@ using namespace mapfile;
 // global map file state
 map_file_t map_file;
 const gamedef_t *current_game = nullptr;
-settings::common_settings common_options;
+
+struct maputil_settings : public settings::common_settings
+{
+private:
+    template<typename TSetting, typename T>
+    bool load_setting(const std::string &name, parser_base_t &parser, settings::source src, T default_value)
+    {
+        TSetting *setting = new TSetting(nullptr, name, "");
+        bool parsed = setting->parse(name, parser, src);
+        operations.push_back(std::unique_ptr<settings::setting_base>(setting));
+        return parsed;
+    }
+
+    bool load_setting(const std::string &name, settings::source src)
+    {
+        settings::setting_func *setting = new settings::setting_func(nullptr, name, nullptr);
+        operations.push_back(std::unique_ptr<settings::setting_base>(setting));
+        return true;
+    }
+
+public:
+    settings::setting_func load{this, "load",
+        [&](const std::string &name, parser_base_t &parser, settings::source src) {
+            return this->load_setting<settings::setting_string>(name, parser, src, "");
+        },
+        nullptr, "Load the given .map file"};
+    settings::setting_func game{this, "game",
+        [&](const std::string &name, parser_base_t &parser, settings::source src) {
+            return this->load_setting<settings::setting_string>(name, parser, src, "");
+        },
+        nullptr, "Set game to process map as (must be done after load)"};
+    settings::setting_func script{this, "script",
+        [&](const std::string &name, parser_base_t &parser, settings::source src) {
+            return this->load_setting<settings::setting_string>(name, parser, src, "");
+        },
+        nullptr, "Run the given script file"};
+    settings::setting_func save{this, "save",
+        [&](const std::string &name, parser_base_t &parser, settings::source src) {
+            return this->load_setting<settings::setting_string>(name, parser, src, "");
+        },
+        nullptr, "Save the .map to the specified output"};
+    settings::setting_func query{this, "query",
+        [&](const std::string &name, parser_base_t &parser, settings::source src) {
+            return this->load_setting<settings::setting_string>(name, parser, src, "");
+        },
+        nullptr,
+        "perform a query on entities and print out matching results. see docs for more details on globals. note that query has the same access as script but is more suitable for small read-only operations."};
+    settings::setting_func convert{this, "convert",
+        [&](const std::string &name, parser_base_t &parser, settings::source src) {
+            return this->load_setting<settings::setting_string>(name, parser, src, "");
+        },
+        nullptr, "convert the current map to the given format."};
+    settings::setting_func strip_extended_info{this, "strip_extended_info",
+        [&](const std::string &name, parser_base_t &parser, settings::source src) {
+            return this->load_setting(name, src);
+        },
+        nullptr, "removes extended Quake II/III information on faces."};
+
+    std::vector<std::unique_ptr<settings::setting_base>> operations;
+};
+
+maputil_settings maputil_options;
 
 map_file_t LoadMapOrEntFile(const fs::path &source)
 {
@@ -62,28 +123,6 @@ map_file_t LoadMapOrEntFile(const fs::path &source)
 
     return map;
 }
-
-constexpr const char *usage = R"(
-usage: maputil [operations...]
-
---script "<path to Lua script file>"
-  execute the given Lua script.
-valid operations:
---query "<Lua expression>"
-  perform a query on entities and print out matching results.
-  see docs for more details on globals.
-  note that query has the same access as script
-  but is more suitable for small read-only operations.
---strip_extended_info
-  removes extended Quake II/III information on faces.
---convert <quake | valve | etp | bp>
-  convert the current map to the given format.
---save "<output path>"
-  save the current map to the given output path.
---game <quake | quake2 | hexen2 | halflife>
-  set the current game; used for certain conversions
-  or operations.
-)";
 
 #ifdef USE_LUA
 using array_iterate_callback = std::function<bool(lua_State *state, size_t index)>;
@@ -139,7 +178,7 @@ static void json_to_lua(lua_State *state, const Json::Value &value)
     case Json::ValueType::arrayValue: {
         lua_newtable(state);
 
-        size_t i = 1;
+            size_t i = 1;
 
         for (auto &v : value) {
             json_to_lua(state, v);
@@ -194,9 +233,7 @@ static int l_load_json(lua_State *state)
         auto json = parse_json(result->data(), result->data() + result->size());
 
         json_to_lua(state, json);
-    }
-    catch(std::exception &e)
-    {
+    } catch (std::exception &e) {
         return luaL_error(state, "JSON load exception for %s: %s\n", path, e.what());
     }
 
@@ -204,43 +241,43 @@ static int l_load_json(lua_State *state)
 }
 
 /*
-* Lua layout:
-* entities = table[]
-*  [E].dict = array
-*      [D] = [ key, value ]
-*  [E].brushes = table[]
-*   [S].texture = string
-*   [S].plane_points = [ [ x, y, z ] [ x, y, z ] [ x, y, z ] ]
-*   [S].raw = table (can only contain ONE member:)
-*       .quaked = table
-*        .shift = [ x, y ]
-*        .rotate = number
-*        .scale = [ x, y ]
-*       .valve = table
-*        .axis = [ [ x, y, z ] [ x, y, z ] ]
-*        .shift = [ x, y ]
-*        .rotate = number
-*        .scale = [ x, y ]
-*       .bp = table
-*        .axis = [ [ x, y, z ] [ x, y, z ] ]
-*       .etp = table
-*        .shift = [ x, y ]
-*        .rotate = number
-*        .scale = [ x, y ]
-*        .tx2 = boolean
-*   [S].info = table or nil
-*       .contents = number
-*       .value = number
-*       .flags = number
-*   [S].plane = [ x, y, z, d ] (read-only)
-*   [S].vecs = [ [ x, y, z, d ] [ x, y, z, d ] ] (read-only)
-*/
+ * Lua layout:
+ * entities = table[]
+ *  [E].dict = array
+ *      [D] = [ key, value ]
+ *  [E].brushes = table[]
+ *   [S].texture = string
+ *   [S].plane_points = [ [ x, y, z ] [ x, y, z ] [ x, y, z ] ]
+ *   [S].raw = table (can only contain ONE member:)
+ *       .quaked = table
+ *        .shift = [ x, y ]
+ *        .rotate = number
+ *        .scale = [ x, y ]
+ *       .valve = table
+ *        .axis = [ [ x, y, z ] [ x, y, z ] ]
+ *        .shift = [ x, y ]
+ *        .rotate = number
+ *        .scale = [ x, y ]
+ *       .bp = table
+ *        .axis = [ [ x, y, z ] [ x, y, z ] ]
+ *       .etp = table
+ *        .shift = [ x, y ]
+ *        .rotate = number
+ *        .scale = [ x, y ]
+ *        .tx2 = boolean
+ *   [S].info = table or nil
+ *       .contents = number
+ *       .value = number
+ *       .flags = number
+ *   [S].plane = [ x, y, z, d ] (read-only)
+ *   [S].vecs = [ [ x, y, z, d ] [ x, y, z, d ] ] (read-only)
+ */
 
 static void maputil_make_brush_side(lua_State *state, const brush_side_t &side)
 {
     // make side
     lua_createtable(state, 0, 4);
-    
+
     // make vecs
     lua_createtable(state, 2, 0);
 
@@ -262,12 +299,13 @@ static void maputil_make_brush_side(lua_State *state, const brush_side_t &side)
 
     lua_createtable(state, 0, 4);
 
-    if (std::holds_alternative<texdef_quake_ed_t>(side.raw) ||
-        std::holds_alternative<texdef_valve_t>(side.raw) ||
+    if (std::holds_alternative<texdef_quake_ed_t>(side.raw) || std::holds_alternative<texdef_valve_t>(side.raw) ||
         std::holds_alternative<texdef_etp_t>(side.raw)) {
-        const texdef_quake_ed_t &raw = std::holds_alternative<texdef_quake_ed_t>(side.raw) ? std::get<texdef_quake_ed_t>(side.raw) :
-            std::holds_alternative<texdef_valve_t>(side.raw) ? reinterpret_cast<const texdef_quake_ed_t &>(std::get<texdef_valve_t>(side.raw)) :
-            reinterpret_cast<const texdef_quake_ed_t &>(std::get<texdef_etp_t>(side.raw));
+        const texdef_quake_ed_t &raw =
+            std::holds_alternative<texdef_quake_ed_t>(side.raw) ? std::get<texdef_quake_ed_t>(side.raw)
+            : std::holds_alternative<texdef_valve_t>(side.raw)
+                ? reinterpret_cast<const texdef_quake_ed_t &>(std::get<texdef_valve_t>(side.raw))
+                : reinterpret_cast<const texdef_quake_ed_t &>(std::get<texdef_etp_t>(side.raw));
 
         lua_createtable(state, 2, 0);
         lua_pushnumber(state, raw.shift[0]);
@@ -294,11 +332,10 @@ static void maputil_make_brush_side(lua_State *state, const brush_side_t &side)
         }
     }
 
-    if (std::holds_alternative<texdef_valve_t>(side.raw) ||
-        std::holds_alternative<texdef_bp_t>(side.raw)) {
-        const texdef_bp_t &raw_bp =
-            std::holds_alternative<texdef_valve_t>(side.raw) ? std::get<texdef_valve_t>(side.raw) :
-            std::get<texdef_bp_t>(side.raw);
+    if (std::holds_alternative<texdef_valve_t>(side.raw) || std::holds_alternative<texdef_bp_t>(side.raw)) {
+        const texdef_bp_t &raw_bp = std::holds_alternative<texdef_valve_t>(side.raw)
+                                        ? std::get<texdef_valve_t>(side.raw)
+                                        : std::get<texdef_bp_t>(side.raw);
 
         lua_createtable(state, 2, 0);
 
@@ -316,9 +353,11 @@ static void maputil_make_brush_side(lua_State *state, const brush_side_t &side)
 
     if (std::holds_alternative<texdef_quake_ed_t>(side.raw)) {
         lua_setfield(state, -2, "quaked");
-    } if (std::holds_alternative<texdef_etp_t>(side.raw)) {
+    }
+    if (std::holds_alternative<texdef_etp_t>(side.raw)) {
         lua_setfield(state, -2, "etp");
-    } if (std::holds_alternative<texdef_valve_t>(side.raw)) {
+    }
+    if (std::holds_alternative<texdef_valve_t>(side.raw)) {
         lua_setfield(state, -2, "valve");
     } else {
         lua_setfield(state, -2, "bp");
@@ -365,7 +404,7 @@ static void maputil_make_brush_side(lua_State *state, const brush_side_t &side)
         lua_setfield(state, -2, "contents");
         lua_pushnumber(state, side.extended_info->value);
         lua_setfield(state, -2, "value");
-        lua_pushnumber(state, side.extended_info->flags.native);
+        lua_pushnumber(state, side.extended_info->flags);
         lua_setfield(state, -2, "flags");
 
         lua_setfield(state, -2, "info");
@@ -387,8 +426,7 @@ static void maputil_make_brush(lua_State *state, const brush_t &brush)
     }
 }
 
-#define LUA_VERIFY_TOP_TYPE(type) \
-    Q_assert(lua_type(state, -1) == type)
+#define LUA_VERIFY_TOP_TYPE(type) Q_assert(lua_type(state, -1) == type)
 
 static void maputil_copy_dict(lua_State *state, map_entity_t &entity)
 {
@@ -512,7 +550,7 @@ static void maputil_copy_side(lua_State *state, brush_side_t &side)
         texdef_bp_t bp = maputil_load_bp(state);
         texdef_quake_ed_t qed = maputil_load_quaked(state);
 
-        side.raw = texdef_valve_t { qed, bp };
+        side.raw = texdef_valve_t{qed, bp};
     }
     lua_pop(state, 1);
 
@@ -528,7 +566,7 @@ static void maputil_copy_side(lua_State *state, brush_side_t &side)
         bool b = !!lua_toboolean(state, -1);
         lua_pop(state, 1);
 
-        side.raw = texdef_etp_t { qed, b };
+        side.raw = texdef_etp_t{qed, b};
     }
     lua_pop(state, 1);
 
@@ -549,7 +587,7 @@ static void maputil_copy_side(lua_State *state, brush_side_t &side)
         lua_pop(state, 1);
 
         lua_getfield(state, -1, "flags");
-        q2.flags.native = lua_tonumber(state, -1);
+        q2.flags = lua_tonumber(state, -1);
         lua_pop(state, 1);
 
         side.extended_info = q2;
@@ -667,7 +705,6 @@ static int l_create_winding(lua_State *state)
     {
         if (lua_type(state, -1) == LUA_TTABLE) {
             lua_iterate_array(state, [&found_face, &winding](auto state, auto index) {
-
                 LUA_VERIFY_TOP_TYPE(LUA_TTABLE);
 
                 // check that the face is part of the brush
@@ -708,20 +745,21 @@ static int l_create_winding(lua_State *state)
 
 static int l_load_texture_meta(lua_State *state)
 {
-    const char *path = lua_tostring(state, 1);  /* get argument */
+    const char *path = lua_tostring(state, 1); /* get argument */
     lua_pop(state, 1);
 
     if (!current_game) {
         luaL_error(state, "need a game loaded with -game for this function");
     }
 
-    auto result = std::get<0>(img::load_texture_meta(path, current_game, common_options)).value_or(img::texture_meta {});
+    auto result =
+        std::get<0>(img::load_texture_meta(path, current_game, maputil_options)).value_or(img::texture_meta{});
 
     lua_createtable(state, 0, 5);
 
     lua_pushnumber(state, result.contents_native);
     lua_setfield(state, -2, "contents");
-    lua_pushnumber(state, result.flags.native);
+    lua_pushnumber(state, result.flags.native_q2);
     lua_setfield(state, -2, "flags");
     lua_pushnumber(state, result.value);
     lua_setfield(state, -2, "value");
@@ -748,18 +786,18 @@ static void maputil_setup_globals(lua_State *state)
     lua_setglobal(state, "load_texture_meta");
 
     // constants
-    lua_pushnumber(state, (int32_t) texcoord_style_t::quaked);
+    lua_pushnumber(state, (int32_t)texcoord_style_t::quaked);
     lua_setglobal(state, "TEXCOORD_QUAKED");
-    lua_pushnumber(state, (int32_t) texcoord_style_t::etp);
+    lua_pushnumber(state, (int32_t)texcoord_style_t::etp);
     lua_setglobal(state, "TEXCOORD_ETP");
-    lua_pushnumber(state, (int32_t) texcoord_style_t::valve_220);
+    lua_pushnumber(state, (int32_t)texcoord_style_t::valve_220);
     lua_setglobal(state, "TEXCOORD_VALVE");
-    lua_pushnumber(state, (int32_t) texcoord_style_t::brush_primitives);
+    lua_pushnumber(state, (int32_t)texcoord_style_t::brush_primitives);
     lua_setglobal(state, "TEXCOORD_BP");
 
     // convert map to a Lua representation.
     lua_createtable(state, map_file.entities.size(), 0);
-    
+
     for (size_t i = 0; i < map_file.entities.size(); i++) {
         auto &entity = map_file.entities[i];
 
@@ -922,47 +960,38 @@ static void maputil_exec_query(const char *query)
 #endif
 }
 
-int maputil_main(int argc, char **argv)
+int maputil_main(int argc, const char **argv)
 {
     logging::preinitialize();
 
-    fmt::print("---- maputil / ericw-tools {} ----\n", ERICWTOOLS_VERSION);
-    if (argc == 1) {
-        fmt::print("{}", usage);
-        exit(1);
+    maputil_options.preinitialize(argc, argv);
+    maputil_options.initialize(argc - 1, argv + 1);
+    maputil_options.postinitialize(argc, argv);
+
+    logging::init(std::nullopt, maputil_options);
+
+    if (maputil_options.operations.empty()) {
+        maputil_options.print_help(true);
+        return 1;
     }
 
-    fs::path source = argv[1];
+    fs::path source;
 
-    if (!fs::exists(source)) {
-        source = DefaultExtension(argv[1], "map");
-    }
+    for (auto &operation : maputil_options.operations) {
 
-    printf("---------------------\n");
-    fmt::print("{}\n", source);
+        if (operation->primary_name() == "load") {
+            source = operation->string_value();
 
-    map_file = LoadMapOrEntFile(source);
+            if (!fs::exists(source)) {
+                source = DefaultExtension(source, "map");
+            }
 
-    for (int32_t i = 2; i < argc - 1; i++) {
+            logging::print("---------------------\n");
+            logging::print("{}\n", source);
 
-        const char *cmd = argv[i];
-
-        if (!strcmp(cmd, "--query")) {
-            i++;
-
-            const char *query = argv[i];
-
-            maputil_exec_query(query);
-        } else if (!strcmp(cmd, "--script")) {
-            i++;
-
-            const char *file = argv[i];
-
-            maputil_exec_script(file);
-        } else if (!strcmp(cmd, "--game")) {
-            i++;
-
-            const char *gamename = argv[i];
+            map_file = LoadMapOrEntFile(source);
+        } else if (operation->primary_name() == "game") {
+            const std::string &gamename = operation->string_value();
 
             current_game = nullptr;
 
@@ -977,20 +1006,12 @@ int maputil_main(int argc, char **argv)
                 FError("not sure what game {} is\n", gamename);
             }
 
-            current_game->init_filesystem(source, common_options);
-
-        } else if (!strcmp(cmd, "--save")) {
-            i++;
-
-            const char *output = argv[i];
-
-            fs::path dest = DefaultExtension(output, "map");
-            fmt::print("saving to {}...\n", dest);
-
-            std::ofstream stream(dest);
-            map_file.write(stream);
-        } else if (!strcmp(cmd, "--strip_extended_info")) {
-
+            current_game->init_filesystem(source, maputil_options);
+        } else if (operation->primary_name() == "script") {
+            maputil_exec_script(operation->string_value().c_str());
+        } else if (operation->primary_name() == "query") {
+            maputil_exec_query(operation->string_value().c_str());
+        } else if (operation->primary_name() == "strip_extended_info") {
             for (auto &entity : map_file.entities) {
                 for (auto &brush : entity.brushes) {
                     for (auto &face : brush.faces) {
@@ -998,30 +1019,34 @@ int maputil_main(int argc, char **argv)
                     }
                 }
             }
-        } else if (!strcmp(cmd, "--convert")) {
+        } else if (operation->primary_name() == "convert") {
 
-            i++;
-
-            const char *type = argv[i];
+            std::string type = operation->string_value();
             texcoord_style_t dest_style;
 
-            if (!strcmp(type, "quake")) {
+            if (string_iequals(type, "quake")) {
                 dest_style = texcoord_style_t::quaked;
-            } else if (!strcmp(type, "valve")) {
+            } else if (string_iequals(type, "valve")) {
                 dest_style = texcoord_style_t::valve_220;
-            } else if (!strcmp(type, "etp")) {
+            } else if (string_iequals(type, "etp")) {
                 dest_style = texcoord_style_t::etp;
-            } else if (!strcmp(type, "bp")) {
+            } else if (string_iequals(type, "bp")) {
                 dest_style = texcoord_style_t::brush_primitives;
             } else {
                 FError("unknown map style {}", type);
             }
 
-            map_file.convert_to(dest_style, current_game, common_options);
+            map_file.convert_to(dest_style, current_game, maputil_options);
+        } else if (operation->primary_name() == "save") {
+            fs::path dest = DefaultExtension(operation->string_value(), "map");
+            logging::print("saving to {}...\n", dest);
+
+            std::ofstream stream(dest);
+            map_file.write(stream);
+        } else {
+            Error("option not implemented: {}", operation->primary_name());
         }
     }
-
-    printf("---------------------\n");
 
     return 0;
 }

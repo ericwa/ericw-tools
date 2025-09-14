@@ -161,17 +161,18 @@ std::optional<size_t> mapdata_t::find_emitted_hash_vector(const qvec3d &vert)
 }
 
 // add vector to hash
-void mapdata_t::add_hash_vector(const qvec3d &point, const size_t &num)
+void mapdata_t::add_hash_vector(const qvec3d &point, size_t num)
 {
     hashverts->hash.emplace(pareto::point<double, 3>({point[0], point[1], point[2]}), num);
 }
 
 void mapdata_t::add_hash_edge(size_t v1, size_t v2, int64_t edge_index, const face_t *face)
 {
-    hashedges.emplace(std::make_pair(v1, v2), hashedge_t{.v1 = v1, .v2 = v2, .edge_index = edge_index, .face = face});
+    hashedges.emplace(std::make_pair(v1, v2),
+        hashedge_t{.v1 = v1, .v2 = v2, .edge_index = edge_index, .face = face, .has_been_reused = false});
 }
 
-const std::optional<img::texture_meta> &mapdata_t::load_image_meta(const std::string_view &name)
+const std::optional<img::texture_meta> &mapdata_t::load_image_meta(std::string_view name)
 {
     static std::optional<img::texture_meta> nullmeta = std::nullopt;
     auto it = meta_cache.find(name.data());
@@ -315,26 +316,6 @@ void mapdata_t::reset()
     *this = mapdata_t{};
 }
 
-struct old_texdef_valve_t
-{
-    qmat<double, 2, 3> axis{};
-    qvec2d scale{};
-    qvec2d shift{};
-};
-
-struct old_texdef_quake_ed_t
-{
-    double rotate = 0;
-    qvec2d scale{};
-    qvec2d shift{};
-};
-
-struct old_texdef_quake_ed_noshift_t
-{
-    double rotate = 0;
-    qvec2d scale{};
-};
-
 /*
 ================
 CalculateBrushBounds
@@ -379,14 +360,6 @@ inline void CalculateBrushBounds(mapbrush_t &ob)
         }
     }
 }
-
-using texdef_brush_primitives_t = qmat<double, 2, 3>;
-
-static old_texdef_valve_t TexDef_BSPToValve(const texvecf &in_vecs);
-static qvec2f projectToAxisPlane(const qvec3d &snapped_normal, const qvec3d &point);
-static old_texdef_quake_ed_noshift_t Reverse_QuakeEd(qmat2x2f M, const qbsp_plane_t &plane, bool preserveX);
-static void SetTexinfo_QuakeEd_New(
-    const qbsp_plane_t &plane, const qvec2d &shift, double rotate, const qvec2d &scale, texvecf &out_vecs);
 
 static void AddAnimTex(const char *name)
 {
@@ -472,7 +445,7 @@ int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_inf
         for (i = 0; i < map.miptex.size(); i++) {
             const maptexdata_t &tex = map.miptex.at(i);
 
-            if (!Q_strcasecmp(name, tex.name.c_str()) && tex.flags.native == extended_info->flags.native &&
+            if (!Q_strcasecmp(name, tex.name.c_str()) && tex.flags.native_q2 == extended_info->flags.native_q2 &&
                 tex.value == extended_info->value && tex.animation == extended_info->animation) {
 
                 return i;
@@ -538,8 +511,6 @@ static bool IsSkipName(const char *name)
         return true;
     if (!Q_strcasecmp(name, "null")) // zhlt compat
         return true;
-    if (!Q_strcasecmp(name, "__TB_empty"))
-        return true;
     return false;
 }
 
@@ -601,7 +572,7 @@ int FindTexinfo(const maptexinfo_t &texinfo, const qplane3d &plane, bool add)
 
     /* Allocate a new texinfo at the end of the array */
     const int num_texinfo = static_cast<int>(map.mtexinfos.size());
-    map.mtexinfos.emplace_back(texinfo);
+    map.mtexinfos.push_back(texinfo);
     map.mtexinfo_lookup[texinfo] = num_texinfo;
 
     // catch broken < implementations in maptexinfo_t
@@ -633,21 +604,21 @@ int FindMiptex(const char *name, bool internal, bool recursive)
 }
 
 static surfflags_t SurfFlagsForEntity(
-    const maptexinfo_t &texinfo, const mapentity_t &entity, const contentflags_t &face_contents)
+    const maptexinfo_t &texinfo, const entdict_t &epairs, contentflags_t face_contents)
 {
     surfflags_t flags{};
     const char *texname = map.miptex.at(texinfo.miptex).name.c_str();
-    const int shadow = entity.epairs.get_int("_shadow");
+    const int shadow = epairs.get_int("_shadow");
     bool is_translucent = false;
 
     // lit water: use worldspawn key by default, but allow overriding with bmodel keys
     // TODO: use a setting_container for these things, rather than custom parsing
     // TODO: support lit water opt-out in Q2 mode
     bool allow_litwater = false;
-    if (entity.epairs.has("_litwater")) {
-        allow_litwater = (entity.epairs.get_int("_litwater") > 0);
-    } else if (entity.epairs.has("_splitturb")) {
-        allow_litwater = (entity.epairs.get_int("_splitturb") > 0);
+    if (epairs.has("_litwater")) {
+        allow_litwater = (epairs.get_int("_litwater") > 0);
+    } else if (epairs.has("_splitturb")) {
+        allow_litwater = (epairs.get_int("_splitturb") > 0);
     } else {
         allow_litwater = qbsp_options.splitturb.value();
     }
@@ -661,40 +632,36 @@ static surfflags_t SurfFlagsForEntity(
     // which we can just call instead of this block.
     // the only annoyance is we can't access the various options (noskip,
     // splitturb, etc) from there.
-    if (qbsp_options.target_game->id != GAME_QUAKE_II) {
-        if (IsSkipName(texname))
-            flags.is_nodraw = true;
-        if (IsHintName(texname))
-            flags.is_hint = true;
-        if (IsSpecialName(texname, allow_litwater))
-            flags.native |= TEX_SPECIAL;
-    } else {
-        flags.native = texinfo.flags.native;
+    if (IsSkipName(texname))
+        flags.set_nodraw(true);
+    if (IsHintName(texname))
+        flags.set_hint(true);
 
-        if ((flags.native & Q2_SURF_NODRAW) || IsSkipName(texname))
-            flags.is_nodraw = true;
-        if ((flags.native & Q2_SURF_HINT) || IsHintName(texname))
-            flags.is_hint = true;
-        if ((flags.native & Q2_SURF_TRANS33) || (flags.native & Q2_SURF_TRANS66))
+    if (qbsp_options.target_game->id != GAME_QUAKE_II) {
+        if (IsSpecialName(texname, allow_litwater))
+            flags.native_q1 = static_cast<q1_surf_flags_t>(flags.native_q1 | TEX_SPECIAL);
+    } else {
+        flags.native_q2 = texinfo.flags.native_q2;
+        if ((flags.native_q2 & Q2_SURF_TRANS33) || (flags.native_q2 & Q2_SURF_TRANS66))
             is_translucent = true;
     }
     if (IsNoExpandName(texname))
         flags.no_expand = true;
-    if (entity.epairs.get_int("_dirt") == -1)
+    if (epairs.get_int("_dirt") == -1)
         flags.no_dirt = true;
-    if (entity.epairs.get_int("_bounce") == -1)
+    if (epairs.get_int("_bounce") == -1)
         flags.no_bounce = true;
-    if (entity.epairs.get_int("_minlight") == -1)
+    if (epairs.get_int("_minlight") == -1)
         flags.no_minlight = true;
-    if (entity.epairs.get_int("_lightignore") == 1)
+    if (epairs.get_int("_lightignore") == 1)
         flags.light_ignore = true;
-    if (entity.epairs.has("_surflight_rescale")) {
-        flags.surflight_rescale = entity.epairs.get_int("_surflight_rescale") == 1;
+    if (epairs.has("_surflight_rescale")) {
+        flags.surflight_rescale = epairs.get_int("_surflight_rescale") == 1;
     }
     {
         qvec3f color;
         // FIXME: get_color, to match settings
-        if (entity.epairs.has("_surflight_color") && entity.epairs.get_vector("_surflight_color", color) == 3) {
+        if (epairs.has("_surflight_color") && epairs.get_vector("_surflight_color", color) == 3) {
             if (color[0] <= 1 && color[1] <= 1 && color[2] <= 1) {
                 flags.surflight_color =
                     qvec3b{(uint8_t)(color[0] * 255), (uint8_t)(color[1] * 255), (uint8_t)(color[2] * 255)};
@@ -703,17 +670,22 @@ static surfflags_t SurfFlagsForEntity(
             }
         }
     }
-    if (entity.epairs.has("_surflight_style") && entity.epairs.get_int("_surflight_style") != 0)
-        flags.surflight_style = entity.epairs.get_int("_surflight_style");
-    if (entity.epairs.has("_surflight_targetname"))
-        flags.surflight_targetname = entity.epairs.get("_surflight_targetname");
+    if (epairs.has("_surflight_style") && epairs.get_int("_surflight_style") != 0)
+        flags.surflight_style = epairs.get_int("_surflight_style");
+    if (epairs.has("_surflight_targetname"))
+        flags.surflight_targetname = epairs.get("_surflight_targetname");
 
-    if (entity.epairs.has("_surflight_minlight_scale"))
-        flags.surflight_minlight_scale = entity.epairs.get_float("_surflight_minlight_scale");
+    if (epairs.has("_surflight_minlight_scale"))
+        flags.surflight_minlight_scale = epairs.get_float("_surflight_minlight_scale");
     // Paril: inherit _surflight_minlight_scale from worldspawn if unset
-    else if (!entity.epairs.has("_surflight_minlight_scale") &&
-             map.world_entity().epairs.has("_surflight_minlight_scale"))
+    else if (!epairs.has("_surflight_minlight_scale") && map.world_entity().epairs.has("_surflight_minlight_scale"))
         flags.surflight_minlight_scale = map.world_entity().epairs.get_float("_surflight_minlight_scale");
+
+    if (epairs.has("_surflight_atten"))
+        flags.surflight_atten = epairs.get_float("_surflight_atten");
+    // Paril: inherit _surflight_atten from worldspawn if unset
+    else if (!epairs.has("_surflight_atten") && map.world_entity().epairs.has("_surflight_atten"))
+        flags.surflight_atten = map.world_entity().epairs.get_float("_surflight_atten");
 
     // "_minlight_exclude", "_minlight_exclude2", "_minlight_exclude3"...
     for (int i = 0; i <= 9; i++) {
@@ -722,7 +694,7 @@ static surfflags_t SurfFlagsForEntity(
             key += std::to_string(i);
         }
 
-        const std::string &excludeTex = entity.epairs.get(key.c_str());
+        const std::string &excludeTex = epairs.get(key.c_str());
         if (!excludeTex.empty() && !Q_strcasecmp(texname, excludeTex)) {
             flags.no_minlight = true;
         }
@@ -730,13 +702,13 @@ static surfflags_t SurfFlagsForEntity(
 
     if (shadow == -1)
         flags.no_shadow = true;
-    if (!Q_strcasecmp("func_detail_illusionary", entity.epairs.get("classname"))) {
+    if (!Q_strcasecmp("func_detail_illusionary", epairs.get("classname"))) {
         /* Mark these entities as TEX_NOSHADOW unless the mapper set "_shadow" "1" */
         if (shadow != 1) {
             flags.no_shadow = true;
         }
     }
-    if (face_contents.is_liquid(qbsp_options.target_game) && !is_translucent) {
+    if (face_contents.is_liquid() && !is_translucent) {
         // opaque liquids don't cast shadow unless opted in
         if (shadow != 1) {
             flags.no_shadow = true;
@@ -744,16 +716,16 @@ static surfflags_t SurfFlagsForEntity(
     }
 
     // handle "_phong" and "_phong_angle" and "_phong_angle_concave"
-    double phongangle = entity.epairs.get_float("_phong_angle");
-    int phong = entity.epairs.get_int("_phong");
+    double phongangle = epairs.get_float("_phong_angle");
+    int phong = epairs.get_int("_phong");
 
     // Paril: inherit phong from worldspawn if unset
-    if (!entity.epairs.has("_phong") && map.world_entity().epairs.has("_phong")) {
+    if (!epairs.has("_phong") && map.world_entity().epairs.has("_phong")) {
         phong = map.world_entity().epairs.get_int("_phong");
     }
 
     // Paril: inherit phong from worldspawn if unset
-    if (!entity.epairs.has("_phong_angle") && map.world_entity().epairs.has("_phong_angle")) {
+    if (!epairs.has("_phong_angle") && map.world_entity().epairs.has("_phong_angle")) {
         phongangle = map.world_entity().epairs.get_float("_phong_angle");
     }
 
@@ -765,20 +737,20 @@ static surfflags_t SurfFlagsForEntity(
         flags.phong_angle = std::clamp(phongangle, 0.0, 360.0);
     }
 
-    const double phong_angle_concave = entity.epairs.get_float("_phong_angle_concave");
+    const double phong_angle_concave = epairs.get_float("_phong_angle_concave");
     flags.phong_angle_concave = std::clamp(phong_angle_concave, 0.0, 360.0);
 
-    flags.phong_group = entity.epairs.get_int("_phong_group");
+    flags.phong_group = epairs.get_int("_phong_group");
 
     // handle "_minlight"
-    if (entity.epairs.has("_minlight")) {
-        const double minlight = entity.epairs.get_float("_minlight");
+    if (epairs.has("_minlight")) {
+        const double minlight = epairs.get_float("_minlight");
         // handle -1 as an alias for 0 (same with other negative values).
         flags.minlight = std::max(0., minlight);
     }
 
     // handle "_maxlight"
-    const double maxlight = entity.epairs.get_float("_maxlight");
+    const double maxlight = epairs.get_float("_maxlight");
     if (maxlight > 0) {
         // CHECK: allow > 510 now that we're float? or is it not worth it since it will
         // be beyond max?
@@ -786,40 +758,40 @@ static surfflags_t SurfFlagsForEntity(
     }
 
     // handle "_lightcolorscale"
-    if (entity.epairs.has("_lightcolorscale")) {
-        const double lightcolorscale = entity.epairs.get_float("_lightcolorscale");
+    if (epairs.has("_lightcolorscale")) {
+        const double lightcolorscale = epairs.get_float("_lightcolorscale");
         if (lightcolorscale != 1.0) {
             flags.lightcolorscale = std::clamp(lightcolorscale, 0.0, 1.0);
         }
     }
 
-    if (entity.epairs.has("_surflight_group")) {
-        const int32_t surflight_group = entity.epairs.get_int("_surflight_group");
+    if (epairs.has("_surflight_group")) {
+        const int32_t surflight_group = epairs.get_int("_surflight_group");
 
         if (surflight_group) {
             flags.surflight_group = surflight_group;
         }
     }
 
-    if (entity.epairs.has("_world_units_per_luxel")) {
-        flags.world_units_per_luxel = entity.epairs.get_float("_world_units_per_luxel");
+    if (epairs.has("_world_units_per_luxel")) {
+        flags.world_units_per_luxel = epairs.get_float("_world_units_per_luxel");
     }
 
-    if (entity.epairs.has("_object_channel_mask")) {
-        flags.object_channel_mask = entity.epairs.get_int("_object_channel_mask");
+    if (epairs.has("_object_channel_mask")) {
+        flags.object_channel_mask = epairs.get_int("_object_channel_mask");
     }
 
     // handle "_mincolor"
     {
         qvec3f mincolor{};
 
-        entity.epairs.get_vector("_mincolor", mincolor);
-        if (qv::epsilonEmpty(mincolor, (float) QBSP_EQUAL_EPSILON)) {
-            entity.epairs.get_vector("_minlight_color", mincolor);
+        epairs.get_vector("_mincolor", mincolor);
+        if (qv::epsilonEmpty(mincolor, (float)QBSP_EQUAL_EPSILON)) {
+            epairs.get_vector("_minlight_color", mincolor);
         }
 
         mincolor = qv::normalize_color_format(mincolor);
-        if (!qv::epsilonEmpty(mincolor, (float) QBSP_EQUAL_EPSILON)) {
+        if (!qv::epsilonEmpty(mincolor, (float)QBSP_EQUAL_EPSILON)) {
             for (int32_t i = 0; i < 3; i++) {
                 flags.minlight_color[i] = std::clamp(mincolor[i], 0.0f, 255.0f);
             }
@@ -827,940 +799,37 @@ static surfflags_t SurfFlagsForEntity(
     }
 
     // handle "_light_alpha"
-    if (entity.epairs.has("_light_alpha")) {
-        const double lightalpha = entity.epairs.get_float("_light_alpha");
+    if (epairs.has("_light_alpha")) {
+        const double lightalpha = epairs.get_float("_light_alpha");
         flags.light_alpha = std::clamp(lightalpha, 0.0, 1.0);
     }
 
     // handle "_light_twosided"
-    if (entity.epairs.has("_light_twosided")) {
-        flags.light_twosided = entity.epairs.get_int("_light_twosided");
+    if (epairs.has("_light_twosided")) {
+        flags.light_twosided = epairs.get_int("_light_twosided");
     }
+
+    flags.noambient = epairs.get_int("_noambient");
 
     return flags;
 }
 
-static void ParseEpair(parser_t &parser, mapentity_t &entity)
+static void ParseTextureDef(const mapentity_t &entity, const mapfile::brush_side_t &input_side, mapface_t &mapface,
+    const mapbrush_t &brush, maptexinfo_t *tx, std::array<qvec3d, 3> &planepts, const qplane3d &plane,
+    texture_def_issues_t &issue_stats)
 {
-    std::string key = parser.token;
-
-    // trim whitespace from start/end
-    while (std::isspace(key.front())) {
-        key.erase(key.begin());
-    }
-    while (std::isspace(key.back())) {
-        key.erase(key.end() - 1);
-    }
-
-    parser.parse_token(PARSE_SAMELINE);
-
-    entity.epairs.set(key, parser.token);
-
-    if (string_iequals(key, "origin")) {
-        entity.epairs.get_vector(key, entity.origin);
-    }
-}
-
-static void TextureAxisFromPlane(const qplane3d &plane, qvec3d &xv, qvec3d &yv, qvec3d &snapped_normal)
-{
-    constexpr qvec3d baseaxis[18] = {
-        {0, 0, 1}, {1, 0, 0}, {0, -1, 0}, // floor
-        {0, 0, -1}, {1, 0, 0}, {0, -1, 0}, // ceiling
-        {1, 0, 0}, {0, 1, 0}, {0, 0, -1}, // west wall
-        {-1, 0, 0}, {0, 1, 0}, {0, 0, -1}, // east wall
-        {0, 1, 0}, {1, 0, 0}, {0, 0, -1}, // south wall
-        {0, -1, 0}, {1, 0, 0}, {0, 0, -1} // north wall
-    };
-
-    int bestaxis;
-    double dot, best;
-    int i;
-
-    best = 0;
-    bestaxis = 0;
-
-    for (i = 0; i < 6; i++) {
-        dot = qv::dot(plane.normal, baseaxis[i * 3]);
-        if (dot > best || (dot == best && !qbsp_options.oldaxis.value())) {
-            best = dot;
-            bestaxis = i;
-        }
-    }
-
-    xv = baseaxis[bestaxis * 3 + 1];
-    yv = baseaxis[bestaxis * 3 + 2];
-    snapped_normal = baseaxis[bestaxis * 3];
-}
-
-static quark_tx_info_t ParseExtendedTX(parser_t &parser)
-{
-    quark_tx_info_t result;
-
-    if (parser.parse_token(PARSE_COMMENT | PARSE_OPTIONAL)) {
-        if (!strncmp(parser.token.c_str(), "//TX", 4)) {
-            if (parser.token[4] == '1')
-                result.quark_tx1 = true;
-            else if (parser.token[4] == '2')
-                result.quark_tx2 = true;
-        }
-    } else {
-        // Parse extra Quake 2 surface info
-        if (parser.parse_token(PARSE_OPTIONAL)) {
-            uint32_t native = std::stoul(parser.token);
-            result.info = extended_texinfo_t{.contents_native = native};
-
-            if (parser.parse_token(PARSE_OPTIONAL)) {
-                result.info->flags.native = std::stoi(parser.token);
-            }
-            if (parser.parse_token(PARSE_OPTIONAL)) {
-                result.info->value = std::stoi(parser.token);
-            }
-        }
-    }
-
-    return result;
-}
-
-static qmat4x4f texVecsTo4x4Matrix(const qplane3d &faceplane, const texvecf &in_vecs)
-{
-    //           [s]
-    // T * vec = [t]
-    //           [distOffPlane]
-    //           [?]
-
-    qmat4x4f T{
-        in_vecs.at(0, 0), in_vecs.at(1, 0), static_cast<float>(faceplane.normal[0]), 0, // col 0
-        in_vecs.at(0, 1), in_vecs.at(1, 1), static_cast<float>(faceplane.normal[1]), 0, // col 1
-        in_vecs.at(0, 2), in_vecs.at(1, 2), static_cast<float>(faceplane.normal[2]), 0, // col 2
-        in_vecs.at(0, 3), in_vecs.at(1, 3), static_cast<float>(-faceplane.dist), 1 // col 3
-    };
-    return T;
-}
-
-static qmat2x2f scale2x2(float xscale, float yscale)
-{
-    qmat2x2f M{xscale, 0, // col 0
-        0, yscale}; // col1
-    return M;
-}
-
-static qmat2x2f rotation2x2_deg(float degrees)
-{
-    float r = degrees * (Q_PI / 180.0);
-    float cosr = cos(r);
-    float sinr = sin(r);
-
-    // [ cosTh -sinTh ]
-    // [ sinTh cosTh  ]
-
-    qmat2x2f M{cosr, sinr, // col 0
-        -sinr, cosr}; // col1
-
-    return M;
-}
-
-static float extractRotation(qmat2x2f m)
-{
-    qvec2f point = m * qvec2f(1, 0); // choice of this matters if there's shearing
-    float rotation = atan2(point[1], point[0]) * 180.0 / Q_PI;
-    return rotation;
-}
-
-static qvec2f evalTexDefAtPoint(const old_texdef_quake_ed_t &texdef, const qbsp_plane_t &faceplane, const qvec3f &point)
-{
-    texvecf temp;
-    SetTexinfo_QuakeEd_New(faceplane, texdef.shift, texdef.rotate, texdef.scale, temp);
-
-    const qmat4x4f worldToTexSpace_res = texVecsTo4x4Matrix(faceplane, temp);
-    const qvec2f uv = qvec2f(worldToTexSpace_res * qvec4f(point[0], point[1], point[2], 1.0f));
-    return uv;
-}
-
-static old_texdef_quake_ed_t addShift(const old_texdef_quake_ed_noshift_t &texdef, const qvec2f shift)
-{
-    old_texdef_quake_ed_t res2;
-    res2.rotate = texdef.rotate;
-    res2.scale[0] = texdef.scale[0];
-    res2.scale[1] = texdef.scale[1];
-
-    res2.shift[0] = shift[0];
-    res2.shift[1] = shift[1];
-    return res2;
-}
-
-void checkEq(const qvec2f &a, const qvec2f &b, float epsilon)
-{
-    for (int i = 0; i < 2; i++) {
-        if (fabs(a[i] - b[i]) > epsilon) {
-            printf("warning, checkEq failed\n");
-        }
-    }
-}
-
-qvec2f normalizeShift(const std::optional<img::texture_meta> &texture, const qvec2f &in)
-{
-    if (!texture) {
-        return in; // can't do anything without knowing the texture size.
-    }
-
-    int fullWidthOffsets = static_cast<int>(in[0]) / texture->width;
-    int fullHeightOffsets = static_cast<int>(in[1]) / texture->height;
-
-    qvec2f result(in[0] - static_cast<float>(fullWidthOffsets * texture->width),
-        in[1] - static_cast<float>(fullHeightOffsets * texture->height));
-    return result;
-}
-
-/// `texture` is optional. If given, the "shift" values can be normalized
-static old_texdef_quake_ed_t TexDef_BSPToQuakeEd(const qbsp_plane_t &faceplane,
-    const std::optional<img::texture_meta> &texture, const texvecf &in_vecs, const std::array<qvec3d, 3> &facepoints)
-{
-    // First get the un-rotated, un-scaled unit texture vecs (based on the face plane).
-    qvec3d snapped_normal;
-    qvec3d unrotated_vecs[2];
-    TextureAxisFromPlane(faceplane, unrotated_vecs[0], unrotated_vecs[1], snapped_normal);
-
-    const qmat4x4f worldToTexSpace = texVecsTo4x4Matrix(faceplane, in_vecs);
-
-    // Grab the UVs of the 3 reference points
-    qvec2f facepoints_uvs[3];
-    for (int i = 0; i < 3; i++) {
-        facepoints_uvs[i] = qvec2f(worldToTexSpace * qvec4f(facepoints[i][0], facepoints[i][1], facepoints[i][2], 1.0));
-    }
-
-    // Project the 3 reference points onto the axis plane. They are now 2d points.
-    qvec2f facepoints_projected[3];
-    for (int i = 0; i < 3; i++) {
-        facepoints_projected[i] = projectToAxisPlane(snapped_normal, facepoints[i]);
-    }
-
-    // Now make 2 vectors out of our 3 points (so we are ignoring translation for now)
-    const qvec2f p0p1 = facepoints_projected[1] - facepoints_projected[0];
-    const qvec2f p0p2 = facepoints_projected[2] - facepoints_projected[0];
-
-    const qvec2f p0p1_uv = facepoints_uvs[1] - facepoints_uvs[0];
-    const qvec2f p0p2_uv = facepoints_uvs[2] - facepoints_uvs[0];
-
-    /*
-    Find a 2x2 transformation matrix that maps p0p1 to p0p1_uv, and p0p2 to p0p2_uv
-
-        [ a b ] [ p0p1.x ] = [ p0p1_uv.x ]
-        [ c d ] [ p0p1.y ]   [ p0p1_uv.y ]
-
-        [ a b ] [ p0p2.x ] = [ p0p1_uv.x ]
-        [ c d ] [ p0p2.y ]   [ p0p2_uv.y ]
-
-    writing as a system of equations:
-
-        a * p0p1.x + b * p0p1.y = p0p1_uv.x
-        c * p0p1.x + d * p0p1.y = p0p1_uv.y
-        a * p0p2.x + b * p0p2.y = p0p2_uv.x
-        c * p0p2.x + d * p0p2.y = p0p2_uv.y
-
-    back to a matrix equation, with the unknowns in a column vector:
-
-       [ p0p1_uv.x ]   [ p0p1.x p0p1.y 0       0      ] [ a ]
-       [ p0p1_uv.y ] = [ 0       0     p0p1.x p0p1.y  ] [ b ]
-       [ p0p2_uv.x ]   [ p0p2.x p0p2.y 0       0      ] [ c ]
-       [ p0p2_uv.y ]   [ 0       0     p0p2.x p0p2.y  ] [ d ]
-
-     */
-
-    const qmat4x4f M{
-        p0p1[0], 0, p0p2[0], 0, // col 0
-        p0p1[1], 0, p0p2[1], 0, // col 1
-        0, p0p1[0], 0, p0p2[0], // col 2
-        0, p0p1[1], 0, p0p2[1] // col 3
-    };
-
-    const qmat4x4f Minv = qv::inverse(M);
-    const qvec4f abcd = Minv * qvec4f(p0p1_uv[0], p0p1_uv[1], p0p2_uv[0], p0p2_uv[1]);
-
-    const qmat2x2f texPlaneToUV{abcd[0], abcd[2], // col 0
-        abcd[1], abcd[3]}; // col 1
-
-    {
-        // self check
-        //        qvec2f uv01_test = texPlaneToUV * p0p1;
-        //        qvec2f uv02_test = texPlaneToUV * p0p2;
-
-        // these fail if one of the texture axes is 0 length.
-        //        checkEq(uv01_test, p0p1_uv, 0.01);
-        //        checkEq(uv02_test, p0p2_uv, 0.01);
-    }
-
-    const old_texdef_quake_ed_noshift_t res = Reverse_QuakeEd(texPlaneToUV, faceplane, false);
-
-    // figure out shift based on facepoints[0]
-    const qvec3f testpoint = facepoints[0];
-    qvec2f uv0_actual = evalTexDefAtPoint(addShift(res, qvec2f(0, 0)), faceplane, testpoint);
-    qvec2f uv0_desired = qvec2f(worldToTexSpace * qvec4f(testpoint[0], testpoint[1], testpoint[2], 1.0f));
-    qvec2f shift = uv0_desired - uv0_actual;
-
-    // sometime we have very large shift values, normalize them to be smaller
-    shift = normalizeShift(texture, shift);
-
-    const old_texdef_quake_ed_t res2 = addShift(res, shift);
-    return res2;
-}
-
-float NormalizeDegrees(float degs)
-{
-    while (degs < 0)
-        degs += 360;
-
-    while (degs > 360)
-        degs -= 360;
-
-    if (fabs(degs - 360.0) < 0.001)
-        degs = 0;
-
-    return degs;
-}
-
-bool EqualDegrees(float a, float b)
-{
-    return fabs(NormalizeDegrees(a) - NormalizeDegrees(b)) < 0.001;
-}
-
-static std::pair<int, int> getSTAxes(const qvec3d &snapped_normal)
-{
-    if (snapped_normal[0]) {
-        return std::make_pair(1, 2);
-    } else if (snapped_normal[1]) {
-        return std::make_pair(0, 2);
-    } else {
-        return std::make_pair(0, 1);
-    }
-}
-
-static qvec2f projectToAxisPlane(const qvec3d &snapped_normal, const qvec3d &point)
-{
-    const std::pair<int, int> axes = getSTAxes(snapped_normal);
-    const qvec2f proj(point[axes.first], point[axes.second]);
-    return proj;
-}
-
-float clockwiseDegreesBetween(qvec2f start, qvec2f end)
-{
-    start = qv::normalize(start);
-    end = qv::normalize(end);
-
-    const float cosAngle = std::max(-1.0f, std::min(1.0f, qv::dot(start, end)));
-    const float unsigned_degrees = acos(cosAngle) * (360.0 / (2.0 * Q_PI));
-
-    if (unsigned_degrees < ANGLEEPSILON)
-        return 0;
-
-    // get a normal for the rotation plane using the right-hand rule
-    // if this is pointing up (qvec3f(0,0,1)), it's counterclockwise rotation.
-    // if this is pointing down (qvec3f(0,0,-1)), it's clockwise rotation.
-    qvec3f rotationNormal = qv::normalize(qv::cross(qvec3f(start[0], start[1], 0.0f), qvec3f(end[0], end[1], 0.0f)));
-
-    const float normalsCosAngle = qv::dot(rotationNormal, qvec3f(0, 0, 1));
-    if (normalsCosAngle >= 0) {
-        // counterclockwise rotation
-        return -unsigned_degrees;
-    }
-    // clockwise rotation
-    return unsigned_degrees;
-}
-
-static old_texdef_quake_ed_noshift_t Reverse_QuakeEd(qmat2x2f M, const qbsp_plane_t &plane, bool preserveX)
-{
-    // Check for shear, because we might tweak M to remove it
-    {
-        qvec2f Xvec = M.row(0);
-        qvec2f Yvec = M.row(1);
-        double cosAngle = qv::dot(qv::normalize(Xvec), qv::normalize(Yvec));
-
-        // const double oldXscale = sqrt(pow(M[0][0], 2.0) + pow(M[1][0], 2.0));
-        // const double oldYscale = sqrt(pow(M[0][1], 2.0) + pow(M[1][1], 2.0));
-
-        if (fabs(cosAngle) > 0.001) {
-            // Detected shear
-
-            if (preserveX) {
-                const float degreesToY = clockwiseDegreesBetween(Xvec, Yvec);
-                const bool CW = (degreesToY > 0);
-
-                // turn 90 degrees from Xvec
-                const qvec2f newYdir =
-                    qv::normalize(qvec2f(qv::cross(qvec3f(0, 0, CW ? -1.0f : 1.0f), qvec3f(Xvec[0], Xvec[1], 0.0))));
-
-                // scalar projection of the old Yvec onto newYDir to get the new Yscale
-                const float newYscale = qv::dot(Yvec, newYdir);
-                Yvec = newYdir * static_cast<float>(newYscale);
-            } else {
-                // Preserve Y.
-
-                const float degreesToX = clockwiseDegreesBetween(Yvec, Xvec);
-                const bool CW = (degreesToX > 0);
-
-                // turn 90 degrees from Yvec
-                const qvec2f newXdir =
-                    qv::normalize(qvec2f(qv::cross(qvec3f(0, 0, CW ? -1.0f : 1.0f), qvec3f(Yvec[0], Yvec[1], 0.0))));
-
-                // scalar projection of the old Xvec onto newXDir to get the new Xscale
-                const float newXscale = qv::dot(Xvec, newXdir);
-                Xvec = newXdir * static_cast<float>(newXscale);
-            }
-
-            // recheck
-            cosAngle = qv::dot(qv::normalize(Xvec), qv::normalize(Yvec));
-            if (fabs(cosAngle) > 0.001) {
-                FError("SHEAR correction failed\n");
-            }
-
-            // update M
-            M.at(0, 0) = Xvec[0];
-            M.at(0, 1) = Xvec[1];
-
-            M.at(1, 0) = Yvec[0];
-            M.at(1, 1) = Yvec[1];
-        }
-    }
-
-    // extract abs(scale)
-    const double absXscale = sqrt(pow(M.at(0, 0), 2.0) + pow(M.at(0, 1), 2.0));
-    const double absYscale = sqrt(pow(M.at(1, 0), 2.0) + pow(M.at(1, 1), 2.0));
-    const qmat2x2f applyAbsScaleM{static_cast<float>(absXscale), // col0
-        0,
-        0, // col1
-        static_cast<float>(absYscale)};
-
-    qvec3d vecs[2];
-    qvec3d snapped_normal;
-    TextureAxisFromPlane(plane, vecs[0], vecs[1], snapped_normal);
-
-    const qvec2f sAxis = projectToAxisPlane(snapped_normal, vecs[0]);
-    const qvec2f tAxis = projectToAxisPlane(snapped_normal, vecs[1]);
-
-    // This is an identity matrix possibly with negative signs.
-    const qmat2x2f axisFlipsM{sAxis[0], tAxis[0], // col0
-        sAxis[1], tAxis[1]}; // col1
-
-    // N.B. this is how M is built in SetTexinfo_QuakeEd_New and guides how we
-    // strip off components of it later in this function.
-    //
-    //    qmat2x2f M = scaleM * rotateM * axisFlipsM;
-
-    // strip off the magnitude component of the scale, and `axisFlipsM`.
-    const qmat2x2f flipRotate = qv::inverse(applyAbsScaleM) * M * qv::inverse(axisFlipsM);
-
-    // We don't know the signs on the scales, which will mess up figuring out the rotation, so try all 4 combinations
-    for (float xScaleSgn : std::vector<float>{-1.0, 1.0}) {
-        for (float yScaleSgn : std::vector<float>{-1.0, 1.0}) {
-
-            // "apply" - matrix constructed to apply a guessed value
-            // "guess" - this matrix might not be what we think
-
-            const qmat2x2f applyGuessedFlipM{xScaleSgn, // col0
-                0,
-                0, // col1
-                yScaleSgn};
-
-            const qmat2x2f rotateMGuess = qv::inverse(applyGuessedFlipM) * flipRotate;
-            const float angleGuess = extractRotation(rotateMGuess);
-
-            //            const qmat2x2f Mident = rotateMGuess * rotation2x2_deg(-angleGuess);
-
-            const qmat2x2f applyAngleGuessM = rotation2x2_deg(angleGuess);
-            const qmat2x2f Mguess = applyGuessedFlipM * applyAbsScaleM * applyAngleGuessM * axisFlipsM;
-
-            if (fabs(M.at(0, 0) - Mguess.at(0, 0)) < 0.001 && fabs(M.at(1, 0) - Mguess.at(1, 0)) < 0.001 &&
-                fabs(M.at(0, 1) - Mguess.at(0, 1)) < 0.001 && fabs(M.at(1, 1) - Mguess.at(1, 1)) < 0.001) {
-
-                old_texdef_quake_ed_noshift_t reversed;
-                reversed.rotate = angleGuess;
-                reversed.scale[0] = xScaleSgn / absXscale;
-                reversed.scale[1] = yScaleSgn / absYscale;
-                return reversed;
-            }
-        }
-    }
-
-    // TODO: detect when we expect this to fail, i.e.  invalid texture axes (0-length),
-    // and throw an error if it fails unexpectedly.
-
-    // printf("Warning, Reverse_QuakeEd failed\n");
-
-    old_texdef_quake_ed_noshift_t fail;
-    return fail;
-}
-
-static void SetTexinfo_QuakeEd_New(
-    const qbsp_plane_t &plane, const qvec2d &shift, double rotate, const qvec2d &scale, texvecf &out_vecs)
-{
-    double sanitized_scale[2];
-    for (int i = 0; i < 2; i++) {
-        sanitized_scale[i] = (scale[i] != 0.0) ? scale[i] : 1.0;
-    }
-
-    qvec3d vecs[2];
-    qvec3d snapped_normal;
-    TextureAxisFromPlane(plane, vecs[0], vecs[1], snapped_normal);
-
-    qvec2f sAxis = projectToAxisPlane(snapped_normal, vecs[0]);
-    qvec2f tAxis = projectToAxisPlane(snapped_normal, vecs[1]);
-
-    // This is an identity matrix possibly with negative signs.
-    qmat2x2f axisFlipsM{sAxis[0], tAxis[0], // col0
-        sAxis[1], tAxis[1]}; // col1
-
-    qmat2x2f rotateM = rotation2x2_deg(rotate);
-    qmat2x2f scaleM = scale2x2(1.0 / sanitized_scale[0], 1.0 / sanitized_scale[1]);
-
-    qmat2x2f M = scaleM * rotateM * axisFlipsM;
-
-    if (false) {
-        // Self-test for Reverse_QuakeEd
-        old_texdef_quake_ed_noshift_t reversed = Reverse_QuakeEd(M, plane, false);
-
-        // normalize
-        if (!EqualDegrees(reversed.rotate, rotate)) {
-            reversed.rotate += 180;
-            reversed.scale[0] *= -1;
-            reversed.scale[1] *= -1;
-        }
-
-        if (!EqualDegrees(reversed.rotate, rotate)) {
-            FError("wrong rotate got {} expected {}\n", reversed.rotate, rotate);
-        }
-
-        if (fabs(reversed.scale[0] - sanitized_scale[0]) > 0.001 ||
-            fabs(reversed.scale[1] - sanitized_scale[1]) > 0.001) {
-            FError("wrong scale, got {} {} exp {} {}\n", reversed.scale[0], reversed.scale[1], sanitized_scale[0],
-                sanitized_scale[1]);
-        }
-    }
-
-    // copy M into the output vectors
-    out_vecs = {};
-
-    const std::pair<int, int> axes = getSTAxes(snapped_normal);
-
-    //                        M[col][row]
-    // S
-    out_vecs.at(0, axes.first) = M.at(0, 0);
-    out_vecs.at(0, axes.second) = M.at(0, 1);
-    out_vecs.at(0, 3) = shift[0];
-
-    // T
-    out_vecs.at(1, axes.first) = M.at(1, 0);
-    out_vecs.at(1, axes.second) = M.at(1, 1);
-    out_vecs.at(1, 3) = shift[1];
-}
-
-static void SetTexinfo_QuakeEd(const qbsp_plane_t &plane, const std::array<qvec3d, 3> &planepts, const qvec2d &shift,
-    const double &rotate, const qvec2d &scale, maptexinfo_t *out)
-{
-    int i, j;
-    qvec3d vecs[2];
-    int sv, tv;
-    double ang, sinv, cosv;
-    double ns, nt;
-    qvec3d unused;
-
-    TextureAxisFromPlane(plane, vecs[0], vecs[1], unused);
-
-    /* Rotate axis */
-    ang = rotate / 180.0 * Q_PI;
-    sinv = sin(ang);
-    cosv = cos(ang);
-
-    if (vecs[0][0])
-        sv = 0;
-    else if (vecs[0][1])
-        sv = 1;
-    else
-        sv = 2; // unreachable, due to TextureAxisFromPlane lookup table
-
-    if (vecs[1][0])
-        tv = 0; // unreachable, due to TextureAxisFromPlane lookup table
-    else if (vecs[1][1])
-        tv = 1;
-    else
-        tv = 2;
-
-    for (i = 0; i < 2; i++) {
-        ns = cosv * vecs[i][sv] - sinv * vecs[i][tv];
-        nt = sinv * vecs[i][sv] + cosv * vecs[i][tv];
-        vecs[i][sv] = ns;
-        vecs[i][tv] = nt;
-    }
-
-    for (i = 0; i < 2; i++)
-        for (j = 0; j < 3; j++)
-            /* Interpret zero scale as no scaling */
-            out->vecs.at(i, j) = vecs[i][j] / (scale[i] ? scale[i] : 1);
-
-    out->vecs.at(0, 3) = shift[0];
-    out->vecs.at(1, 3) = shift[1];
-
-    if (false) {
-        // Self-test of SetTexinfo_QuakeEd_New
-        texvecf check;
-        SetTexinfo_QuakeEd_New(plane, shift, rotate, scale, check);
-        for (int i = 0; i < 2; i++) {
-            for (int j = 0; j < 4; j++) {
-                if (fabs(check.at(i, j) - out->vecs.at(i, j)) > 0.001) {
-                    SetTexinfo_QuakeEd_New(plane, shift, rotate, scale, check);
-                    FError("fail");
-                }
-            }
-        }
-    }
-
-    if (false) {
-        // Self-test of TexDef_BSPToQuakeEd
-        old_texdef_quake_ed_t reversed = TexDef_BSPToQuakeEd(plane, std::nullopt, out->vecs, planepts);
-
-        if (!EqualDegrees(reversed.rotate, rotate)) {
-            reversed.rotate += 180;
-            reversed.scale[0] *= -1;
-            reversed.scale[1] *= -1;
-        }
-
-        if (!EqualDegrees(reversed.rotate, rotate)) {
-            fmt::print("wrong rotate got {} expected {}\n", reversed.rotate, rotate);
-        }
-
-        if (fabs(reversed.scale[0] - scale[0]) > 0.001 || fabs(reversed.scale[1] - scale[1]) > 0.001) {
-            fmt::print("wrong scale, got {} {} exp {} {}\n", reversed.scale[0], reversed.scale[1], scale[0], scale[1]);
-        }
-
-        if (fabs(reversed.shift[0] - shift[0]) > 0.1 || fabs(reversed.shift[1] - shift[1]) > 0.1) {
-            fmt::print("wrong shift, got {} {} exp {} {}\n", reversed.shift[0], reversed.shift[1], shift[0], shift[1]);
-        }
-    }
-}
-
-static void SetTexinfo_QuArK(
-    parser_t &parser, const std::array<qvec3d, 3> &planepts, old_texcoord_style_t style, maptexinfo_t *out)
-{
-    int i;
-    qvec3d vecs[2];
-    double a, b, c, d;
-    double determinant;
-
-    /*
-     * Type 1 uses vecs[0] = (pt[2] - pt[0]) and vecs[1] = (pt[1] - pt[0])
-     * Type 2 reverses the order of the vecs
-     * 128 is the scaling factor assumed by QuArK.
-     */
-    switch (style) {
-        case TX_QUARK_TYPE1:
-            vecs[0] = planepts[2] - planepts[0];
-            vecs[1] = planepts[1] - planepts[0];
-            break;
-        case TX_QUARK_TYPE2:
-            vecs[0] = planepts[1] - planepts[0];
-            vecs[1] = planepts[2] - planepts[0];
-            break;
-        default: FError("{}: bad texture coordinate style", parser.location);
-    }
-
-    vecs[0] *= 1.0 / 128.0;
-    vecs[1] *= 1.0 / 128.0;
-
-    a = qv::dot(vecs[0], vecs[0]);
-    b = qv::dot(vecs[0], vecs[1]);
-    c = b; /* qv::dot(vecs[1], vecs[0]); */
-    d = qv::dot(vecs[1], vecs[1]);
-
-    /*
-     * Want to solve for out->vecs:
-     *
-     *    | a b | | out->vecs[0] | = | vecs[0] |
-     *    | c d | | out->vecs[1] |   | vecs[1] |
-     *
-     * => | out->vecs[0] | = __ 1.0__  | d  -b | | vecs[0] |
-     *    | out->vecs[1] |   a*d - b*c | -c  a | | vecs[1] |
-     */
-    determinant = a * d - b * c;
-    if (fabs(determinant) < ZERO_EPSILON) {
-        logging::print("WARNING: {}: Face with degenerate QuArK-style texture axes\n", parser.location);
-        for (i = 0; i < 3; i++)
-            out->vecs.at(0, i) = out->vecs.at(1, i) = 0;
-    } else {
-        for (i = 0; i < 3; i++) {
-            out->vecs.at(0, i) = (d * vecs[0][i] - b * vecs[1][i]) / determinant;
-            out->vecs.at(1, i) = -(a * vecs[1][i] - c * vecs[0][i]) / determinant;
-        }
-    }
-
-    /* Finally, the texture offset is indicated by planepts[0] */
-    for (i = 0; i < 3; ++i) {
-        vecs[0][i] = out->vecs.at(0, i);
-        vecs[1][i] = out->vecs.at(1, i);
-    }
-    out->vecs.at(0, 3) = -qv::dot(vecs[0], planepts[0]);
-    out->vecs.at(1, 3) = -qv::dot(vecs[1], planepts[0]);
-}
-
-static void SetTexinfo_Valve220(qmat<double, 2, 3> &axis, const qvec2d &shift, const qvec2d &scale, maptexinfo_t *out)
-{
-    int i;
-
-    for (i = 0; i < 3; i++) {
-        out->vecs.at(0, i) = axis.at(0, i) / scale[0];
-        out->vecs.at(1, i) = axis.at(1, i) / scale[1];
-    }
-    out->vecs.at(0, 3) = shift[0];
-    out->vecs.at(1, 3) = shift[1];
-}
-
-/*
- ComputeAxisBase()
- from q3map2
-
- computes the base texture axis for brush primitive texturing
- note: ComputeAxisBase here and in editor code must always BE THE SAME!
- warning: special case behaviour of atan2( y, x ) <-> atan( y / x ) might not be the same everywhere when x == 0
- rotation by (0,RotY,RotZ) assigns X to normal
- */
-static void ComputeAxisBase(const qvec3d &normal_unsanitized, qvec3d &texX, qvec3d &texY)
-{
-    double RotY, RotZ;
-
-    qvec3d normal = normal_unsanitized;
-
-    /* do some cleaning */
-    if (fabs(normal[0]) < 1e-6) {
-        normal[0] = 0.0f;
-    }
-    if (fabs(normal[1]) < 1e-6) {
-        normal[1] = 0.0f;
-    }
-    if (fabs(normal[2]) < 1e-6) {
-        normal[2] = 0.0f;
-    }
-
-    /* compute the two rotations around y and z to rotate x to normal */
-    RotY = -atan2(normal[2], sqrt(normal[1] * normal[1] + normal[0] * normal[0]));
-    RotZ = atan2(normal[1], normal[0]);
-
-    /* rotate (0,1,0) and (0,0,1) to compute texX and texY */
-    texX[0] = -sin(RotZ);
-    texX[1] = cos(RotZ);
-    texX[2] = 0;
-
-    /* the texY vector is along -z (t texture coorinates axis) */
-    texY[0] = -sin(RotY) * cos(RotZ);
-    texY[1] = -sin(RotY) * sin(RotZ);
-    texY[2] = -cos(RotY);
-}
-
-static void SetTexinfo_BrushPrimitives(
-    const qmat<double, 2, 3> &texMat, const qvec3d &faceNormal, int texWidth, int texHeight, texvecf &vecs)
-{
-    qvec3d texX, texY;
-
-    ComputeAxisBase(faceNormal, texX, texY);
-
-    /*
-     derivation of the conversion below:
-
-     classic BSP texture vecs to texture coordinates:
-
-       u = (dot(vert, out->vecs[0]) + out->vecs[3]) / texWidth
-
-     brush primitives: (starting with q3map2 code, then rearranging it to look like the classic formula)
-
-       u = (texMat[0][0] * dot(vert, texX)) + (texMat[0][1] * dot(vert, texY)) + texMat[0][2]
-
-     factor out vert:
-
-       u = (vert[0] * (texX[0] * texMat[0][0] + texY[0] * texMat[0][1]))
-          + (vert[1] * (texX[1] * texMat[0][0] + texY[1] * texMat[0][1]))
-          + (vert[2] * (texX[2] * texMat[0][0] + texY[2] * texMat[0][1]))
-          + texMat[0][2];
-
-     multiplying that by 1 = (texWidth / texWidth) gives us something in the same shape as the classic formula,
-     so we can get out->vecs.
-
-     */
-
-    vecs.at(0, 0) = texWidth * ((texX[0] * texMat.at(0, 0)) + (texY[0] * texMat.at(0, 1)));
-    vecs.at(0, 1) = texWidth * ((texX[1] * texMat.at(0, 0)) + (texY[1] * texMat.at(0, 1)));
-    vecs.at(0, 2) = texWidth * ((texX[2] * texMat.at(0, 0)) + (texY[2] * texMat.at(0, 1)));
-    vecs.at(0, 3) = texWidth * texMat.at(0, 2);
-
-    vecs.at(1, 0) = texHeight * ((texX[0] * texMat.at(1, 0)) + (texY[0] * texMat.at(1, 1)));
-    vecs.at(1, 1) = texHeight * ((texX[1] * texMat.at(1, 0)) + (texY[1] * texMat.at(1, 1)));
-    vecs.at(1, 2) = texHeight * ((texX[2] * texMat.at(1, 0)) + (texY[2] * texMat.at(1, 1)));
-    vecs.at(1, 3) = texHeight * texMat.at(1, 2);
-}
-
-// From FaceToBrushPrimitFace in GtkRadiant
-static texdef_brush_primitives_t TexDef_BSPToBrushPrimitives(
-    const qplane3d &plane, const int texSize[2], const texvecf &in_vecs)
-{
-    qvec3d texX, texY;
-    ComputeAxisBase(plane.normal, texX, texY);
-
-    // compute projection vector
-    qvec3d proj = plane.normal * plane.dist;
-
-    // (0,0) in plane axis base is (0,0,0) in world coordinates + projection on the affine plane
-    // (1,0) in plane axis base is texX in world coordinates + projection on the affine plane
-    // (0,1) in plane axis base is texY in world coordinates + projection on the affine plane
-    // use old texture code to compute the ST coords of these points
-    qvec2d st[] = {in_vecs.uvs(proj, texSize[0], texSize[1]), in_vecs.uvs(texX + proj, texSize[0], texSize[1]),
-        in_vecs.uvs(texY + proj, texSize[0], texSize[1])};
-    // compute texture matrix
-    texdef_brush_primitives_t res;
-    res.set_col(2, st[0]);
-    res.set_col(0, st[1] - st[0]);
-    res.set_col(1, st[2] - st[0]);
-    return res;
-}
-
-static void ParsePlaneDef(parser_t &parser, std::array<qvec3d, 3> &planepts)
-{
-    int i, j;
-
-    for (i = 0; i < 3; i++) {
-        if (i != 0)
-            parser.parse_token();
-        if (parser.token != "(")
-            goto parse_error;
-
-        for (j = 0; j < 3; j++) {
-            parser.parse_token(PARSE_SAMELINE);
-            planepts[i][j] = std::stod(parser.token);
-        }
-
-        parser.parse_token(PARSE_SAMELINE);
-        if (parser.token != ")")
-            goto parse_error;
-    }
-    return;
-
-parse_error:
-    FError("{}: Invalid brush plane format", parser.location);
-}
-
-static void ParseValve220TX(parser_t &parser, qmat<double, 2, 3> &axis, qvec2d &shift, double &rotate, qvec2d &scale)
-{
-    int i, j;
-
-    for (i = 0; i < 2; i++) {
-        parser.parse_token(PARSE_SAMELINE);
-        if (parser.token != "[")
-            goto parse_error;
-        for (j = 0; j < 3; j++) {
-            parser.parse_token(PARSE_SAMELINE);
-            axis.at(i, j) = std::stod(parser.token);
-        }
-        parser.parse_token(PARSE_SAMELINE);
-        shift[i] = std::stod(parser.token);
-        parser.parse_token(PARSE_SAMELINE);
-        if (parser.token != "]")
-            goto parse_error;
-    }
-    parser.parse_token(PARSE_SAMELINE);
-    rotate = std::stod(parser.token);
-    parser.parse_token(PARSE_SAMELINE);
-    scale[0] = std::stod(parser.token);
-    parser.parse_token(PARSE_SAMELINE);
-    scale[1] = std::stod(parser.token);
-    return;
-
-parse_error:
-    FError("{}: couldn't parse Valve220 texture info", parser.location);
-}
-
-static void ParseBrushPrimTX(parser_t &parser, qmat<double, 2, 3> &texMat)
-{
-    parser.parse_token(PARSE_SAMELINE);
-    if (parser.token != "(")
-        goto parse_error;
-
-    for (int i = 0; i < 2; i++) {
-        parser.parse_token(PARSE_SAMELINE);
-        if (parser.token != "(")
-            goto parse_error;
-
-        for (int j = 0; j < 3; j++) {
-            parser.parse_token(PARSE_SAMELINE);
-            texMat.at(i, j) = std::stod(parser.token);
-        }
-
-        parser.parse_token(PARSE_SAMELINE);
-        if (parser.token != ")")
-            goto parse_error;
-    }
-
-    parser.parse_token(PARSE_SAMELINE);
-    if (parser.token != ")")
-        goto parse_error;
-
-    return;
-
-parse_error:
-    FError("{}: couldn't parse Brush Primitives texture info", parser.location);
-}
-
-static void ParseTextureDef(const mapentity_t &entity, parser_t &parser, mapface_t &mapface, const mapbrush_t &brush,
-    maptexinfo_t *tx, std::array<qvec3d, 3> &planepts, const qplane3d &plane, texture_def_issues_t &issue_stats)
-{
-    double rotate;
-    qmat<double, 2, 3> texMat, axis;
-    qvec2d shift, scale;
-    old_texcoord_style_t tx_type;
-
     quark_tx_info_t extinfo;
+    mapface.texname = input_side.texture;
 
-    if (brush.format == brushformat_t::BRUSH_PRIMITIVES) {
-        ParseBrushPrimTX(parser, texMat);
-        tx_type = TX_BRUSHPRIM;
+    // copy in Q2 attributes if present
+    if (input_side.extended_info) {
+        extinfo.info = {extended_texinfo_t{}};
 
-        parser.parse_token(PARSE_SAMELINE);
-        mapface.texname = parser.token;
-
-        // Read extra Q2 params
-        extinfo = ParseExtendedTX(parser);
-
-        mapface.raw_info = extinfo.info;
-    } else if (brush.format == brushformat_t::NORMAL) {
-        parser.parse_token(PARSE_SAMELINE);
-        mapface.texname = parser.token;
-
-        parser.parse_token(PARSE_SAMELINE | PARSE_PEEK);
-        if (parser.token == "[") {
-            ParseValve220TX(parser, axis, shift, rotate, scale);
-            tx_type = TX_VALVE_220;
-
-            // Read extra Q2 params
-            extinfo = ParseExtendedTX(parser);
-        } else {
-            parser.parse_token(PARSE_SAMELINE);
-            shift[0] = std::stod(parser.token);
-            parser.parse_token(PARSE_SAMELINE);
-            shift[1] = std::stod(parser.token);
-            parser.parse_token(PARSE_SAMELINE);
-            rotate = std::stod(parser.token);
-            parser.parse_token(PARSE_SAMELINE);
-            scale[0] = std::stod(parser.token);
-            parser.parse_token(PARSE_SAMELINE);
-            scale[1] = std::stod(parser.token);
-
-            // Read extra Q2 params and/or QuArK subtype
-            extinfo = ParseExtendedTX(parser);
-            if (extinfo.quark_tx1) {
-                tx_type = TX_QUARK_TYPE1;
-            } else if (extinfo.quark_tx2) {
-                tx_type = TX_QUARK_TYPE2;
-            } else {
-                tx_type = TX_QUAKED;
-            }
-        }
+        extinfo.info->contents_native = input_side.extended_info->contents;
+        extinfo.info->flags = {.native_q2 = static_cast<q2_surf_flags_t>(input_side.extended_info->flags)};
+        extinfo.info->value = input_side.extended_info->value;
 
         mapface.raw_info = extinfo.info;
-    } else {
-        FError("{}: Bad brush format", parser.location);
     }
 
     // if we have texture defs, see if we should remap this one
@@ -1794,7 +863,7 @@ static void ParseTextureDef(const mapentity_t &entity, parser_t &parser, mapface
             extinfo.info->contents_native &= ~Q2_CONTENTS_TRANSLUCENT;
 
             // but give us detail if we lack trans. this is likely what they intended
-            if (!(extinfo.info->flags.native & (Q2_SURF_TRANS33 | Q2_SURF_TRANS66))) {
+            if (!(extinfo.info->flags.native_q2 & (Q2_SURF_TRANS33 | Q2_SURF_TRANS66))) {
                 extinfo.info->contents_native |= Q2_CONTENTS_DETAIL;
 
                 if (qbsp_options.verbose.value()) {
@@ -1806,8 +875,8 @@ static void ParseTextureDef(const mapentity_t &entity, parser_t &parser, mapface
         }
 
         // This fixes a bug in some old maps.
-        if ((extinfo.info->flags.native & (Q2_SURF_SKY | Q2_SURF_NODRAW)) == (Q2_SURF_SKY | Q2_SURF_NODRAW)) {
-            extinfo.info->flags.native &= ~Q2_SURF_NODRAW;
+        if ((extinfo.info->flags.native_q2 & (Q2_SURF_SKY | Q2_SURF_NODRAW)) == (Q2_SURF_SKY | Q2_SURF_NODRAW)) {
+            extinfo.info->flags.set_nodraw(false);
 
             if (qbsp_options.verbose.value()) {
                 logging::print("WARNING: {}: SKY | NODRAW mixed. Removing NODRAW.\n", mapface.line);
@@ -1825,8 +894,8 @@ static void ParseTextureDef(const mapentity_t &entity, parser_t &parser, mapface
                 if (visible_contents & i) {
                     if (visible_contents != i) {
                         FError("{}: Mixed visible contents: {}", mapface.line,
-                               qbsp_options.target_game->create_contents_from_native(extinfo.info->contents_native)
-                                .to_string(qbsp_options.target_game));
+                            qbsp_options.target_game->create_contents_from_native(extinfo.info->contents_native)
+                                .to_string());
                     }
                 }
             }
@@ -1834,14 +903,13 @@ static void ParseTextureDef(const mapentity_t &entity, parser_t &parser, mapface
 
         // Other Q2 hard errors
         if (extinfo.info->contents_native & (Q2_CONTENTS_MONSTER | Q2_CONTENTS_DEADMONSTER)) {
-            FError(
-                "{}: Illegal contents: {}", mapface.line, qbsp_options.target_game->create_contents_from_native(
-                        extinfo.info->contents_native).to_string(qbsp_options.target_game));
+            FError("{}: Illegal contents: {}", mapface.line,
+                qbsp_options.target_game->create_contents_from_native(extinfo.info->contents_native).to_string());
         }
 
         // If Q2 style phong is enabled on a mirrored face, `light` will erroneously try to blend normals between
         // the front and back faces leading to light artifacts.
-        const bool wants_phong = !(extinfo.info->flags.native & Q2_SURF_LIGHT) && (extinfo.info->value != 0);
+        const bool wants_phong = !(extinfo.info->flags.native_q2 & Q2_SURF_LIGHT) && (extinfo.info->value != 0);
         // Technically this is not the 100% correct check for mirrored, but we don't have the full brush
         // contents set up at this point. Correct would be to call `portal_generates_face()`.
         bool mirrored = (extinfo.info->contents_native != 0) &&
@@ -1864,29 +932,7 @@ static void ParseTextureDef(const mapentity_t &entity, parser_t &parser, mapface
         mapface.contents = contentflags_t::make(EWT_VISCONTENTS_EMPTY);
     tx->flags = {extinfo.info->flags};
     tx->value = extinfo.info->value;
-
-    if (!mapface.contents.is_valid(qbsp_options.target_game, false)) {
-        auto old_contents = mapface.contents;
-        qbsp_options.target_game->contents_make_valid(mapface.contents);
-        logging::print("WARNING: {}: face has invalid contents {}, remapped to {}\n", mapface.line,
-            old_contents.to_string(qbsp_options.target_game), mapface.contents.to_string(qbsp_options.target_game));
-    }
-
-    switch (tx_type) {
-        case TX_QUARK_TYPE1:
-        case TX_QUARK_TYPE2: SetTexinfo_QuArK(parser, planepts, tx_type, tx); break;
-        case TX_VALVE_220: SetTexinfo_Valve220(axis, shift, scale, tx); break;
-        case TX_BRUSHPRIM: {
-            const auto &texture = map.load_image_meta(mapface.texname.c_str());
-            const int32_t width = texture ? texture->width : 64;
-            const int32_t height = texture ? texture->height : 64;
-
-            SetTexinfo_BrushPrimitives(texMat, plane.normal, width, height, tx->vecs);
-            break;
-        }
-        case TX_QUAKED:
-        default: SetTexinfo_QuakeEd(plane, planepts, shift, rotate, scale, tx); break;
-    }
+    tx->vecs = input_side.vecs;
 }
 
 bool mapface_t::set_planepts(const std::array<qvec3d, 3> &pts)
@@ -1935,93 +981,36 @@ const qbsp_plane_t &mapface_t::get_positive_plane() const
     return map.get_plane(planenum & ~1);
 }
 
-bool IsValidTextureProjection(const qvec3f &faceNormal, const qvec3f &s_vec, const qvec3f &t_vec)
+std::tuple<int32_t, std::optional<size_t>> mapbrush_t::sort_key() const
 {
-    // TODO: This doesn't match how light does it (TexSpaceToWorld)
-
-    const qvec3f tex_normal = qv::normalize(qv::cross(s_vec, t_vec));
-
-    for (int i = 0; i < 3; i++)
-        if (std::isnan(tex_normal[i]))
-            return false;
-
-    const float cosangle = qv::dot(tex_normal, faceNormal);
-    if (std::isnan(cosangle))
-        return false;
-    if (fabs(cosangle) < ZERO_EPSILON)
-        return false;
-
-    return true;
+    return {chop_index, line.line_number};
 }
 
-inline bool IsValidTextureProjection(const mapface_t &mapface, const maptexinfo_t *tx)
+static std::optional<mapface_t> ParseBrushFace(const mapfile::brush_side_t &input_side, const mapbrush_t &brush,
+    const mapentity_t &entity, texture_def_issues_t &issue_stats)
 {
-    return IsValidTextureProjection(mapface.get_plane().get_normal(), tx->vecs.row(0).xyz(), tx->vecs.row(1).xyz());
-}
-
-static void ValidateTextureProjection(mapface_t &mapface, maptexinfo_t *tx, texture_def_issues_t &issue_stats)
-{
-    if (!IsValidTextureProjection(mapface, tx)) {
-        if (qbsp_options.verbose.value()) {
-            logging::print("WARNING: {}: repairing invalid texture projection (\"{}\" near {} {} {})\n", mapface.line,
-                mapface.texname, (int)mapface.planepts[0][0], (int)mapface.planepts[0][1], (int)mapface.planepts[0][2]);
-        } else {
-            issue_stats.num_repaired++;
-        }
-
-        // Reset texturing to sensible defaults
-        const std::array<double, 2> shift{0, 0};
-        const double rotate = 0;
-        const std::array<double, 2> scale = {1, 1};
-        SetTexinfo_QuakeEd(mapface.get_plane(), mapface.planepts, shift, rotate, scale, tx);
-
-        Q_assert(IsValidTextureProjection(mapface, tx));
-    }
-}
-
-static std::optional<mapface_t> ParseBrushFace(
-    parser_t &parser, const mapbrush_t &brush, const mapentity_t &entity, texture_def_issues_t &issue_stats)
-{
-    std::array<qvec3d, 3> planepts;
-    bool normal_ok;
     maptexinfo_t tx;
-    int i, j;
     mapface_t face;
 
-    face.line = parser.location;
+    face.line = input_side.location;
 
-    ParsePlaneDef(parser, planepts);
+    const bool normal_ok = face.set_planepts(input_side.planepts);
 
-    normal_ok = face.set_planepts(planepts);
-
-    ParseTextureDef(entity, parser, face, brush, &tx, face.planepts, face.get_plane(), issue_stats);
+    ParseTextureDef(entity, input_side, face, brush, &tx, face.planepts, face.get_plane(), issue_stats);
 
     if (!normal_ok) {
-        logging::print("WARNING: {}: Brush plane with no normal\n", parser.location);
+        logging::print("WARNING: {}: Brush plane with no normal\n", input_side.location);
         return std::nullopt;
     }
 
-    tx.flags = SurfFlagsForEntity(tx, entity, face.contents);
+    tx.flags = SurfFlagsForEntity(tx, entity.epairs, face.contents);
 
     // to save on texinfo, reset all invisible sides to default texvecs
-    if (tx.flags.is_nodraw || tx.flags.is_hintskip || tx.flags.is_hint) {
+    if (tx.flags.is_nodraw() || tx.flags.is_hintskip() || tx.flags.is_hint()) {
         mapfile::brush_side_t temp;
         temp.plane = face.get_plane();
-        temp.set_texinfo(mapfile::texdef_quake_ed_t{ { 0, 0 }, 0, { 1, 1 }});
+        temp.set_texinfo(mapfile::texdef_quake_ed_t{{0, 0}, 0, {1, 1}});
         tx.vecs = temp.vecs;
-    } else {
-        // ericw -- round texture vector values that are within ZERO_EPSILON of integers,
-        // to attempt to attempt to work around corrupted lightmap sizes in DarkPlaces
-        // (it uses 32 bit precision in CalcSurfaceExtents)
-        for (i = 0; i < 2; i++) {
-            for (j = 0; j < 4; j++) {
-                double r = Q_rint(tx.vecs.at(i, j));
-                if (fabs(tx.vecs.at(i, j) - r) < ZERO_EPSILON)
-                    tx.vecs.at(i, j) = r;
-            }
-        }
-
-        ValidateTextureProjection(face, &tx, issue_stats);
     }
 
     face.texinfo = FindTexinfo(tx, face.get_plane());
@@ -2444,16 +1433,16 @@ Fetch the final contents flag of the given mapbrush.
 static contentflags_t Brush_GetContents(const mapentity_t &entity, const mapbrush_t &mapbrush)
 {
     bool base_contents_set = false;
-    contentflags_t base_contents = qbsp_options.target_game->create_empty_contents();
+    contentflags_t base_contents = contentflags_t::make(EWT_VISCONTENTS_EMPTY);
 
     // validate that all of the sides have valid contents
     for (auto &mapface : mapbrush.faces) {
         const maptexinfo_t &texinfo = mapface.get_texinfo();
 
-        contentflags_t contents =
-            qbsp_options.target_game->face_get_contents(mapface.texname.data(), texinfo.flags, mapface.contents);
+        contentflags_t contents = qbsp_options.target_game->face_get_contents(
+            mapface.texname.data(), texinfo.flags, mapface.contents, qbsp_options.transwater.value());
 
-        if (contents.is_empty(qbsp_options.target_game)) {
+        if (contents.is_empty()) {
             continue;
         }
 
@@ -2463,16 +1452,12 @@ static contentflags_t Brush_GetContents(const mapentity_t &entity, const mapbrus
             base_contents = contents;
         }
 
-        if (!contents.types_equal(base_contents, qbsp_options.target_game)) {
+        if (!contents.types_equal(base_contents)) {
             logging::print("WARNING: {}: brush has multiple face contents ({} vs {}), the former will be used.\n",
-                mapface.line, base_contents.to_string(qbsp_options.target_game),
-                contents.to_string(qbsp_options.target_game));
+                mapface.line, base_contents.to_string(), contents.to_string());
             break;
         }
     }
-
-    // make sure we found a valid type
-    Q_assert(base_contents.is_valid(qbsp_options.target_game, false));
 
     // extended flags
     if (entity.epairs.has("_mirrorinside")) {
@@ -2492,14 +1477,12 @@ static contentflags_t Brush_GetContents(const mapentity_t &entity, const mapbrus
     }
 
     if (string_iequals(entity.epairs.get("classname"), "func_illusionary_visblocker")) {
-        base_contents = contentflags_t::make(base_contents.flags | EWT_INVISCONTENTS_ILLUSIONARY_VISBLOCKER);
-    }
-
-    // non-Q2: -transwater implies liquids are detail
-    if (qbsp_options.target_game->id != GAME_QUAKE_II && qbsp_options.transwater.value()) {
-        if (base_contents.is_liquid(qbsp_options.target_game)) {
-            base_contents = qbsp_options.target_game->set_detail(base_contents);
-        }
+        // - unset existing visible contents + detail
+        // - set mist, mirrorinside, mirrorinside set
+        // note this overrides the logic in face_get_contents() that normally forces mist to be detail
+        base_contents = contentflags_t::make(
+            (base_contents.flags & ~(EWT_ALL_VISIBLE_CONTENTS | EWT_CFLAG_DETAIL | EWT_CFLAG_TRANSLUCENT)) |
+            EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER);
     }
 
     return base_contents;
@@ -2510,7 +1493,6 @@ static mapbrush_t CloneBrush(const mapbrush_t &input, bool faces = false)
     mapbrush_t brush;
 
     brush.contents = input.contents;
-    brush.format = input.format;
     brush.line = input.line;
 
     if (faces) {
@@ -2529,45 +1511,16 @@ static mapbrush_t CloneBrush(const mapbrush_t &input, bool faces = false)
     return brush;
 }
 
-static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity, texture_def_issues_t &issue_stats)
+static mapbrush_t ParseBrush(const mapfile::brush_t &in, mapentity_t &entity, texture_def_issues_t &issue_stats)
 {
     mapbrush_t brush;
 
-    // ericw -- brush primitives
-    if (!parser.parse_token(PARSE_PEEK))
-        FError("{}: unexpected EOF after {{ beginning brush", parser.location);
-
-    if (parser.token == "(" || parser.token == "}") {
-        brush.format = brushformat_t::NORMAL;
-    } else {
-        parser.parse_token();
-        brush.format = brushformat_t::BRUSH_PRIMITIVES;
-
-        // optional
-        if (parser.token == "brushDef") {
-            if (!parser.parse_token())
-                FError("{}: Brush primitives: unexpected EOF (nothing after brushDef)", parser.location);
-        }
-
-        // mandatory
-        if (parser.token != "{")
-            FError("{}: Brush primitives: expected second {{ at beginning of brush, got \"{}\"", parser.location, parser.token);
-    }
-    // ericw -- end brush primitives
+    brush.line = in.location;
 
     bool is_hint = false;
 
-    while (parser.parse_token()) {
-
-        // set linenum after first parsed token
-        if (!brush.line) {
-            brush.line = parser.location;
-        }
-
-        if (parser.token == "}")
-            break;
-
-        std::optional<mapface_t> face = ParseBrushFace(parser, brush, entity, issue_stats);
+    for (const auto &in_face : in.faces) {
+        std::optional<mapface_t> face = ParseBrushFace(in_face, brush, entity, issue_stats);
 
         if (!face) {
             continue;
@@ -2577,13 +1530,13 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity, texture_def_
         bool discardFace = false;
         for (auto &check : brush.faces) {
             if (qv::epsilonEqual(check.get_plane(), face->get_plane())) {
-                logging::print("{}: Brush with duplicate plane\n", parser.location);
+                logging::print("{}: Brush with duplicate plane\n", in_face.location);
                 discardFace = true;
                 continue;
             }
             if (qv::epsilonEqual(-check.get_plane(), face->get_plane())) {
                 /* FIXME - this is actually an invalid brush */
-                logging::print("{}: Brush with duplicate plane\n", parser.location);
+                logging::print("{}: Brush with duplicate plane\n", in_face.location);
                 continue;
             }
         }
@@ -2592,7 +1545,7 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity, texture_def_
             continue;
         }
 
-        if (face->get_texinfo().flags.is_hint) {
+        if (face->get_texinfo().flags.is_hint()) {
             is_hint = true;
         }
 
@@ -2625,13 +1578,13 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity, texture_def_
     // check for region/antiregion brushes
     if (is_antiregion) {
         if (!map.is_world_entity(entity)) {
-            FError("Region brush at {} isn't part of the world entity", parser.token);
+            FError("Region brush at {} isn't part of the world entity", in.location);
         }
 
         map.antiregions.push_back(CloneBrush(brush, true));
     } else if (is_region) {
         if (!map.is_world_entity(entity)) {
-            FError("Region brush at {} isn't part of the world entity", parser.token);
+            FError("Region brush at {} isn't part of the world entity", in.location);
         }
 
         // construct region brushes
@@ -2656,7 +1609,7 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity, texture_def_
                     new_side.planenum = map.add_or_find_plane(
                         {new_side.get_plane().get_normal(), new_side.get_plane().get_dist() + 16.f});
 
-                    new_brush.faces.emplace_back(std::move(new_side));
+                    new_brush.faces.push_back(std::move(new_side));
                     // the inverted side is special
                 } else if (side.get_plane().get_normal() == -new_brush_side.get_plane().get_normal()) {
 
@@ -2669,7 +1622,7 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity, texture_def_
                     flipped_side.planenum = map.add_or_find_plane(
                         {-new_brush_side.get_plane().get_normal(), -new_brush_side.get_plane().get_dist()});
 
-                    new_brush.faces.emplace_back(std::move(flipped_side));
+                    new_brush.faces.push_back(std::move(flipped_side));
                 } else {
                     mapface_t new_side;
                     new_side.texinfo = side.texinfo;
@@ -2678,7 +1631,7 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity, texture_def_
                     new_side.texname = side.texname;
                     new_side.planenum = side.planenum;
 
-                    new_brush.faces.emplace_back(std::move(new_side));
+                    new_brush.faces.push_back(std::move(new_side));
                 }
             }
 
@@ -2690,7 +1643,7 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity, texture_def_
         if (!map.region) {
             map.region = std::move(brush);
         } else {
-            FError("Multiple region brushes detected; newest at {}", parser.token);
+            FError("Multiple region brushes detected; newest at {}", in.location);
         }
 
         return brush;
@@ -2700,79 +1653,44 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity, texture_def_
     if (is_hint) {
 
         for (auto &face : brush.faces) {
-            if (qbsp_options.target_game->texinfo_is_hintskip(
-                    face.get_texinfo().flags, map.miptexTextureName(face.get_texinfo().miptex))) {
+            // any face in a hint brush that isn't HINT are treated as "hintskip", and discarded
+            if (!face.get_texinfo().flags.is_hint()) {
                 auto copy = face.get_texinfo();
-                copy.flags.is_hintskip = true;
+                copy.flags.set_hintskip(true);
                 face.texinfo = FindTexinfo(copy, face.get_plane());
             }
         }
     }
-
-    // ericw -- brush primitives - there should be another closing }
-    if (brush.format == brushformat_t::BRUSH_PRIMITIVES) {
-        if (!parser.parse_token())
-            FError("Brush primitives: unexpected EOF (no closing brace)");
-        if (parser.token != "}")
-            FError("Brush primitives: Expected }}, got: {}", parser.token);
-    }
-    // ericw -- end brush primitives
 
     brush.contents = Brush_GetContents(entity, brush);
 
     return brush;
 }
 
-bool ParseEntity(parser_t &parser, mapentity_t &entity, texture_def_issues_t &issue_stats)
+void ParseEntity(const mapfile::map_entity_t &in_entity, mapentity_t &entity, texture_def_issues_t &issue_stats)
 {
-    entity.location = parser.location;
+    entity.location = in_entity.location;
+    entity.epairs = in_entity.epairs;
 
-    if (!parser.parse_token()) {
-        return false;
+    // cache origin key
+    if (in_entity.epairs.has("origin")) {
+        in_entity.epairs.get_vector("origin", entity.origin);
     }
-
-    if (parser.token != "{") {
-        FError("{}: Invalid entity format, {{ not found", parser.location);
-    }
-
-    entity.mapbrushes.clear();
 
     // _omitbrushes 1 just discards all brushes in the entity.
     // could be useful for geometry guides, selective compilation, etc.
-    bool omit = false;
+    bool omit = in_entity.epairs.get_int("_omitbrushes");
 
-    bool first_brush = false;
+    if (!omit) {
+        for (const mapfile::brush_t &in_brush : in_entity.brushes) {
+            // once we run into the first brush, set up textures state.
+            EnsureTexturesLoaded();
 
-    do {
-        if (!parser.parse_token())
-            FError("Unexpected EOF (no closing brace)");
-        if (parser.token == "}")
-            break;
-        else if (parser.token == "{") {
-            if (!first_brush) {
-                // once we run into the first brush, set up textures state.
-                EnsureTexturesLoaded();
-                first_brush = true;
-
-                omit = entity.epairs.get_int("_omitbrushes");
+            if (auto brush = ParseBrush(in_brush, entity, issue_stats); brush.faces.size()) {
+                entity.mapbrushes.push_back(std::move(brush));
             }
-
-            if (omit) {
-                // skip until a } since we don't care to load brushes on this entity
-                do {
-                    if (!parser.parse_token()) {
-                        FError("Unexpected EOF (no closing brace)");
-                    }
-                } while (parser.token != "}");
-            } else {
-                if (auto brush = ParseBrush(parser, entity, issue_stats); brush.faces.size()) {
-                    entity.mapbrushes.push_back(std::move(brush));
-                }
-            }
-        } else {
-            ParseEpair(parser, entity);
         }
-    } while (1);
+    }
 
     // replace aliases
     auto alias_it = qbsp_options.loaded_entity_defs.find(entity.epairs.get("classname"));
@@ -2784,8 +1702,6 @@ bool ParseEntity(parser_t &parser, mapentity_t &entity, texture_def_issues_t &is
             }
         }
     }
-
-    return true;
 }
 
 static void ScaleMapFace(mapface_t &face, const qvec3d &scale)
@@ -2895,27 +1811,26 @@ static mapentity_t LoadExternalMap(const std::string &filename)
         FError("Couldn't load external map file \"{}\".\n", filename);
     }
 
-    parser_t parser(file, {filename});
+    auto in_map = mapfile::parse(
+        std::string_view(reinterpret_cast<const char *>(file->data()), file->size()), parser_source_location{filename});
     texture_def_issues_t issue_stats;
 
     // parse the worldspawn
-    if (!ParseEntity(parser, dest, issue_stats)) {
-        FError("'{}': Couldn't parse worldspawn entity\n", filename);
-    }
+    ParseEntity(in_map.entities.at(0), dest, issue_stats);
+
     const std::string &classname = dest.epairs.get("classname");
     if (Q_strcasecmp("worldspawn", classname)) {
         FError("'{}': Expected first entity to be worldspawn, got: '{}'\n", filename, classname);
     }
 
     // parse any subsequent entities, move any brushes to worldspawn
-    mapentity_t dummy{};
-    while (ParseEntity(parser, dummy, issue_stats)) {
+    for (size_t i = 1; i < in_map.entities.size(); ++i) {
+        mapentity_t dummy{};
+        ParseEntity(in_map.entities[i], dummy, issue_stats);
+
         // move the brushes to the worldspawn
         dest.mapbrushes.insert(dest.mapbrushes.end(), std::make_move_iterator(dummy.mapbrushes.begin()),
             std::make_move_iterator(dummy.mapbrushes.end()));
-
-        // clear for the next loop iteration
-        dummy = mapentity_t();
     }
 
     if (!dest.mapbrushes.size()) {
@@ -2958,7 +1873,7 @@ void ProcessExternalMapEntity(mapentity_t &entity)
     qvec3f angles;
     entity.epairs.get_vector("_external_map_angles", angles);
 
-    if (qv::epsilonEmpty(angles, (float) QBSP_EQUAL_EPSILON)) {
+    if (qv::epsilonEmpty(angles, (float)QBSP_EQUAL_EPSILON)) {
         angles[1] = entity.epairs.get_float("_external_map_angle");
     }
 
@@ -3066,7 +1981,7 @@ bool IsNonRemoveWorldBrushEntity(const mapentity_t &entity)
 inline bool MapBrush_IsHint(const mapbrush_t &brush)
 {
     for (auto &f : brush.faces) {
-        if (f.get_texinfo().flags.is_hint)
+        if (f.get_texinfo().flags.is_hint())
             return true;
     }
 
@@ -3203,10 +2118,10 @@ void ProcessMapBrushes()
                 brush.func_areaportal = areaportal;
                 brush.is_hint = MapBrush_IsHint(brush);
 
-                // _chop signals that a brush does not partake in the BSP chopping phase.
-                // this allows brushes embedded in others to be retained.
+                // "_chop" "0" is a deprecated way of saying "don't let this brush get chopped by others", i.e.
+                // move it to the end of the brush list.
                 if (entity.epairs.has("_chop") && !entity.epairs.get_int("_chop")) {
-                    brush.no_chop = true;
+                    brush.chop_index = 1;
                 }
 
                 // brushes are sorted by their _chop_order; higher numbered brushes
@@ -3221,7 +2136,7 @@ void ProcessMapBrushes()
 
                 // origin brushes are removed, and the origin of the entity is overwritten
                 // with its centroid.
-                if (brush.contents.is_origin(qbsp_options.target_game)) {
+                if (brush.contents.is_origin()) {
                     if (map.is_world_entity(entity)) {
                         logging::print("WARNING: Ignoring origin brush in worldspawn\n");
                     } else if (entity.epairs.has("origin")) {
@@ -3370,7 +2285,7 @@ void ProcessMapBrushes()
         aabb3d hull;
 
         if (qbsp_options.debugexpand.is_hull()) {
-            const auto &hulls = qbsp_options.target_game->get_hull_sizes();
+            const auto hulls = qbsp_options.target_game->get_hull_sizes();
 
             if (hulls.size() <= qbsp_options.debugexpand.hull_index_value()) {
                 FError("invalid hull index passed to debugexpand\n");
@@ -3405,17 +2320,14 @@ void LoadMapFile()
 
             parser_t parser(file, {qbsp_options.map_path.string()});
 
-            for (;;) {
+            mapfile::map_file_t parsed_map;
+            parsed_map.parse(parser);
+
+            for (const mapfile::map_entity_t &in_entity : parsed_map.entities) {
                 mapentity_t &entity = map.entities.emplace_back();
 
-                if (!ParseEntity(parser, entity, issue_stats)) {
-                    break;
-                }
+                ParseEntity(in_entity, entity, issue_stats);
             }
-
-            // Remove dummy entity inserted above
-            assert(!map.entities.back().epairs.size());
-            map.entities.pop_back();
         }
 
         // -add function
@@ -3428,13 +2340,13 @@ void LoadMapFile()
             }
 
             parser_t parser(file, {qbsp_options.add.value()});
+            auto input_map = mapfile::map_file_t{};
+            input_map.parse(parser);
 
-            for (;;) {
+            for (const auto &in_entity : input_map.entities) {
                 mapentity_t &entity = map.entities.emplace_back();
 
-                if (!ParseEntity(parser, entity, issue_stats)) {
-                    break;
-                }
+                ParseEntity(in_entity, entity, issue_stats);
 
                 if (entity.epairs.get("classname") == "worldspawn") {
                     // The easiest way to get the additional map's worldspawn brushes
@@ -3442,9 +2354,6 @@ void LoadMapFile()
                     entity.epairs.set("classname", "func_group");
                 }
             }
-            // Remove dummy entity inserted above
-            assert(!map.entities.back().epairs.size());
-            map.entities.pop_back();
         }
     }
 
@@ -3466,175 +2375,24 @@ void LoadMapFile()
     logging::print(logging::flag::STAT, "\n");
 }
 
-static old_texdef_valve_t TexDef_BSPToValve(const texvecf &in_vecs)
-{
-    old_texdef_valve_t res;
-
-    // From the valve -> bsp code,
-    //
-    //    for (i = 0; i < 3; i++) {
-    //        out->vecs[0][i] = axis[0][i] / scale[0];
-    //        out->vecs[1][i] = axis[1][i] / scale[1];
-    //    }
-    //
-    // We'll generate axis vectors of length 1 and pick the necessary scale
-
-    for (int i = 0; i < 2; i++) {
-        qvec3d axis = in_vecs.row(i).xyz();
-        const double length = qv::normalizeInPlace(axis);
-        // avoid division by 0
-        if (length != 0.0) {
-            res.scale[i] = 1.0 / length;
-        } else {
-            res.scale[i] = 0.0;
-        }
-        res.shift[i] = in_vecs.at(i, 3);
-        res.axis.set_row(i, axis);
-    }
-
-    return res;
-}
-
-static void fprintDoubleAndSpc(std::ofstream &f, double v)
-{
-    int rounded = rint(v);
-    if (static_cast<double>(rounded) == v) {
-        ewt::print(f, "{} ", rounded);
-    } else if (std::isfinite(v)) {
-        ewt::print(f, "{:0.17} ", v);
-    } else {
-        printf("WARNING: suppressing nan or infinity\n");
-        f << "0 ";
-    }
-}
-
-static void ConvertMapFace(std::ofstream &f, const mapface_t &mapface, const conversion_t format)
-{
-    const auto &texture = map.load_image_meta(mapface.texname.c_str());
-
-    const maptexinfo_t &texinfo = mapface.get_texinfo();
-
-    // Write plane points
-    for (int i = 0; i < 3; i++) {
-        f << " ( ";
-        for (int j = 0; j < 3; j++) {
-            fprintDoubleAndSpc(f, mapface.planepts[i][j]);
-        }
-        f << ") ";
-    }
-
-    switch (format) {
-        case conversion_t::quake:
-        case conversion_t::quake2: {
-            const old_texdef_quake_ed_t quakeed =
-                TexDef_BSPToQuakeEd(mapface.get_plane(), texture, texinfo.vecs, mapface.planepts);
-
-            ewt::print(f, "{} ", mapface.texname);
-            fprintDoubleAndSpc(f, quakeed.shift[0]);
-            fprintDoubleAndSpc(f, quakeed.shift[1]);
-            fprintDoubleAndSpc(f, quakeed.rotate);
-            fprintDoubleAndSpc(f, quakeed.scale[0]);
-            fprintDoubleAndSpc(f, quakeed.scale[1]);
-
-            if (mapface.raw_info.has_value()) {
-                f << mapface.raw_info->contents_native << " " << mapface.raw_info->flags.native << " "
-                  << mapface.raw_info->value;
-            }
-
-            break;
-        }
-        case conversion_t::valve: {
-            const old_texdef_valve_t valve = TexDef_BSPToValve(texinfo.vecs);
-
-            ewt::print(f, "{} [ ", mapface.texname);
-            fprintDoubleAndSpc(f, valve.axis.at(0, 0));
-            fprintDoubleAndSpc(f, valve.axis.at(0, 1));
-            fprintDoubleAndSpc(f, valve.axis.at(0, 2));
-            fprintDoubleAndSpc(f, valve.shift[0]);
-            f << "] [ ";
-            fprintDoubleAndSpc(f, valve.axis.at(1, 0));
-            fprintDoubleAndSpc(f, valve.axis.at(1, 1));
-            fprintDoubleAndSpc(f, valve.axis.at(1, 2));
-            fprintDoubleAndSpc(f, valve.shift[1]);
-            f << "] 0 ";
-            fprintDoubleAndSpc(f, valve.scale[0]);
-            fprintDoubleAndSpc(f, valve.scale[1]);
-
-            if (mapface.raw_info.has_value()) {
-                f << mapface.raw_info->contents_native << " " << mapface.raw_info->flags.native << " "
-                  << mapface.raw_info->value;
-            }
-
-            break;
-        }
-        case conversion_t::bp: {
-            int texSize[2];
-            texSize[0] = texture ? texture->width : 64;
-            texSize[1] = texture ? texture->height : 64;
-
-            const texdef_brush_primitives_t bp =
-                TexDef_BSPToBrushPrimitives(mapface.get_plane(), texSize, texinfo.vecs);
-            f << "( ( ";
-            fprintDoubleAndSpc(f, bp.at(0, 0));
-            fprintDoubleAndSpc(f, bp.at(0, 1));
-            fprintDoubleAndSpc(f, bp.at(0, 2));
-            f << ") ( ";
-            fprintDoubleAndSpc(f, bp.at(1, 0));
-            fprintDoubleAndSpc(f, bp.at(1, 1));
-            fprintDoubleAndSpc(f, bp.at(1, 2));
-
-            // N.B.: always print the Q2/Q3 flags
-            ewt::print(f, ") ) {} ", mapface.texname);
-
-            if (mapface.raw_info.has_value()) {
-                f << mapface.raw_info->contents_native << " " << mapface.raw_info->flags.native << " "
-                  << mapface.raw_info->value;
-            } else {
-                f << "0 0 0";
-            }
-
-            break;
-        }
-        default: FError("Internal error: unknown texcoord_style_t\n");
-    }
-
-    f << '\n';
-}
-
-static void ConvertMapBrush(std::ofstream &f, const mapbrush_t &mapbrush, const conversion_t format)
-{
-    f << "{\n";
-    if (format == conversion_t::bp) {
-        f << "brushDef\n";
-        f << "{\n";
-    }
-    for (int i = 0; i < mapbrush.faces.size(); i++) {
-        ConvertMapFace(f, mapbrush.faces[i], format);
-    }
-    if (format == conversion_t::bp) {
-        f << "}\n";
-    }
-    f << "}\n";
-}
-
-static void ConvertEntity(std::ofstream &f, const mapentity_t &entity, const conversion_t format)
-{
-    f << "{\n";
-
-    for (const auto &[key, value] : entity.epairs) {
-        ewt::print(f, "\"{}\" \"{}\"\n", key, value);
-    }
-
-    for (auto &mapbrush : entity.mapbrushes) {
-        ConvertMapBrush(f, mapbrush, format);
-    }
-    f << "}\n";
-}
-
 void ConvertMapFile()
 {
     logging::funcheader();
 
+    auto file = fs::load(qbsp_options.map_path);
+
+    if (!file) {
+        FError("Couldn't load map file \"{}\".\n", qbsp_options.map_path);
+        return;
+    }
+
+    // parse the map
+    parser_t parser(file, {qbsp_options.map_path.string()});
+
+    mapfile::map_file_t parsed_map;
+    parsed_map.parse(parser);
+
+    // choose output filename
     std::string append;
 
     switch (qbsp_options.convertmapformat.value()) {
@@ -3648,14 +2406,38 @@ void ConvertMapFile()
     fs::path filename = qbsp_options.bsp_path;
     filename.replace_filename(qbsp_options.bsp_path.stem().string() + append).replace_extension(".map");
 
+    // do conversion
+    conversion_t target = qbsp_options.convertmapformat.value();
+    switch (target) {
+        case conversion_t::quake:
+            parsed_map.convert_to(mapfile::texcoord_style_t::quaked, qbsp_options.target_game, qbsp_options);
+            break;
+        case conversion_t::quake2:
+            parsed_map.convert_to(mapfile::texcoord_style_t::quaked, qbsp_options.target_game, qbsp_options);
+            break;
+        case conversion_t::valve:
+            parsed_map.convert_to(mapfile::texcoord_style_t::valve_220, qbsp_options.target_game, qbsp_options);
+            break;
+        case conversion_t::bp:
+            parsed_map.convert_to(mapfile::texcoord_style_t::brush_primitives, qbsp_options.target_game, qbsp_options);
+            break;
+        default: FError("Internal error: unknown conversion_t\n");
+    }
+
+    // clear q2 attributes
+    // FIXME: should have a way to convert to Q2 Valve
+    if (target != conversion_t::quake2)
+        for (mapfile::map_entity_t &ent : parsed_map.entities)
+            for (mapfile::brush_t &brush : ent.brushes)
+                for (mapfile::brush_side_t &side : brush.faces)
+                    side.extended_info = std::nullopt;
+
+    // write out
     std::ofstream f(filename);
 
     if (!f)
         FError("Couldn't open file\n");
-
-    for (const mapentity_t &entity : map.entities) {
-        ConvertEntity(f, entity, qbsp_options.convertmapformat.value());
-    }
+    parsed_map.write(f);
 
     logging::print("Conversion saved to {}\n", filename);
 }

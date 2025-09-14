@@ -16,6 +16,8 @@
 #include <stdexcept>
 #include <optional>
 
+#include <fmt/ostream.h>
+
 #include <tbb/scalable_allocator.h>
 
 namespace polylib
@@ -47,6 +49,7 @@ struct winding_storage_stack_t
 public:
     using float_type = T;
     using vec3_type = qvec<T, 3>;
+
 protected:
     using array_type = std::array<vec3_type, N>;
     array_type array;
@@ -60,7 +63,7 @@ public:
     // construct winding with initial size; may allocate
     // memory, and sets size, but does not initialize any
     // of them.
-    inline winding_storage_stack_t(const size_t &initial_size)
+    inline winding_storage_stack_t(size_t initial_size)
         : count(initial_size)
     {
         if (initial_size > N) {
@@ -122,7 +125,7 @@ public:
 
     inline size_t size() const { return count; }
 
-    inline vec3_type &at(const size_t &index)
+    inline vec3_type &at(size_t index)
     {
 #ifdef _DEBUG
         if (index >= count)
@@ -132,7 +135,7 @@ public:
         return array[index];
     }
 
-    inline const vec3_type &at(const size_t &index) const
+    inline const vec3_type &at(size_t index) const
     {
 #ifdef _DEBUG
         if (index >= count)
@@ -143,10 +146,10 @@ public:
     }
 
     // un-bounds-checked
-    inline vec3_type &operator[](const size_t &index) { return array[index]; }
+    inline vec3_type &operator[](size_t index) { return array[index]; }
 
     // un-bounds-checked
-    inline const vec3_type &operator[](const size_t &index) const { return array[index]; }
+    inline const vec3_type &operator[](size_t index) const { return array[index]; }
 
     using const_iterator = typename array_type::const_iterator;
 
@@ -171,7 +174,7 @@ public:
         return (array[count - 1] = vec);
     }
 
-    inline void resize(const size_t &new_size)
+    inline void resize(size_t new_size)
     {
         if (new_size > N) {
             throw std::bad_alloc();
@@ -192,6 +195,7 @@ struct winding_storage_heap_t
 public:
     using float_type = T;
     using vec3_type = qvec<T, 3>;
+
 protected:
     std::vector<vec3_type, tbb::scalable_allocator<vec3_type>> values{};
 
@@ -202,7 +206,7 @@ public:
     // construct winding with initial size; may allocate
     // memory, and sets size, but does not initialize any
     // of them.
-    inline winding_storage_heap_t(const size_t &initial_size)
+    inline winding_storage_heap_t(size_t initial_size)
         : values(initial_size)
     {
     }
@@ -250,15 +254,15 @@ public:
 
     inline size_t size() const { return values.size(); }
 
-    inline vec3_type &at(const size_t &index) { return values[index]; }
+    inline vec3_type &at(size_t index) { return values[index]; }
 
-    inline const vec3_type &at(const size_t &index) const { return values[index]; }
-
-    // un-bounds-checked
-    inline vec3_type &operator[](const size_t &index) { return values[index]; }
+    inline const vec3_type &at(size_t index) const { return values[index]; }
 
     // un-bounds-checked
-    inline const vec3_type &operator[](const size_t &index) const { return values[index]; }
+    inline vec3_type &operator[](size_t index) { return values[index]; }
+
+    // un-bounds-checked
+    inline const vec3_type &operator[](size_t index) const { return values[index]; }
 
     inline const auto begin() const { return values.begin(); }
 
@@ -270,7 +274,7 @@ public:
 
     inline vec3_type &emplace_back(const vec3_type &vec) { return values.emplace_back(vec); }
 
-    inline void resize(const size_t &new_size) { values.resize(new_size); }
+    inline void resize(size_t new_size) { values.resize(new_size); }
 
     inline void reserve(size_t size) { values.reserve(size); }
 
@@ -285,6 +289,7 @@ struct winding_storage_hybrid_t
 public:
     using float_type = T;
     using vec3_type = qvec<T, 3>;
+
 protected:
     using array_type = std::array<vec3_type, N>;
     using vector_type = std::vector<vec3_type>;
@@ -394,7 +399,7 @@ public:
     // construct winding with initial size; may allocate
     // memory, and sets size, but does not initialize any
     // of them.
-    inline winding_storage_hybrid_t(const size_t &initial_size)
+    inline winding_storage_hybrid_t(size_t initial_size)
         : count(initial_size)
     {
         if (count > N) {
@@ -489,7 +494,7 @@ public:
 
     inline size_t vector_size() const { return vector.size(); }
 
-    inline vec3_type &at(const size_t &index)
+    inline vec3_type &at(size_t index)
     {
 #ifdef _DEBUG
         if (index >= count)
@@ -503,7 +508,7 @@ public:
         return array[index];
     }
 
-    inline const vec3_type &at(const size_t &index) const
+    inline const vec3_type &at(size_t index) const
     {
 #ifdef _DEBUG
         if (index >= count)
@@ -518,7 +523,7 @@ public:
     }
 
     // un-bounds-checked
-    inline vec3_type &operator[](const size_t &index)
+    inline vec3_type &operator[](size_t index)
     {
         if (index >= N) {
             return vector[index - N];
@@ -528,7 +533,7 @@ public:
     }
 
     // un-bounds-checked
-    inline const vec3_type &operator[](const size_t &index) const
+    inline const vec3_type &operator[](size_t index) const
     {
         if (index >= N) {
             return vector[index - N];
@@ -560,7 +565,7 @@ public:
         return (array[count - 1] = vec);
     }
 
-    inline void resize(const size_t &new_size)
+    inline void resize(size_t new_size)
     {
         // resize vector if necessary
         if (new_size > N) {
@@ -583,6 +588,7 @@ struct winding_base_t
 public:
     using float_type = typename TStorage::float_type;
     using vec3_type = typename TStorage::vec3_type;
+
 protected:
     TStorage storage;
 
@@ -593,7 +599,7 @@ public:
     // construct winding with initial size; may allocate
     // memory, and sets size, but does not initialize any
     // of them.
-    inline winding_base_t(const size_t &initial_size)
+    inline winding_base_t(size_t initial_size)
         : storage(initial_size)
     {
     }
@@ -637,15 +643,15 @@ public:
 
     inline size_t size() const { return storage.size(); }
 
-    inline vec3_type &at(const size_t &index) { return storage.at(index); }
+    inline vec3_type &at(size_t index) { return storage.at(index); }
 
-    inline const vec3_type &at(const size_t &index) const { return storage.at(index); }
-
-    // un-bounds-checked
-    inline vec3_type &operator[](const size_t &index) { return storage[index]; }
+    inline const vec3_type &at(size_t index) const { return storage.at(index); }
 
     // un-bounds-checked
-    inline const vec3_type &operator[](const size_t &index) const { return storage[index]; }
+    inline vec3_type &operator[](size_t index) { return storage[index]; }
+
+    // un-bounds-checked
+    inline const vec3_type &operator[](size_t index) const { return storage[index]; }
 
     inline const auto begin() const { return storage.begin(); }
 
@@ -663,7 +669,7 @@ public:
 
     inline void push_back(const vec3_type &vec) { storage.emplace_back(vec); }
 
-    inline void resize(const size_t &new_size) { storage.resize(new_size); }
+    inline void resize(size_t new_size) { storage.resize(new_size); }
 
     inline void reserve(size_t size) { storage.reserve(size); }
 
@@ -757,7 +763,7 @@ public:
     }
 
     template<typename TPlane>
-    static winding_base_t from_plane(const qplane3<TPlane> &plane, const float_type &worldextent)
+    static winding_base_t from_plane(const qplane3<TPlane> &plane, float_type worldextent)
     {
         /* find the major axis */
         float_type max = -std::numeric_limits<float_type>::max();
@@ -804,7 +810,7 @@ public:
         return w;
     }
 
-    void check(const float_type &bogus_range = DEFAULT_BOGUS_RANGE, const float_type &on_epsilon = DEFAULT_ON_EPSILON) const
+    void check(float_type bogus_range = DEFAULT_BOGUS_RANGE, float_type on_epsilon = DEFAULT_ON_EPSILON) const
     {
         if (size() < 3)
             FError("{} points", size());
@@ -878,8 +884,8 @@ public:
 
     // dists/sides can be null, or must have (size() + 1) reserved
     template<typename TPlane>
-    inline std::array<size_t, SIDE_TOTAL> calc_sides(
-        const qplane3<TPlane> &plane, float_type *dists, planeside_t *sides, const float_type &on_epsilon = DEFAULT_ON_EPSILON) const
+    inline std::array<size_t, SIDE_TOTAL> calc_sides(const qplane3<TPlane> &plane, float_type *dists,
+        planeside_t *sides, float_type on_epsilon = DEFAULT_ON_EPSILON) const
     {
         std::array<size_t, SIDE_TOTAL> counts{};
 
@@ -942,7 +948,7 @@ public:
     */
     template<typename TStor = TStorage>
     twosided<std::optional<winding_base_t<TStor>>> clip(
-        const qplane3d &plane, const float_type &on_epsilon = DEFAULT_ON_EPSILON, const bool &keepon = false) const
+        const qplane3d &plane, float_type on_epsilon = DEFAULT_ON_EPSILON, bool keepon = false) const
     {
         float_type *dists = (float_type *)alloca(sizeof(float_type) * (size() + 1));
         planeside_t *sides = (planeside_t *)alloca(sizeof(planeside_t) * (size() + 1));
@@ -1014,7 +1020,7 @@ public:
     */
     template<typename TPlane>
     std::optional<winding_base_t> clip_front(
-        const qplane3<TPlane> &plane, const float_type &on_epsilon = DEFAULT_ON_EPSILON, const bool &keepon = false)
+        const qplane3<TPlane> &plane, float_type on_epsilon = DEFAULT_ON_EPSILON, bool keepon = false)
     {
         float_type *dists = (float_type *)alloca(sizeof(float_type) * (size() + 1));
         planeside_t *sides = (planeside_t *)alloca(sizeof(planeside_t) * (size() + 1));
@@ -1078,7 +1084,7 @@ public:
     ==================
     */
     std::optional<winding_base_t> clip_back(
-        const qplane3d &plane, const float_type &on_epsilon = DEFAULT_ON_EPSILON, const bool &keepon = false)
+        const qplane3d &plane, float_type on_epsilon = DEFAULT_ON_EPSILON, bool keepon = false)
     {
         float_type *dists = (float_type *)alloca(sizeof(float_type) * (size() + 1));
         planeside_t *sides = (planeside_t *)alloca(sizeof(planeside_t) * (size() + 1));
@@ -1215,7 +1221,7 @@ public:
         return result;
     }
 
-    bool directional_equal(const winding_base_t &w, const float_type &equal_epsilon = POINT_EQUAL_EPSILON) const
+    bool directional_equal(const winding_base_t &w, float_type equal_epsilon = POINT_EQUAL_EPSILON) const
     {
         if (this->size() != w.size()) {
             return false;
@@ -1246,7 +1252,7 @@ public:
         return false;
     }
 
-    bool undirectional_equal(const winding_base_t &w, const float_type &equal_epsilon = POINT_EQUAL_EPSILON) const
+    bool undirectional_equal(const winding_base_t &w, float_type equal_epsilon = POINT_EQUAL_EPSILON) const
     {
         return directional_equal(w, equal_epsilon) || directional_equal(w.flip(), equal_epsilon);
     }
@@ -1278,6 +1284,20 @@ public:
 
         return result;
     }
+
+    // gtest support
+    // also, makes printable via fmt since we include fmt/ostream.h
+    friend std::ostream &operator<<(std::ostream &os, const winding_base_t &winding)
+    {
+        os << "{";
+        for (size_t i = 0; i < winding.size(); ++i) {
+            os << "(" << winding[i] << ")";
+            if ((i + 1) < winding.size())
+                os << ", ";
+        }
+        os << "}";
+        return os;
+    }
 };
 
 // the default amount of points to keep on stack
@@ -1286,3 +1306,9 @@ constexpr size_t STACK_POINTS_ON_WINDING = MAX_POINTS_ON_WINDING / 4;
 using winding_t = winding_base_t<winding_storage_heap_t<double>>;
 using winding3f_t = winding_base_t<winding_storage_heap_t<float>>;
 }; // namespace polylib
+
+// fmt support
+template<class T>
+struct fmt::formatter<polylib::winding_base_t<T>> : fmt::ostream_formatter
+{
+};

@@ -82,10 +82,10 @@ struct q2_dmodel_t
     q2_dmodel_t() = default;
 
     // convert from mbsp_t
-    q2_dmodel_t(const dmodelh2_t &model);
+    explicit q2_dmodel_t(const dmodelh2_t &model);
 
     // convert to mbsp_t
-    operator dmodelh2_t() const;
+    explicit operator dmodelh2_t() const;
 
     // serialize for streams
     void stream_write(std::ostream &s) const;
@@ -116,8 +116,8 @@ enum q2_contents_t : int32_t
     Q2_CONTENTS_UNUSED_10 = nth_bit(10),
     Q2_CONTENTS_UNUSED_11 = nth_bit(11),
     Q2_CONTENTS_UNUSED_12 = nth_bit(12),
-    Q2_CONTENTS_UNUSED_13 = nth_bit(13),
-    Q2_CONTENTS_UNUSED_14 = nth_bit(14),
+    Q2_CONTENTS_NO_WATERJUMP = nth_bit(13), // liquid-only; re-release
+    Q2_CONTENTS_PROJECTILECLIP = nth_bit(14), // like playerclip/monsterclip, but only affects projectiles
 
     Q2_LAST_VISIBLE_CONTENTS = Q2_CONTENTS_MIST,
     Q2_ALL_VISIBLE_CONTENTS = Q2_CONTENTS_SOLID | Q2_CONTENTS_WINDOW | Q2_CONTENTS_AUX | Q2_CONTENTS_LAVA |
@@ -155,7 +155,7 @@ enum q2_contents_t : int32_t
 struct q2_dnode_t
 {
     int32_t planenum;
-    std::array<int32_t, 2> children; // negative numbers are -(leafs+1), not nodes
+    twosided<int32_t> children; // negative numbers are -(leafs+1), not nodes
     qvec3s mins; // for frustom culling
     qvec3s maxs;
     uint16_t firstface;
@@ -164,10 +164,10 @@ struct q2_dnode_t
     q2_dnode_t() = default;
 
     // convert from mbsp_t
-    q2_dnode_t(const bsp2_dnode_t &model);
+    explicit q2_dnode_t(const bsp2_dnode_t &model);
 
     // convert to mbsp_t
-    operator bsp2_dnode_t() const;
+    explicit operator bsp2_dnode_t() const;
 
     // serialize for streams
     void stream_write(std::ostream &s) const;
@@ -196,6 +196,10 @@ enum q2_surf_flags_t : int32_t
     Q2_SURF_ALPHATEST = nth_bit(25), // Paril, KMQ2 flag
 };
 
+static constexpr int32_t Q2_SURF_ALL = Q2_SURF_LIGHT | Q2_SURF_SLICK | Q2_SURF_SKY | Q2_SURF_WARP | Q2_SURF_TRANS33 |
+                                       Q2_SURF_TRANS66 | Q2_SURF_FLOWING | Q2_SURF_NODRAW | Q2_SURF_HINT |
+                                       Q2_SURF_SKIP | Q2_SURF_ALPHATEST;
+
 struct q2_texinfo_t
 {
     texvecf vecs; // [s/t][xyz offset]
@@ -207,10 +211,10 @@ struct q2_texinfo_t
     q2_texinfo_t() = default;
 
     // convert from mbsp_t
-    q2_texinfo_t(const mtexinfo_t &model);
+    explicit q2_texinfo_t(const mtexinfo_t &model);
 
     // convert to mbsp_t
-    operator mtexinfo_t() const;
+    explicit operator mtexinfo_t() const;
 
     // serialize for streams
     void stream_write(std::ostream &s) const;
@@ -232,10 +236,10 @@ struct q2_dface_t
     q2_dface_t() = default;
 
     // convert from mbsp_t
-    q2_dface_t(const mface_t &model);
+    explicit q2_dface_t(const mface_t &model);
 
     // convert to mbsp_t
-    operator mface_t() const;
+    explicit operator mface_t() const;
 
     // serialize for streams
     void stream_write(std::ostream &s) const;
@@ -257,10 +261,10 @@ struct q2_dface_qbism_t
     q2_dface_qbism_t() = default;
 
     // convert from mbsp_t
-    q2_dface_qbism_t(const mface_t &model);
+    explicit q2_dface_qbism_t(const mface_t &model);
 
     // convert to mbsp_t
-    operator mface_t() const;
+    explicit operator mface_t() const;
 
     // serialize for streams
     void stream_write(std::ostream &s) const;
@@ -286,10 +290,10 @@ struct q2_dleaf_t
     q2_dleaf_t() = default;
 
     // convert from mbsp_t
-    q2_dleaf_t(const mleaf_t &model);
+    explicit q2_dleaf_t(const mleaf_t &model);
 
     // convert to mbsp_t
-    operator mleaf_t() const;
+    explicit operator mleaf_t() const;
 
     // serialize for streams
     void stream_write(std::ostream &s) const;
@@ -315,10 +319,10 @@ struct q2_dleaf_qbism_t
     q2_dleaf_qbism_t() = default;
 
     // convert from mbsp_t
-    q2_dleaf_qbism_t(const mleaf_t &model);
+    explicit q2_dleaf_qbism_t(const mleaf_t &model);
 
     // convert to mbsp_t
-    operator mleaf_t() const;
+    explicit operator mleaf_t() const;
 
     // serialize for streams
     void stream_write(std::ostream &s) const;
@@ -333,10 +337,10 @@ struct q2_dbrushside_t
     q2_dbrushside_t() = default;
 
     // convert from mbsp_t
-    q2_dbrushside_t(const q2_dbrushside_qbism_t &model);
+    explicit q2_dbrushside_t(const q2_dbrushside_qbism_t &model);
 
     // convert to mbsp_t
-    operator q2_dbrushside_qbism_t() const;
+    explicit operator q2_dbrushside_qbism_t() const;
 
     // serialize for streams
     void stream_write(std::ostream &s) const;

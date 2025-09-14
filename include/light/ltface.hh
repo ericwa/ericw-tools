@@ -45,15 +45,14 @@ extern std::atomic<uint32_t> total_surflight_rays, total_surflight_ray_hits; // 
 extern std::atomic<uint32_t> fully_transparent_lightmaps; // write.cc
 
 void PrintFaceInfo(const mface_t *face, const mbsp_t *bsp);
-// FIXME: remove light param. add normal param and dir params.
-float GetLightValue(const settings::worldspawn_keys &cfg, const light_t *entity, float dist);
 void SetupDirt(settings::worldspawn_keys &cfg);
 lightsurf_t CreateLightmapSurface(const mbsp_t *bsp, const mface_t *face, const facesup_t *facesup,
     const bspx_decoupled_lm_perface *facesup_decoupled, const settings::worldspawn_keys &cfg);
 bool Face_IsLightmapped(const mbsp_t *bsp, const mface_t *face);
 bool Face_IsEmissive(const mbsp_t *bsp, const mface_t *face);
 void DirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::worldspawn_keys &cfg);
-void IndirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::worldspawn_keys &cfg, size_t bounce_depth);
+void IndirectLightFace(
+    const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::worldspawn_keys &cfg, size_t bounce_depth);
 void PostProcessLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::worldspawn_keys &cfg);
 
 struct lightgrid_sample_t
@@ -70,7 +69,7 @@ struct lightgrid_sample_t
      * - if a color component is nan, nan is considered equal to nan for the purposes of this comparison
      */
     bool operator==(const lightgrid_sample_t &other) const;
-    bool operator!=(const lightgrid_sample_t &other) const; //gcc9 workaround
+    bool operator!=(const lightgrid_sample_t &other) const; // gcc9 workaround
 };
 
 struct lightgrid_samples_t

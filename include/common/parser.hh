@@ -149,7 +149,7 @@ struct parser_t : parser_base_t
 
     // pull from string_view; note that the string view must live for the entire
     // duration of the parser's life time
-    parser_t(const std::string_view &view, parser_source_location base_location);
+    parser_t(std::string_view view, parser_source_location base_location);
 
     // pull from fs::data; note that the data must live for the entire
     // duration of the parser's life time, and must has_value()

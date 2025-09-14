@@ -22,6 +22,7 @@
 #include <common/qvec.hh>
 #include <common/iterators.hh>
 #include <array>
+#include <ostream>
 
 /**!
  * touching a side/edge/corner is considered touching
@@ -50,10 +51,7 @@ public:
         {
         }
 
-        constexpr bool operator==(const intersection_t &other) const
-        {
-            return valid == other.valid && bbox == other.bbox;
-        }
+        constexpr auto operator<=>(const intersection_t &other) const = default;
 
         constexpr operator bool() const { return valid; }
     };
@@ -105,7 +103,7 @@ public:
         }
     }
 
-    constexpr bool operator==(const aabb &other) const { return m_corners == other.m_corners; }
+    constexpr auto operator<=>(const aabb &other) const = default;
 
     constexpr const value_type &mins() const { return m_corners[0]; }
 
@@ -225,9 +223,9 @@ public:
 
     constexpr aabb grow(const value_type &size) const { return {mins() - size, maxs() + size}; }
 
-    constexpr value_type &operator[](const size_t &index) { return m_corners[index]; }
+    constexpr value_type &operator[](size_t index) { return m_corners[index]; }
 
-    constexpr const value_type &operator[](const size_t &index) const { return m_corners[index]; }
+    constexpr const value_type &operator[](size_t index) const { return m_corners[index]; }
 
     constexpr value_type centroid() const { return (mins() + maxs()) * 0.5; }
 
@@ -245,6 +243,13 @@ public:
 
     // stream support
     auto stream_data() { return std::tie(m_corners); }
+
+    // gtest support
+    friend std::ostream &operator<<(std::ostream &os, const aabb &aabb)
+    {
+        os << fmt::format("{{mins: ({}), maxs: ({})}}", aabb.m_corners[0], aabb.m_corners[1]);
+        return os;
+    }
 };
 
 template<class V>

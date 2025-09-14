@@ -41,34 +41,45 @@
 #include <algorithm>
 #include <string>
 
-#if defined(__has_include) && __has_include(<strings.h>)
-#include <strings.h>
-#endif
-
-int32_t Q_strncasecmp(const std::string_view &a, const std::string_view &b, size_t maxcount)
+char Q_tolower(char x)
 {
-    return
-#ifdef _WIN32
-        _strnicmp
-#elif defined(__has_include) && __has_include(<strings.h>)
-        strncasecmp
-#else
-        strnicmp
-#endif
-        (a.data(), b.data(), maxcount);
+    if (x >= 'A' && x <= 'Z') {
+        x += 'a' - 'A';
+    }
+    return x;
 }
 
-int32_t Q_strcasecmp(const std::string_view &a, const std::string_view &b)
+int32_t Q_strncasecmp(std::string_view a, std::string_view b, size_t maxcount)
 {
-    return
-#ifdef _WIN32
-        _stricmp
-#elif defined(__has_include) && __has_include(<strings.h>)
-        strcasecmp
-#else
-        stricmp
-#endif
-        (a.data(), b.data());
+    return Q_strcasecmp(a.substr(0, maxcount), b.substr(0, maxcount));
+}
+
+int32_t Q_strcasecmp(std::string_view a, std::string_view b)
+{
+    const char *a_ptr = a.data();
+    const char *b_ptr = b.data();
+    const size_t common_size = std::min(a.size(), b.size());
+
+    for (size_t i = 0; i < common_size; ++i) {
+        char achar = Q_tolower(a_ptr[i]);
+        char bchar = Q_tolower(b_ptr[i]);
+
+        if (achar < bchar) {
+            return -1;
+        }
+        if (achar > bchar) {
+            return 1;
+        }
+    }
+
+    // the first common_size chars are the same
+    if (a.size() < b.size()) {
+        return -1;
+    }
+    if (a.size() > b.size()) {
+        return 1;
+    }
+    return 0;
 }
 
 void // mxd
@@ -86,7 +97,7 @@ string_replaceall(std::string &str, const std::string &from, const std::string &
 }
 
 bool // mxd
-string_iequals(const std::string_view &a, const std::string_view &b)
+string_iequals(std::string_view a, std::string_view b)
 {
     size_t sz = a.size();
     if (b.size() != sz)
@@ -679,7 +690,7 @@ bool string_icontains(std::string_view haystack, std::string_view needle)
     return string_ifind(haystack, needle) != haystack.end();
 }
 
-time_point I_FloatTime()
+qtime_point I_FloatTime()
 {
     return qclock::now();
 }

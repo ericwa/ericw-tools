@@ -1,3 +1,6 @@
+#include <gtest/gtest.h>
+#include <gmock/gmock.h>
+
 #include <qbsp/map.hh>
 #include <common/bsputils.hh>
 #include <common/qvec.hh>
@@ -9,33 +12,32 @@
 #include <map>
 
 #include "test_qbsp.hh"
-#include "testutils.hh"
 
-TEST_CASE("detail" * doctest::test_suite("testmaps_q2"))
+TEST(testmapsQ2, detail)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_detail.map");
 
-    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+    EXPECT_EQ(GAME_QUAKE_II, bsp.loadversion->game->id);
 
     // stats
-    CHECK(1 == bsp.dmodels.size());
+    EXPECT_EQ(1, bsp.dmodels.size());
     // Q2 reserves leaf 0 as an invalid leaf
     const auto &leaf0 = bsp.dleafs[0];
-    CHECK(Q2_CONTENTS_SOLID == leaf0.contents);
-    CHECK(-1 == leaf0.visofs);
-    CHECK(qvec3f{} == leaf0.mins);
-    CHECK(qvec3f{} == leaf0.maxs);
-    CHECK(0 == leaf0.firstmarksurface);
-    CHECK(0 == leaf0.nummarksurfaces);
-    CHECK(leaf0.ambient_level == std::array<uint8_t, NUM_AMBIENTS>{0, 0, 0, 0});
-    CHECK(CLUSTER_INVALID == leaf0.cluster);
-    CHECK(AREA_INVALID == leaf0.area);
-    CHECK(0 == leaf0.firstleafbrush);
-    CHECK(0 == leaf0.numleafbrushes);
+    EXPECT_EQ(Q2_CONTENTS_SOLID, leaf0.contents);
+    EXPECT_EQ(-1, leaf0.visofs);
+    EXPECT_EQ(qvec3f{}, leaf0.mins);
+    EXPECT_EQ(qvec3f{}, leaf0.maxs);
+    EXPECT_EQ(0, leaf0.firstmarksurface);
+    EXPECT_EQ(0, leaf0.nummarksurfaces);
+    EXPECT_EQ(leaf0.ambient_level, (std::array<uint8_t, NUM_AMBIENTS>{0, 0, 0, 0}));
+    EXPECT_EQ(CLUSTER_INVALID, leaf0.cluster);
+    EXPECT_EQ(AREA_INVALID, leaf0.area);
+    EXPECT_EQ(0, leaf0.firstleafbrush);
+    EXPECT_EQ(0, leaf0.numleafbrushes);
 
     // no areaportals except the placeholder
-    CHECK(1 == bsp.dareaportals.size());
-    CHECK(2 == bsp.dareas.size());
+    EXPECT_EQ(1, bsp.dareaportals.size());
+    EXPECT_EQ(2, bsp.dareas.size());
 
     // leafs:
     //  6 solid leafs outside the room (* can be more depending on when the "divider" is cut)
@@ -48,13 +50,12 @@ TEST_CASE("detail" * doctest::test_suite("testmaps_q2"))
     for (size_t i = 1; i < bsp.dleafs.size(); ++i) {
         ++counts_by_contents[bsp.dleafs[i].contents];
     }
-    CHECK(2 == counts_by_contents.size()); // number of types
+    EXPECT_EQ(3, counts_by_contents.size()); // number of types
 
-    CHECK(counts_by_contents.find(Q2_CONTENTS_SOLID | Q2_CONTENTS_DETAIL) ==
-          counts_by_contents.end()); // the detail bit gets cleared
-    CHECK(8 == counts_by_contents.at(0)); // empty leafs
-    CHECK(counts_by_contents.at(Q2_CONTENTS_SOLID) >= 8);
-    CHECK(counts_by_contents.at(Q2_CONTENTS_SOLID) <= 12);
+    EXPECT_EQ(1, counts_by_contents.at(Q2_CONTENTS_SOLID | Q2_CONTENTS_DETAIL)); // detail leafs
+    EXPECT_EQ(8, counts_by_contents.at(0)); // empty leafs
+    EXPECT_GE(counts_by_contents.at(Q2_CONTENTS_SOLID), 6);
+    EXPECT_LE(counts_by_contents.at(Q2_CONTENTS_SOLID), 12);
 
     // clusters:
     //  1 empty cluster filling the room above the divider
@@ -68,7 +69,7 @@ TEST_CASE("detail" * doctest::test_suite("testmaps_q2"))
             clusters.insert(bsp.dleafs[i].cluster);
         }
     }
-    CHECK(4 == clusters.size());
+    EXPECT_EQ(4, clusters.size());
 
     // various points in the main room cluster
     const qvec3d under_button{246, 436, 96}; // directly on the main floor plane
@@ -80,116 +81,117 @@ TEST_CASE("detail" * doctest::test_suite("testmaps_q2"))
     const qvec3d side_room{138, 576, 140};
 
     // detail clips away world faces
-    CHECK(nullptr == BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], under_button, {0, 0, 1}));
+    EXPECT_EQ(nullptr, BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], under_button, {0, 0, 1}));
 
     // check for correct contents
     auto *detail_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], inside_button);
-    CHECK(Q2_CONTENTS_SOLID == detail_leaf->contents);
-    CHECK(-1 == detail_leaf->cluster);
-    CHECK(0 == detail_leaf->area); // solid leafs get the invalid area 0
+    EXPECT_EQ((Q2_CONTENTS_SOLID | Q2_CONTENTS_DETAIL), detail_leaf->contents);
+    EXPECT_EQ(-1, detail_leaf->cluster);
+    EXPECT_EQ(0, detail_leaf->area); // solid leafs get the invalid area 0
 
     // check for button (detail) brush
-    CHECK(1 == Leaf_Brushes(&bsp, detail_leaf).size());
-    CHECK((Q2_CONTENTS_SOLID | Q2_CONTENTS_DETAIL) == Leaf_Brushes(&bsp, detail_leaf).at(0)->contents);
+    EXPECT_EQ(1, Leaf_Brushes(&bsp, detail_leaf).size());
+    EXPECT_EQ((Q2_CONTENTS_SOLID | Q2_CONTENTS_DETAIL), Leaf_Brushes(&bsp, detail_leaf).at(0)->contents);
 
     // get more leafs
     auto *empty_leaf_above_button = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], above_button);
-    CHECK(0 == empty_leaf_above_button->contents);
-    CHECK(0 == Leaf_Brushes(&bsp, empty_leaf_above_button).size());
-    CHECK(1 == empty_leaf_above_button->area);
+    EXPECT_EQ(0, empty_leaf_above_button->contents);
+    EXPECT_EQ(0, Leaf_Brushes(&bsp, empty_leaf_above_button).size());
+    EXPECT_EQ(1, empty_leaf_above_button->area);
 
     auto *empty_leaf_side_room = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], side_room);
-    CHECK(0 == empty_leaf_side_room->contents);
-    CHECK(0 == Leaf_Brushes(&bsp, empty_leaf_side_room).size());
-    CHECK(empty_leaf_side_room->cluster != empty_leaf_above_button->cluster);
-    CHECK(1 == empty_leaf_side_room->area);
+    EXPECT_EQ(0, empty_leaf_side_room->contents);
+    EXPECT_EQ(0, Leaf_Brushes(&bsp, empty_leaf_side_room).size());
+    EXPECT_NE(empty_leaf_side_room->cluster, empty_leaf_above_button->cluster);
+    EXPECT_EQ(1, empty_leaf_side_room->area);
 
     auto *empty_leaf_beside_button = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], beside_button);
-    CHECK(0 == empty_leaf_beside_button->contents);
-    CHECK(-1 != empty_leaf_beside_button->cluster);
-    CHECK(empty_leaf_above_button->cluster == empty_leaf_beside_button->cluster);
-    CHECK(empty_leaf_above_button != empty_leaf_beside_button);
-    CHECK(1 == empty_leaf_beside_button->area);
+    EXPECT_EQ(0, empty_leaf_beside_button->contents);
+    EXPECT_NE(-1, empty_leaf_beside_button->cluster);
+    EXPECT_EQ(empty_leaf_above_button->cluster, empty_leaf_beside_button->cluster);
+    EXPECT_NE(empty_leaf_above_button, empty_leaf_beside_button);
+    EXPECT_EQ(1, empty_leaf_beside_button->area);
 
-    CHECK(prt->portals.size() == 5);
-    CHECK(prt->portalleafs_real == 0); // not used by Q2
-    CHECK(prt->portalleafs == 4);
+    EXPECT_EQ(prt->portals.size(), 5);
+    EXPECT_EQ(prt->portalleafs_real, 0); // not used by Q2
+    EXPECT_EQ(prt->portalleafs, 4);
 }
 
-TEST_CASE("q2 detail with -nodetail" * doctest::test_suite("testmaps_q2"))
+TEST(testmapsQ2, Q2DetailWithNodetail)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_detail.map", {"-nodetail"});
 
     const qvec3d inside_button{246, 436, 98};
     auto *inside_button_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], inside_button);
-    CHECK(Q2_CONTENTS_SOLID == inside_button_leaf->contents);
+    EXPECT_EQ(Q2_CONTENTS_SOLID, inside_button_leaf->contents);
 
-    CHECK(prt->portals.size() > 5);
-    CHECK(prt->portalleafs == 8);
+    EXPECT_GT(prt->portals.size(), 5);
+    EXPECT_EQ(prt->portalleafs, 8);
 }
 
-TEST_CASE("q2 detail with -omitdetail" * doctest::test_suite("testmaps_q2"))
+TEST(testmapsQ2, Q2DetailWithOmitdetail)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_detail.map", {"-omitdetail"});
 
-    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+    EXPECT_EQ(GAME_QUAKE_II, bsp.loadversion->game->id);
 
     const qvec3d inside_button{246, 436, 98};
     const qvec3d above_button{246, 436, 120};
 
     auto *inside_button_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], inside_button);
-    CHECK(Q2_CONTENTS_EMPTY == inside_button_leaf->contents);
+    EXPECT_EQ(Q2_CONTENTS_EMPTY, inside_button_leaf->contents);
 
     auto *above_button_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], above_button);
-    CHECK(inside_button_leaf == above_button_leaf);
+    EXPECT_EQ(inside_button_leaf, above_button_leaf);
 }
 
-TEST_CASE("-omitdetail removing all brushes in a func" * doctest::test_suite("testmaps_q2"))
+TEST(testmapsQ2, omitdetailRemovingAllBrushesInAFunc)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_omitdetail_in_func.map", {"-omitdetail"});
 }
 
-TEST_CASE("playerclip" * doctest::test_suite("testmaps_q2"))
+TEST(testmapsQ2, playerclip)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_playerclip.map");
 
-    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+    EXPECT_EQ(GAME_QUAKE_II, bsp.loadversion->game->id);
 
     const qvec3d in_playerclip{32, -136, 144};
     auto *playerclip_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_playerclip);
-    CHECK((Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_DETAIL) == playerclip_leaf->contents);
+    EXPECT_EQ((Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_DETAIL), playerclip_leaf->contents);
 
     // make sure faces at these locations aren't clipped away
     const qvec3d floor_under_clip{32, -136, 96};
     const qvec3d pillar_side_in_clip1{32, -48, 144};
     const qvec3d pillar_side_in_clip2{32, -208, 144};
 
-    CHECK(nullptr != BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], floor_under_clip, {0, 0, 1}));
-    CHECK(nullptr != BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], pillar_side_in_clip1, {0, -1, 0}));
-    CHECK(nullptr != BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], pillar_side_in_clip2, {0, 1, 0}));
+    EXPECT_NE(nullptr, BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], floor_under_clip, {0, 0, 1}));
+    EXPECT_NE(nullptr, BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], pillar_side_in_clip1, {0, -1, 0}));
+    EXPECT_NE(nullptr, BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], pillar_side_in_clip2, {0, 1, 0}));
 
     // make sure no face is generated for the playerclip brush
     const qvec3d playerclip_front_face{16, -152, 144};
-    CHECK(nullptr == BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], playerclip_front_face, {-1, 0, 0}));
+    EXPECT_EQ(nullptr, BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], playerclip_front_face, {-1, 0, 0}));
 
     // check for brush
-    CHECK(1 == Leaf_Brushes(&bsp, playerclip_leaf).size());
-    CHECK((Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_DETAIL) == Leaf_Brushes(&bsp, playerclip_leaf).at(0)->contents);
+    EXPECT_EQ(1, Leaf_Brushes(&bsp, playerclip_leaf).size());
+    EXPECT_EQ((Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_DETAIL), Leaf_Brushes(&bsp, playerclip_leaf).at(0)->contents);
 }
 
-TEST_CASE("areaportal" * doctest::test_suite("testmaps_q2"))
+TEST(testmapsQ2, areaportal)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_areaportal.map");
 
-    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+    EXPECT_EQ(GAME_QUAKE_II, bsp.loadversion->game->id);
 
     // area 0 is a placeholder
     // areaportal 0 is a placeholder
     //
     // the conceptual area portal has portalnum 1, and consists of two dareaportals entries with connections to area 1
     // and 2
-    CHECK_VECTORS_UNOREDERED_EQUAL(bsp.dareaportals, std::vector<dareaportal_t>{{0, 0}, {1, 1}, {1, 2}});
-    CHECK_VECTORS_UNOREDERED_EQUAL(bsp.dareas, std::vector<darea_t>{{0, 0}, {1, 1}, {1, 2}});
+    EXPECT_THAT(
+        bsp.dareaportals, testing::UnorderedElementsAreArray(std::vector<dareaportal_t>{{0, 0}, {1, 1}, {1, 2}}));
+    EXPECT_THAT(bsp.dareas, testing::UnorderedElementsAreArray(std::vector<darea_t>{{0, 0}, {1, 1}, {1, 2}}));
 
     // look up the leafs
     const qvec3d player_start{-88, -112, 120};
@@ -203,108 +205,184 @@ TEST_CASE("areaportal" * doctest::test_suite("testmaps_q2"))
     auto *void_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], void_pos);
 
     // check leaf contents
-    CHECK(0 == player_start_leaf->contents);
-    CHECK(0 == other_room_leaf->contents);
-    CHECK(Q2_CONTENTS_AREAPORTAL == areaportal_leaf->contents);
-    CHECK(Q2_CONTENTS_SOLID == void_leaf->contents);
+    EXPECT_EQ(0, player_start_leaf->contents);
+    EXPECT_EQ(0, other_room_leaf->contents);
+    EXPECT_EQ(Q2_CONTENTS_AREAPORTAL, areaportal_leaf->contents);
+    EXPECT_EQ(Q2_CONTENTS_SOLID, void_leaf->contents);
 
     // make sure faces at these locations aren't clipped away
     const qvec3d floor_under_areaportal{32, -136, 96};
-    CHECK(nullptr != BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], floor_under_areaportal, {0, 0, 1}));
+    EXPECT_NE(nullptr, BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], floor_under_areaportal, {0, 0, 1}));
 
     // check for brushes
-    CHECK(1 == Leaf_Brushes(&bsp, areaportal_leaf).size());
-    CHECK(Q2_CONTENTS_AREAPORTAL == Leaf_Brushes(&bsp, areaportal_leaf).at(0)->contents);
+    EXPECT_EQ(1, Leaf_Brushes(&bsp, areaportal_leaf).size());
+    EXPECT_EQ(Q2_CONTENTS_AREAPORTAL, Leaf_Brushes(&bsp, areaportal_leaf).at(0)->contents);
 
-    CHECK(1 == Leaf_Brushes(&bsp, void_leaf).size());
-    CHECK(Q2_CONTENTS_SOLID == Leaf_Brushes(&bsp, void_leaf).at(0)->contents);
+    EXPECT_EQ(1, Leaf_Brushes(&bsp, void_leaf).size());
+    EXPECT_EQ(Q2_CONTENTS_SOLID, Leaf_Brushes(&bsp, void_leaf).at(0)->contents);
 
     // check leaf areas
-    CHECK_VECTORS_UNOREDERED_EQUAL(
-        (std::vector<int32_t>{1, 2}), std::vector<int32_t>{player_start_leaf->area, other_room_leaf->area});
+    EXPECT_THAT(
+        (std::vector<int32_t>{player_start_leaf->area, other_room_leaf->area}), testing::UnorderedElementsAre(1, 2));
     // the areaportal leaf itself actually gets assigned to one of the two sides' areas
-    CHECK((areaportal_leaf->area == 1 || areaportal_leaf->area == 2));
-    CHECK(0 == void_leaf->area); // a solid leaf gets the invalid area
+    EXPECT_TRUE(areaportal_leaf->area == 1 || areaportal_leaf->area == 2);
+    EXPECT_EQ(0, void_leaf->area); // a solid leaf gets the invalid area
 
     // check the func_areaportal entity had its "style" set
     auto ents = EntData_Parse(bsp);
     auto it = std::find_if(
         ents.begin(), ents.end(), [](const entdict_t &dict) { return dict.get("classname") == "func_areaportal"; });
 
-    REQUIRE(it != ents.end());
-    REQUIRE("1" == it->get("style"));
+    ASSERT_NE(it, ents.end());
+    ASSERT_EQ("1", it->get("style"));
 }
 
 /**
  *  Similar to above test, but there's a detail brush sticking into the area portal
  */
-TEST_CASE("areaportal_with_detail" * doctest::test_suite("testmaps_q2"))
+TEST(testmapsQ2, areaportalWithDetail)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_areaportal_with_detail.map");
 
-    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+    EXPECT_EQ(GAME_QUAKE_II, bsp.loadversion->game->id);
 
     // area 0 is a placeholder
     // areaportal 0 is a placeholder
     //
     // the conceptual area portal has portalnum 1, and consists of two dareaportals entries with connections to area 1
     // and 2
-    CHECK_VECTORS_UNOREDERED_EQUAL(bsp.dareaportals, std::vector<dareaportal_t>{{0, 0}, {1, 1}, {1, 2}});
-    CHECK_VECTORS_UNOREDERED_EQUAL(bsp.dareas, std::vector<darea_t>{{0, 0}, {1, 1}, {1, 2}});
+    EXPECT_THAT(
+        bsp.dareaportals, testing::UnorderedElementsAreArray(std::vector<dareaportal_t>{{0, 0}, {1, 1}, {1, 2}}));
+    EXPECT_THAT(bsp.dareas, testing::UnorderedElementsAreArray(std::vector<darea_t>{{0, 0}, {1, 1}, {1, 2}}));
 }
 
-TEST_CASE("nodraw_light" * doctest::test_suite("testmaps_q2"))
+/**
+ * same as q2_areaportal.map but has 2 areaportals
+ * more clearly shows how areaportal indices work
+ *
+ *        ap1      ap2
+ *
+ *  player |  light |   ammo
+ *  start  |        | grenades
+ *
+ *   area     area      area
+ *    3         2        1
+ *
+ *         -- +x -->
+ */
+TEST(testmapsQ2, areaportals)
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_areaportals.map");
+
+    ASSERT_EQ(4, bsp.dareas.size()); // 1 reserved + 3 actual = 4
+    ASSERT_EQ(5, bsp.dareaportals.size()); // 1 reserved + (2 portals * 2 directions) = 5
+
+    // check the areaportal numbers from the "style" keys of the func_areaportal entities
+    auto ents = EntData_Parse(bsp);
+
+    auto playerstart_portal_it = std::ranges::find_if(
+        ents, [](const entdict_t &dict) { return dict.get("targetname") == "playerstart_portal"; });
+    auto grenades_portal_it =
+        std::ranges::find_if(ents, [](const entdict_t &dict) { return dict.get("targetname") == "grenades_portal"; });
+
+    ASSERT_NE(playerstart_portal_it, ents.end());
+    ASSERT_NE(grenades_portal_it, ents.end());
+
+    const int32_t playerstart_portal_num = playerstart_portal_it->get_int("style");
+    const int32_t grenades_portal_num = grenades_portal_it->get_int("style");
+
+    // may need to be adjusted
+    ASSERT_EQ(1, playerstart_portal_num);
+    ASSERT_EQ(2, grenades_portal_num);
+
+    // look up the leafs
+    const qvec3d player_start{-88, -112, 120};
+    const qvec3d light_pos{72, -136, 168};
+    const qvec3d grenades_pos{416, -128, 112};
+
+    auto *player_start_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], player_start);
+    auto *light_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], light_pos);
+    auto *grenades_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], grenades_pos);
+
+    // check leaf areas (may need to be adjusted)
+    EXPECT_EQ(2, light_leaf->area);
+    EXPECT_EQ(3, player_start_leaf->area);
+    EXPECT_EQ(1, grenades_leaf->area);
+
+    // inspect player_start_leaf area
+    {
+        const darea_t &area = bsp.dareas[player_start_leaf->area];
+        ASSERT_EQ(area.numareaportals, 1); // to light area
+
+        const dareaportal_t &portal = bsp.dareaportals[area.firstareaportal];
+        EXPECT_EQ(portal.otherarea, light_leaf->area);
+        EXPECT_EQ(portal.portalnum, playerstart_portal_num);
+    }
+
+    // inspect "light" leaf
+    {
+        const darea_t &area = bsp.dareas[light_leaf->area];
+        ASSERT_EQ(area.numareaportals, 2); // to player start, grenades areas
+
+        dareaportal_t portal_x = bsp.dareaportals[area.firstareaportal];
+        dareaportal_t portal_y = bsp.dareaportals[area.firstareaportal + 1];
+
+        EXPECT_THAT((std::vector{portal_x, portal_y}),
+            testing::UnorderedElementsAre(
+                dareaportal_t{.portalnum = playerstart_portal_num, .otherarea = player_start_leaf->area},
+                dareaportal_t{.portalnum = grenades_portal_num, .otherarea = grenades_leaf->area}));
+    }
+
+    // inspect "grenades" leaf
+    {
+        const darea_t &area = bsp.dareas[grenades_leaf->area];
+        ASSERT_EQ(area.numareaportals, 1); // to light leaf
+
+        dareaportal_t portal = bsp.dareaportals[area.firstareaportal];
+
+        EXPECT_EQ(portal, (dareaportal_t{.portalnum = grenades_portal_num, .otherarea = light_leaf->area}));
+    }
+}
+
+TEST(testmapsQ2, nodrawLight)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_nodraw_light.map", {"-includeskip"});
 
-    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+    EXPECT_EQ(GAME_QUAKE_II, bsp.loadversion->game->id);
 
     const qvec3d topface_center{160, -148, 208};
     auto *topface = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], topface_center, {0, 0, 1});
-    REQUIRE(nullptr != topface);
+    ASSERT_NE(nullptr, topface);
 
     auto *texinfo = Face_Texinfo(&bsp, topface);
-    CHECK(std::string(texinfo->texture.data()) == "e1u1/trigger");
-    CHECK(texinfo->flags.native == (Q2_SURF_LIGHT | Q2_SURF_NODRAW));
+    EXPECT_EQ(std::string(texinfo->texture.data()), "e1u1/trigger");
+    EXPECT_EQ(texinfo->flags.native_q2, (Q2_SURF_LIGHT | Q2_SURF_NODRAW));
 }
 
-TEST_CASE("q2_long_texture_name" * doctest::test_suite("testmaps_q2"))
+TEST(testmapsQ2, longTextureName)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_long_texture_name.map");
 
-    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+    EXPECT_EQ(GAME_QUAKE_II, bsp.loadversion->game->id);
 
     auto *topface = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 16}, {0, 0, 1});
-    REQUIRE(nullptr != topface);
+    ASSERT_NE(nullptr, topface);
 
     // this won't work in game, but we're mostly checking for lack of memory corruption
     // (a warning is issued)
     auto *texinfo = Face_Texinfo(&bsp, topface);
-    CHECK(std::string(texinfo->texture.data()) == "long_folder_name_test/long_text");
-    CHECK(texinfo->nexttexinfo == -1);
+    EXPECT_EQ(std::string(texinfo->texture.data()), "long_folder_name_test/long_text");
+    EXPECT_EQ(texinfo->nexttexinfo, -1);
 }
 
-TEST_CASE("nodraw_light" * doctest::test_suite("testmaps_q2"))
+TEST(testmapsQ2, base1)
 {
-    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_nodraw_light.map", {"-includeskip"});
+    GTEST_SKIP();
 
-    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
-
-    const qvec3d topface_center{160, -148, 208};
-    auto *topface = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], topface_center, {0, 0, 1});
-    REQUIRE(nullptr != topface);
-
-    auto *texinfo = Face_Texinfo(&bsp, topface);
-    CHECK(std::string(texinfo->texture.data()) == "e1u1/trigger");
-    CHECK(texinfo->flags.native == (Q2_SURF_LIGHT | Q2_SURF_NODRAW));
-}
-
-TEST_CASE("base1" * doctest::test_suite("testmaps_q2") * doctest::skip() * doctest::may_fail())
-{
     const auto [bsp, bspx, prt] = LoadTestmapQ2("base1-test.map");
 
-    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
-    CHECK(prt);
+    EXPECT_EQ(GAME_QUAKE_II, bsp.loadversion->game->id);
+    EXPECT_TRUE(prt);
     CheckFilled(bsp);
 
     // bspinfo output from a compile done with
@@ -330,8 +408,8 @@ TEST_CASE("base1" * doctest::test_suite("testmaps_q2") * doctest::skip() * docte
     //      visdata               0
     //      entdata           53623
 
-    CHECK(3 == bsp.dareaportals.size());
-    CHECK(3 == bsp.dareas.size());
+    EXPECT_EQ(3, bsp.dareaportals.size());
+    EXPECT_EQ(3, bsp.dareas.size());
 
     // check for a sliver face which we had issues with being missing
     {
@@ -341,42 +419,42 @@ TEST_CASE("base1" * doctest::test_suite("testmaps_q2") * doctest::skip() * docte
         const qvec3d normal = qv::normalize(normal_point - face_point);
 
         auto *sliver_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], face_point, normal);
-        REQUIRE(nullptr != sliver_face);
+        ASSERT_NE(nullptr, sliver_face);
 
-        CHECK(std::string_view("e1u1/metal3_5") == Face_TextureName(&bsp, sliver_face));
-        CHECK(Face_Winding(&bsp, sliver_face).area() < 5.0);
+        EXPECT_EQ(std::string_view("e1u1/metal3_5"), Face_TextureName(&bsp, sliver_face));
+        EXPECT_LT(Face_Winding(&bsp, sliver_face).area(), 5.0);
     }
 }
 
-TEST_CASE("base1leak" * doctest::test_suite("testmaps_q2"))
+TEST(testmapsQ2, base1leak)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("base1leak.map");
 
-    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+    EXPECT_EQ(GAME_QUAKE_II, bsp.loadversion->game->id);
 
-    CHECK(8 == bsp.dbrushes.size());
+    EXPECT_EQ(8, bsp.dbrushes.size());
 
-    CHECK(bsp.dleafs.size() >= 8); // 1 placeholder + 1 empty (room interior) + 6 solid (sides of room)
-    CHECK(bsp.dleafs.size() <= 12); // q2tools-220 generates 12
+    EXPECT_GE(bsp.dleafs.size(), 8); // 1 placeholder + 1 empty (room interior) + 6 solid (sides of room)
+    EXPECT_LE(bsp.dleafs.size(), 12); // q2tools-220 generates 12
 
     const qvec3d in_plus_y_wall{-776, 976, -24};
     auto *plus_y_wall_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_plus_y_wall);
-    CHECK(Q2_CONTENTS_SOLID == plus_y_wall_leaf->contents);
+    EXPECT_EQ(Q2_CONTENTS_SOLID, plus_y_wall_leaf->contents);
 
-    CHECK(3 == plus_y_wall_leaf->numleafbrushes);
+    EXPECT_EQ(3, plus_y_wall_leaf->numleafbrushes);
 
-    CHECK(prt->portals.size() == 0);
-    CHECK(prt->portalleafs == 1);
+    EXPECT_EQ(prt->portals.size(), 0);
+    EXPECT_EQ(prt->portalleafs, 1);
 }
 
 /**
  * e1u1/brlava brush intersecting e1u1/clip
  **/
-TEST_CASE("lavaclip" * doctest::test_suite("testmaps_q2"))
+TEST(testmapsQ2, lavaclip)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_lavaclip.map");
 
-    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+    EXPECT_EQ(GAME_QUAKE_II, bsp.loadversion->game->id);
 
     // not touching the lava, but inside the clip
     const qvec3d playerclip_outside1{-88, -32, 8};
@@ -391,67 +469,68 @@ TEST_CASE("lavaclip" * doctest::test_suite("testmaps_q2"))
     const qvec3d lava_top_face_in_playerclip{0, -32, 16};
 
     // check leaf contents
-    CHECK((Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_DETAIL) ==
-          BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], playerclip_outside1)->contents);
-    CHECK((Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_DETAIL) ==
-          BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], playerclip_outside2)->contents);
-    CHECK((Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_DETAIL | Q2_CONTENTS_LAVA) ==
-          BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], playerclip_inside_lava)->contents);
-    CHECK(Q2_CONTENTS_LAVA == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_lava_only)->contents);
+    EXPECT_EQ((Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_DETAIL),
+        BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], playerclip_outside1)->contents);
+    EXPECT_EQ((Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_DETAIL),
+        BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], playerclip_outside2)->contents);
+    EXPECT_EQ((Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_DETAIL | Q2_CONTENTS_LAVA),
+        BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], playerclip_inside_lava)->contents);
+    EXPECT_EQ(Q2_CONTENTS_LAVA, BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_lava_only)->contents);
 
     // search for face
     auto *topface = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], lava_top_face_in_playerclip, {0, 0, 1});
-    REQUIRE(nullptr != topface);
+    ASSERT_NE(nullptr, topface);
 
     auto *texinfo = Face_Texinfo(&bsp, topface);
-    CHECK(std::string(texinfo->texture.data()) == "e1u1/brlava");
-    CHECK(texinfo->flags.native == (Q2_SURF_LIGHT | Q2_SURF_WARP));
+    EXPECT_EQ(std::string(texinfo->texture.data()), "e1u1/brlava");
+    EXPECT_EQ(texinfo->flags.native_q2, (Q2_SURF_LIGHT | Q2_SURF_WARP));
 }
 
 /**
  * check that e1u1/clip intersecting mist doesn't split up the mist faces
  **/
-TEST_CASE("mist_clip" * doctest::test_suite("testmaps_q2"))
+TEST(testmapsQ2, mistClip)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_mist_clip.map");
 
-    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+    EXPECT_EQ(GAME_QUAKE_II, bsp.loadversion->game->id);
 
     // mist is two sided, so 12 faces for a cube
-    CHECK(12 == bsp.dfaces.size());
+    EXPECT_EQ(12, bsp.dfaces.size());
 }
 
 /**
  * e1u1/brlava brush intersecting e1u1/brwater
  **/
-TEST_CASE("lavawater" * doctest::test_suite("testmaps_q2"))
+TEST(testmapsQ2, lavawater)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_lavawater.map");
 
-    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+    EXPECT_EQ(GAME_QUAKE_II, bsp.loadversion->game->id);
 
     const qvec3d inside_both{0, 32, 8};
 
     // check leaf contents
-    CHECK((Q2_CONTENTS_LAVA | Q2_CONTENTS_WATER) == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], inside_both)->contents);
+    EXPECT_EQ(
+        (Q2_CONTENTS_LAVA | Q2_CONTENTS_WATER), BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], inside_both)->contents);
 }
 
 /**
  * Weird mystery issue with a func_wall with broken collision
  * (ended up being a PLANE_X/Y/Z plane with negative facing normal, which is illegal - engine assumes they are positive)
  */
-TEST_CASE("q2_bmodel_collision" * doctest::test_suite("testmaps_q2"))
+TEST(testmapsQ2, bmodelCollision)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_bmodel_collision.map");
 
-    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+    EXPECT_EQ(GAME_QUAKE_II, bsp.loadversion->game->id);
 
     const qvec3d in_bmodel{-544, -312, -258};
-    REQUIRE(2 == bsp.dmodels.size());
-    CHECK(Q2_CONTENTS_SOLID == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[1], in_bmodel)->contents);
+    ASSERT_EQ(2, bsp.dmodels.size());
+    EXPECT_EQ(Q2_CONTENTS_SOLID, BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[1], in_bmodel)->contents);
 }
 
-TEST_CASE("q2_liquids" * doctest::test_suite("testmaps_q2"))
+TEST(testmapsQ2, liquids)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_liquids.map");
 
@@ -462,86 +541,86 @@ TEST_CASE("q2_liquids" * doctest::test_suite("testmaps_q2"))
         const qvec3d wateropaque_trans33 = watertrans33_trans66 - qvec3d(0, 0, 48);
         const qvec3d floor_wateropaque = wateropaque_trans33 - qvec3d(0, 0, 48);
 
-        CHECK_VECTORS_UNOREDERED_EQUAL(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], watertrans66_air)),
-            std::vector<std::string>({"e1u1/bluwter", "e1u1/bluwter"}));
-        CHECK(0 == BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], watertrans33_trans66).size());
-        CHECK(0 == BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], wateropaque_trans33).size());
-        CHECK_VECTORS_UNOREDERED_EQUAL(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], floor_wateropaque)),
-            std::vector<std::string>({"e1u1/c_met11_2"}));
+        EXPECT_THAT(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], watertrans66_air)),
+            testing::UnorderedElementsAre("e1u1/bluwter", "e1u1/bluwter"));
+        EXPECT_EQ(0, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], watertrans33_trans66).size());
+        EXPECT_EQ(0, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], wateropaque_trans33).size());
+        EXPECT_THAT(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], floor_wateropaque)),
+            testing::UnorderedElementsAre("e1u1/c_met11_2"));
     }
 
     const qvec3d watertrans66_slimetrans66{-116, -144, 116};
 
     // water trans66 / slime trans66
     {
-        CHECK_VECTORS_UNOREDERED_EQUAL(
+        EXPECT_THAT(
             TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], watertrans66_slimetrans66, qvec3d(0, -1, 0))),
-            std::vector<std::string>({"e1u1/sewer1"}));
+            testing::UnorderedElementsAre("e1u1/sewer1"));
 
-        CHECK_VECTORS_UNOREDERED_EQUAL(
+        EXPECT_THAT(
             TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], watertrans66_slimetrans66, qvec3d(0, 1, 0))),
-            std::vector<std::string>({"e1u1/sewer1"}));
+            testing::UnorderedElementsAre("e1u1/sewer1"));
     }
 
     // slime trans66 / lava trans66
     const qvec3d slimetrans66_lavatrans66 = watertrans66_slimetrans66 + qvec3d(0, 48, 0);
     {
-        CHECK_VECTORS_UNOREDERED_EQUAL(
+        EXPECT_THAT(
             TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], slimetrans66_lavatrans66, qvec3d(0, -1, 0))),
-            std::vector<std::string>({"e1u1/brlava"}));
+            testing::UnorderedElementsAre("e1u1/brlava"));
 
-        CHECK_VECTORS_UNOREDERED_EQUAL(
+        EXPECT_THAT(
             TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], slimetrans66_lavatrans66, qvec3d(0, 1, 0))),
-            std::vector<std::string>({"e1u1/brlava"}));
+            testing::UnorderedElementsAre("e1u1/brlava"));
     }
 }
 
 /**
  * Empty rooms are sealed to solid in Q2
  **/
-TEST_CASE("q2_seal_empty_rooms" * doctest::test_suite("testmaps_q2"))
+TEST(testmapsQ2, sealEmptyRooms)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_seal_empty_rooms.map");
 
-    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+    EXPECT_EQ(GAME_QUAKE_II, bsp.loadversion->game->id);
 
     const qvec3d in_start_room{-240, 80, 56};
     const qvec3d in_empty_room{-244, 476, 68};
 
     // check leaf contents
-    CHECK(Q2_CONTENTS_EMPTY == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_start_room)->contents);
-    CHECK(Q2_CONTENTS_SOLID == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_empty_room)->contents);
+    EXPECT_EQ(Q2_CONTENTS_EMPTY, BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_start_room)->contents);
+    EXPECT_EQ(Q2_CONTENTS_SOLID, BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_empty_room)->contents);
 
-    CHECK(prt->portals.size() == 0);
-    CHECK(prt->portalleafs == 1);
+    EXPECT_EQ(prt->portals.size(), 0);
+    EXPECT_EQ(prt->portalleafs, 1);
 }
 
-TEST_CASE("q2_detail_non_sealing" * doctest::test_suite("testmaps_q2"))
+TEST(testmapsQ2, detailNonSealing)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_detail_non_sealing.map");
 
-    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+    EXPECT_EQ(GAME_QUAKE_II, bsp.loadversion->game->id);
 
     const qvec3d in_start_room{-240, 80, 56};
     const qvec3d in_void{-336, 80, 56};
 
     // check leaf contents
-    CHECK(Q2_CONTENTS_EMPTY == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_start_room)->contents);
-    CHECK(Q2_CONTENTS_EMPTY == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_void)->contents);
+    EXPECT_EQ(Q2_CONTENTS_EMPTY, BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_start_room)->contents);
+    EXPECT_EQ(Q2_CONTENTS_EMPTY, BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_void)->contents);
 }
 
-TEST_CASE("q2_detail_overlapping_solid_sealing" * doctest::test_suite("testmaps_q2"))
+TEST(testmapsQ2, detailOverlappingSolidSealing)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_detail_overlapping_solid_sealing.map");
 
-    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+    EXPECT_EQ(GAME_QUAKE_II, bsp.loadversion->game->id);
 
     const qvec3d in_start_room{-240, 80, 56};
     const qvec3d in_void{-336, 80, 56};
 
     // check leaf contents
-    CHECK(Q2_CONTENTS_EMPTY == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_start_room)->contents);
-    CHECK(Q2_CONTENTS_SOLID == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_void)->contents);
+    EXPECT_EQ(Q2_CONTENTS_EMPTY, BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_start_room)->contents);
+    EXPECT_EQ((Q2_CONTENTS_SOLID & BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_void)->contents), Q2_CONTENTS_SOLID);
 }
 
 /**
@@ -550,153 +629,155 @@ TEST_CASE("q2_detail_overlapping_solid_sealing" * doctest::test_suite("testmaps_
  * Also, the faces on the ceiling/floor cross the areaportal
  * (due to our aggressive face merging).
  */
-TEST_CASE("q2_double_areaportal" * doctest::test_suite("testmaps_q2"))
+TEST(testmapsQ2, doubleAreaportal)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_double_areaportal.map");
 
-    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+    EXPECT_EQ(GAME_QUAKE_II, bsp.loadversion->game->id);
     CheckFilled(bsp);
 
-    CHECK(4 == bsp.dareas.size());
-    CHECK(5 == bsp.dareaportals.size());
+    EXPECT_EQ(4, bsp.dareas.size());
+    EXPECT_EQ(5, bsp.dareaportals.size());
 }
 
-TEST_CASE("q2_areaportal_split" * doctest::test_suite("testmaps_q2"))
+TEST(testmapsQ2, areaportalSplit)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_areaportal_split.map");
 
-    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+    EXPECT_EQ(GAME_QUAKE_II, bsp.loadversion->game->id);
     CheckFilled(bsp);
 
-    CHECK(3 == bsp.dareas.size()); // 1 invalid index zero reserved + 2 areas
-    CHECK(3 == bsp.dareaportals
-                   .size()); // 1 invalid index zero reserved + 2 dareaportals to store the two directions of the portal
+    EXPECT_EQ(3, bsp.dareas.size()); // 1 invalid index zero reserved + 2 areas
+    EXPECT_EQ(
+        3, bsp.dareaportals
+               .size()); // 1 invalid index zero reserved + 2 dareaportals to store the two directions of the portal
 }
 
 /**
  * Test for q2 bmodel bounds
  **/
-TEST_CASE("q2_door" * doctest::test_suite("testmaps_q2"))
+TEST(testmapsQ2, door)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_door.map");
 
-    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+    EXPECT_EQ(GAME_QUAKE_II, bsp.loadversion->game->id);
 
     const aabb3f world_tight_bounds{{-64, -64, -16}, {64, 80, 128}};
     const aabb3f bmodel_tight_bounds{{-48, 48, 16}, {48, 64, 112}};
 
-    CHECK(world_tight_bounds.mins() == bsp.dmodels[0].mins);
-    CHECK(world_tight_bounds.maxs() == bsp.dmodels[0].maxs);
+    EXPECT_EQ(world_tight_bounds.mins(), bsp.dmodels[0].mins);
+    EXPECT_EQ(world_tight_bounds.maxs(), bsp.dmodels[0].maxs);
 
-    CHECK(bmodel_tight_bounds.mins() == bsp.dmodels[1].mins);
-    CHECK(bmodel_tight_bounds.maxs() == bsp.dmodels[1].maxs);
+    EXPECT_EQ(bmodel_tight_bounds.mins(), bsp.dmodels[1].mins);
+    EXPECT_EQ(bmodel_tight_bounds.maxs(), bsp.dmodels[1].maxs);
 }
 
-TEST_CASE("q2_mirrorinside" * doctest::test_suite("testmaps_q2"))
+TEST(testmapsQ2, mirrorinside)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_mirrorinside.map");
 
     {
-        INFO("window is not two sided by default");
+        SCOPED_TRACE("window is not two sided by default");
         const qvec3d window_pos{192, 96, 156};
-        CHECK_VECTORS_UNOREDERED_EQUAL(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], window_pos)),
-            std::vector<std::string>({"e2u2/wndow1_1"}));
+        EXPECT_THAT(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], window_pos)),
+            testing::UnorderedElementsAre("e2u2/wndow1_1"));
     }
 
     {
-        INFO("aux is not two sided by default");
+        SCOPED_TRACE("aux is not two sided by default");
         const qvec3d aux_pos{32, 96, 156};
-        CHECK_VECTORS_UNOREDERED_EQUAL(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], aux_pos)),
-            std::vector<std::string>({"e1u1/brwater"}));
+        EXPECT_THAT(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], aux_pos)),
+            testing::UnorderedElementsAre("e1u1/brwater"));
     }
 
     {
-        INFO("mist is two sided by default");
+        SCOPED_TRACE("mist is two sided by default");
         const qvec3d mist_pos{32, -28, 156};
-        CHECK_VECTORS_UNOREDERED_EQUAL(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], mist_pos)),
-            std::vector<std::string>({"e1u1/brwater", "e1u1/brwater"}));
+        EXPECT_THAT(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], mist_pos)),
+            testing::UnorderedElementsAre("e1u1/brwater", "e1u1/brwater"));
     }
 
     {
-        INFO("_mirrorinside 0 disables the inside faces on mist");
+        SCOPED_TRACE("_mirrorinside 0 disables the inside faces on mist");
         const qvec3d mist_mirrorinside0_pos{32, -224, 156};
-        CHECK_VECTORS_UNOREDERED_EQUAL(
-            TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], mist_mirrorinside0_pos)),
-            std::vector<std::string>({"e1u1/brwater"}));
+        EXPECT_THAT(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], mist_mirrorinside0_pos)),
+            testing::UnorderedElementsAre("e1u1/brwater"));
     }
 
     {
-        INFO("_mirrorinside 1 works on func_detail_fence");
-        CHECK_VECTORS_UNOREDERED_EQUAL(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], {32, -348, 156})),
-            std::vector<std::string>({"e1u1/alphamask", "e1u1/alphamask"}));
+        SCOPED_TRACE("_mirrorinside 1 works on func_detail_fence");
+        EXPECT_THAT(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], {32, -348, 156})),
+            testing::UnorderedElementsAre("e1u1/alphamask", "e1u1/alphamask"));
     }
 }
 
-TEST_CASE("q2_alphatest_window" * doctest::test_suite("testmaps_q2"))
+TEST(testmapsQ2, alphatestWindow)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_alphatest_window.map");
 
-    INFO("alphatest + window implies detail and translucent");
+    SCOPED_TRACE("alphatest + window implies detail and translucent");
     auto *leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0});
 
-    CHECK(leaf->contents == (Q2_CONTENTS_DETAIL | Q2_CONTENTS_WINDOW | Q2_CONTENTS_TRANSLUCENT));
+    EXPECT_EQ(leaf->contents, (Q2_CONTENTS_DETAIL | Q2_CONTENTS_WINDOW | Q2_CONTENTS_TRANSLUCENT));
 }
 
-TEST_CASE("q2_alphatest_solid" * doctest::test_suite("testmaps_q2"))
+TEST(testmapsQ2, alphatestSolid)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_alphatest_solid.map");
 
-    INFO("alphatest + solid implies window, detail and translucent");
+    SCOPED_TRACE("alphatest + solid implies window, detail and translucent");
     auto *leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0});
 
-    CHECK(leaf->contents == (Q2_CONTENTS_DETAIL | Q2_CONTENTS_WINDOW | Q2_CONTENTS_TRANSLUCENT));
+    EXPECT_EQ(leaf->contents, (Q2_CONTENTS_DETAIL | Q2_CONTENTS_WINDOW | Q2_CONTENTS_TRANSLUCENT));
 }
 
-TEST_CASE("q2_trans33_window" * doctest::test_suite("testmaps_q2"))
+TEST(testmapsQ2, trans33Window)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_trans33_window.map");
 
-    INFO("trans33 + window implies detail and translucent");
+    SCOPED_TRACE("trans33 + window implies detail and translucent");
     auto *leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0});
 
-    CHECK(leaf->contents == (Q2_CONTENTS_DETAIL | Q2_CONTENTS_WINDOW | Q2_CONTENTS_TRANSLUCENT));
+    EXPECT_EQ(leaf->contents, (Q2_CONTENTS_DETAIL | Q2_CONTENTS_WINDOW | Q2_CONTENTS_TRANSLUCENT));
 }
 
-TEST_CASE("q2_trans33_solid" * doctest::test_suite("testmaps_q2"))
+TEST(testmapsQ2, trans33Solid)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_trans33_solid.map");
 
-    INFO("trans33 + solid implies window, detail and translucent");
+    SCOPED_TRACE("trans33 + solid implies window, detail and translucent");
     auto *leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0});
 
-    CHECK(leaf->contents == (Q2_CONTENTS_DETAIL | Q2_CONTENTS_WINDOW | Q2_CONTENTS_TRANSLUCENT));
+    EXPECT_EQ(leaf->contents, (Q2_CONTENTS_DETAIL | Q2_CONTENTS_WINDOW | Q2_CONTENTS_TRANSLUCENT));
 }
 
 /**
  * Ensure that leaked maps still get areas assigned properly
  * (empty leafs should get area 1, solid leafs area 0)
  */
-TEST_CASE("q2_leaked" * doctest::test_suite("testmaps_q2"))
+TEST(testmapsQ2, leaked)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_leaked.map");
 
-    CHECK(!prt);
-    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+    EXPECT_FALSE(prt);
+    EXPECT_EQ(GAME_QUAKE_II, bsp.loadversion->game->id);
 
-    CHECK(bsp.dareaportals.size() == 1);
-    CHECK(bsp.dareas.size() == 2);
-    CHECK(bsp.dleafs.size() == 8);
+    EXPECT_EQ(bsp.dareaportals.size(), 1);
+    EXPECT_EQ(bsp.dareas.size(), 2);
+    EXPECT_EQ(bsp.dleafs.size(), 8);
     for (auto &leaf : bsp.dleafs) {
         if (leaf.contents == Q2_CONTENTS_SOLID) {
-            CHECK(0 == leaf.area);
+            EXPECT_EQ(0, leaf.area);
         } else {
-            CHECK(1 == leaf.area);
+            EXPECT_EQ(1, leaf.area);
         }
     }
 }
 
-TEST_CASE("q2_missing_faces" * doctest::test_suite("testmaps_q2") * doctest::may_fail())
+TEST(testmapsQ2, missingFaces)
 {
+    GTEST_SKIP();
+
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_missing_faces.map");
 
     const qvec3d point_on_missing_face{-137, 125, -76.1593};
@@ -704,12 +785,12 @@ TEST_CASE("q2_missing_faces" * doctest::test_suite("testmaps_q2") * doctest::may
     const qvec3d point_on_present_face{-137, 133, -76.6997};
 
     CheckFilled(bsp);
-    CHECK(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], point_on_missing_face));
-    CHECK(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], point_on_missing_face2));
-    CHECK(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], point_on_present_face));
+    EXPECT_TRUE(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], point_on_missing_face));
+    EXPECT_TRUE(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], point_on_missing_face2));
+    EXPECT_TRUE(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], point_on_present_face));
 }
 
-TEST_CASE("q2_ladder" * doctest::test_suite("testmaps_q2"))
+TEST(testmapsQ2, ladder)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_ladder.map");
 
@@ -719,133 +800,134 @@ TEST_CASE("q2_ladder" * doctest::test_suite("testmaps_q2"))
 
     auto *leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], point_in_ladder);
 
-    // the brush lacked a visible contents, so it became solid. solid leafs wipe out any other content bits
-    CHECK(leaf->contents == (Q2_CONTENTS_SOLID));
+    // the brush lacked a visible contents, so it became solid.
+    // ladder and detail flags are preseved now.
+    // (previously we were wiping them out and just writing out leafs as Q2_CONTENTS_SOLID).
+    EXPECT_EQ(leaf->contents, (Q2_CONTENTS_SOLID | Q2_CONTENTS_LADDER | Q2_CONTENTS_DETAIL));
 
-    CHECK(1 == Leaf_Brushes(&bsp, leaf).size());
-    CHECK((Q2_CONTENTS_SOLID | Q2_CONTENTS_LADDER | Q2_CONTENTS_DETAIL) == Leaf_Brushes(&bsp, leaf).at(0)->contents);
+    EXPECT_EQ(1, Leaf_Brushes(&bsp, leaf).size());
+    EXPECT_EQ((Q2_CONTENTS_SOLID | Q2_CONTENTS_LADDER | Q2_CONTENTS_DETAIL), Leaf_Brushes(&bsp, leaf).at(0)->contents);
 }
 
-TEST_CASE("q2_hint_missing_faces" * doctest::test_suite("testmaps_q2") * doctest::may_fail())
+TEST(testmapsQ2, hintMissingFaces)
 {
+    GTEST_SKIP();
+
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_hint_missing_faces.map");
 
-    CHECK(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {36, 144, 30}));
+    EXPECT_TRUE(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {36, 144, 30}));
 }
 
-TEST_CASE("q2_tb_cleanup" * doctest::test_suite("testmaps_q2"))
+TEST(testmapsQ2, tbCleanup)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_tb_cleanup.map");
 
     {
-        INFO("check that __TB_empty was converted to skip");
-        CHECK(nullptr == BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0}));
+        SCOPED_TRACE("check that __TB_empty was not converted to skip");
+        EXPECT_NE(nullptr, BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0}));
     }
 
     {
         auto ents = EntData_Parse(bsp);
 
-        REQUIRE(ents.size() == 2);
-        INFO("check that _tb_textures was stripped out");
-        CHECK(entdict_t{{"classname", "worldspawn"}} == ents[0]);
+        ASSERT_EQ(ents.size(), 2);
+        SCOPED_TRACE("check that _tb_textures was stripped out");
+        EXPECT_EQ((entdict_t{{"classname", "worldspawn"}}), ents[0]);
     }
 }
 
-TEST_CASE("q2_detail_wall" * doctest::test_suite("testmaps_q2"))
+TEST(testmapsQ2, detailWall)
 {
     // q2_detail_wall_with_detail_bit.map has the DETAIL content flag set on the
     // brushes inside the func_detail_wall. the func_detail_wall should take priority.
     const std::vector<std::string> maps{"q2_detail_wall.map", "q2_detail_wall_with_detail_bit.map"};
 
     for (const auto &mapname : maps) {
-        SUBCASE(mapname.c_str())
+        SCOPED_TRACE(mapname);
+
+        const auto [bsp, bspx, prt] = LoadTestmapQ2(mapname);
+        auto *game = bsp.loadversion->game;
+
+        EXPECT_EQ(GAME_QUAKE_II, game->id);
+
+        const auto deleted_face_pos = qvec3d{320, 384, 96};
+        const auto in_detail_wall = qvec3d{320, 384, 100};
+
+        auto *detail_wall_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_detail_wall);
+
         {
-            const auto [bsp, bspx, prt] = LoadTestmapQ2(mapname);
-            auto *game = bsp.loadversion->game;
+            SCOPED_TRACE("check leaf / brush contents");
 
-            CHECK(GAME_QUAKE_II == game->id);
+            SCOPED_TRACE(game->create_contents_from_native(detail_wall_leaf->contents).to_string());
+            EXPECT_EQ((Q2_CONTENTS_SOLID | Q2_CONTENTS_DETAIL), detail_wall_leaf->contents);
 
-            const auto deleted_face_pos = qvec3d{320, 384, 96};
-            const auto in_detail_wall = qvec3d{320, 384, 100};
+            ASSERT_EQ(1, Leaf_Brushes(&bsp, detail_wall_leaf).size());
+            auto *brush = Leaf_Brushes(&bsp, detail_wall_leaf).at(0);
 
-            auto *detail_wall_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_detail_wall);
+            SCOPED_TRACE(game->create_contents_from_native(brush->contents).to_string());
+            EXPECT_EQ((Q2_CONTENTS_SOLID | Q2_CONTENTS_DETAIL), brush->contents);
+        }
 
-            {
-                INFO("check leaf / brush contents");
+        {
+            SCOPED_TRACE("check fully covered face is deleted");
+            EXPECT_FALSE(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], deleted_face_pos));
+        }
 
-                CAPTURE(game->create_contents_from_native(detail_wall_leaf->contents).to_string(game));
-                CHECK(Q2_CONTENTS_SOLID == detail_wall_leaf->contents);
+        {
+            SCOPED_TRACE("check floor under detail fence is not deleted, and not split");
 
-                REQUIRE(1 == Leaf_Brushes(&bsp, detail_wall_leaf).size());
-                auto *brush = Leaf_Brushes(&bsp, detail_wall_leaf).at(0);
+            auto *face_under_fence = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], qvec3d{320, 348, 96});
+            auto *face_outside_fence = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], qvec3d{320, 312, 96});
 
-                CAPTURE(game->create_contents_from_native(brush->contents).to_string(game));
-                CHECK(Q2_CONTENTS_SOLID == brush->contents);
-            }
-
-            {
-                INFO("check fully covered face is deleted");
-                CHECK(!BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], deleted_face_pos));
-            }
-
-            {
-                INFO("check floor under detail fence is not deleted, and not split");
-
-                auto *face_under_fence = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], qvec3d{320, 348, 96});
-                auto *face_outside_fence = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], qvec3d{320, 312, 96});
-
-                CHECK(face_under_fence);
-                CHECK(face_under_fence == face_outside_fence);
-            }
+            EXPECT_TRUE(face_under_fence);
+            EXPECT_EQ(face_under_fence, face_outside_fence);
         }
     }
 }
 
-TEST_CASE("q2_detail_fence" * doctest::test_suite("testmaps_q2"))
+TEST(testmapsQ2, detailFence)
 {
     const std::vector<std::string> maps{"q2_detail_fence.map", "q2_detail_fence_with_detail_bit.map"};
 
     for (const auto &mapname : maps) {
-        SUBCASE(mapname.c_str())
+        SCOPED_TRACE(mapname);
+
+        const auto [bsp, bspx, prt] = LoadTestmapQ2(mapname);
+        auto *game = bsp.loadversion->game;
+
+        EXPECT_EQ(GAME_QUAKE_II, game->id);
+
+        auto *detail_wall_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], qvec3d{320, 384, 100});
+
         {
-            const auto [bsp, bspx, prt] = LoadTestmapQ2(mapname);
-            auto *game = bsp.loadversion->game;
+            SCOPED_TRACE("check leaf / brush contents");
+            SCOPED_TRACE(game->create_contents_from_native(detail_wall_leaf->contents).to_string());
 
-            CHECK(GAME_QUAKE_II == game->id);
+            EXPECT_EQ((Q2_CONTENTS_WINDOW | Q2_CONTENTS_DETAIL | Q2_CONTENTS_TRANSLUCENT), detail_wall_leaf->contents);
 
-            auto *detail_wall_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], qvec3d{320, 384, 100});
+            ASSERT_EQ(1, Leaf_Brushes(&bsp, detail_wall_leaf).size());
+            EXPECT_EQ((Q2_CONTENTS_WINDOW | Q2_CONTENTS_DETAIL | Q2_CONTENTS_TRANSLUCENT),
+                Leaf_Brushes(&bsp, detail_wall_leaf).at(0)->contents);
+        }
 
-            {
-                INFO("check leaf / brush contents");
-                CAPTURE(game->create_contents_from_native(detail_wall_leaf->contents).to_string(game));
+        {
+            SCOPED_TRACE("check fully covered face is not deleted");
+            EXPECT_TRUE(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], qvec3d{320, 384, 96}));
+        }
 
-                CHECK(
-                    (Q2_CONTENTS_WINDOW | Q2_CONTENTS_DETAIL | Q2_CONTENTS_TRANSLUCENT) == detail_wall_leaf->contents);
+        {
+            SCOPED_TRACE("check floor under detail fence is not deleted, and not split");
 
-                REQUIRE(1 == Leaf_Brushes(&bsp, detail_wall_leaf).size());
-                CHECK((Q2_CONTENTS_WINDOW | Q2_CONTENTS_DETAIL | Q2_CONTENTS_TRANSLUCENT) ==
-                      Leaf_Brushes(&bsp, detail_wall_leaf).at(0)->contents);
-            }
+            auto *face_under_fence = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], qvec3d{320, 348, 96});
+            auto *face_outside_fence = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], qvec3d{320, 312, 96});
 
-            {
-                INFO("check fully covered face is not deleted");
-                CHECK(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], qvec3d{320, 384, 96}));
-            }
-
-            {
-                INFO("check floor under detail fence is not deleted, and not split");
-
-                auto *face_under_fence = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], qvec3d{320, 348, 96});
-                auto *face_outside_fence = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], qvec3d{320, 312, 96});
-
-                CHECK(face_under_fence);
-                CHECK(face_under_fence == face_outside_fence);
-            }
+            EXPECT_TRUE(face_under_fence);
+            EXPECT_EQ(face_under_fence, face_outside_fence);
         }
     }
 }
 
-TEST_CASE("q2_mist_transwater" * doctest::test_suite("testmaps_q2"))
+TEST(testmapsQ2, mistTranswater)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_mist_transwater.map", {"-tjunc", "none"});
 
@@ -854,34 +936,44 @@ TEST_CASE("q2_mist_transwater" * doctest::test_suite("testmaps_q2"))
     auto up_faces = BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], top_of_water, {0, 0, 1});
     auto down_faces = BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], top_of_water, {0, 0, -1});
 
-    REQUIRE(1 == up_faces.size());
-    REQUIRE(1 == down_faces.size());
+    ASSERT_EQ(1, up_faces.size());
+    ASSERT_EQ(1, down_faces.size());
 
     // water has a higher priority (lower content bits are stronger), so it should cut a hole in the mist
-    CHECK(Face_TextureNameView(&bsp, up_faces[0]) == "e1u1/water6");
-    CHECK(Face_TextureNameView(&bsp, down_faces[0]) == "e1u1/water6");
+    EXPECT_EQ(Face_TextureNameView(&bsp, up_faces[0]), "e1u1/water6");
+    EXPECT_EQ(Face_TextureNameView(&bsp, down_faces[0]), "e1u1/water6");
 
-    const auto top_of_water_up = winding_t{{-232,-32,352}, {-232,0, 352}, {-200,0, 352}, {-200,-32,352}};
+    const auto top_of_water_up = winding_t{{-232, -32, 352}, {-232, 0, 352}, {-200, 0, 352}, {-200, -32, 352}};
     const auto top_of_water_dn = top_of_water_up.flip();
 
-    CHECK(Face_Winding(&bsp, up_faces[0]).directional_equal(top_of_water_up));
-    CHECK(Face_Winding(&bsp, down_faces[0]).directional_equal(top_of_water_dn));
+    EXPECT_TRUE(Face_Winding(&bsp, up_faces[0]).directional_equal(top_of_water_up));
+    EXPECT_TRUE(Face_Winding(&bsp, down_faces[0]).directional_equal(top_of_water_dn));
 }
 
-TEST_CASE("q2_tjunc_matrix" * doctest::test_suite("testmaps_q2"))
+TEST(testmapsQ2, mistAuxImplicitlyDetail)
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_mist_aux_implicitly_detail.map", {});
+
+    ASSERT_TRUE(prt);
+    EXPECT_EQ(prt->portals.size(), 0);
+    EXPECT_EQ(prt->portalleafs, 1);
+}
+
+TEST(testmapsQ2, tjuncMatrix)
 {
     const auto [b, bspx, prt] = LoadTestmapQ2("q2_tjunc_matrix.map");
     const mbsp_t &bsp = b; // workaround clang not allowing capturing bindings in lambdas
     auto *game = bsp.loadversion->game;
 
-    CHECK(GAME_QUAKE_II == game->id);
+    EXPECT_EQ(GAME_QUAKE_II, game->id);
 
-    const qvec3d face_midpoint_origin {-24, 0, 24};
-    const qvec3d face_midpoint_to_tjunc {8, 0, 8};
-    const qvec3d z_delta_to_next_face {0, 0, 64};
-    const qvec3d x_delta_to_next_face {-64, 0, 0};
+    const qvec3d face_midpoint_origin{-24, 0, 24};
+    const qvec3d face_midpoint_to_tjunc{8, 0, 8};
+    const qvec3d z_delta_to_next_face{0, 0, 64};
+    const qvec3d x_delta_to_next_face{-64, 0, 0};
 
-    enum index_t : int {
+    enum index_t : int
+    {
         INDEX_DETAIL_WALL = 0,
         INDEX_SOLID,
         INDEX_SOLID_DETAIL,
@@ -894,9 +986,8 @@ TEST_CASE("q2_tjunc_matrix" * doctest::test_suite("testmaps_q2"))
     };
 
     auto has_tjunc = [&](index_t horizontal, index_t vertical) -> bool {
-        const qvec3d face_midpoint = face_midpoint_origin
-                + (x_delta_to_next_face * static_cast<int>(horizontal))
-                + (z_delta_to_next_face * static_cast<int>(vertical));
+        const qvec3d face_midpoint = face_midpoint_origin + (x_delta_to_next_face * static_cast<int>(horizontal)) +
+                                     (z_delta_to_next_face * static_cast<int>(vertical));
 
         auto *f = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], face_midpoint);
 
@@ -911,185 +1002,220 @@ TEST_CASE("q2_tjunc_matrix" * doctest::test_suite("testmaps_q2"))
     };
 
     {
-        INFO("INDEX_DETAIL_WALL horizontal");
-        CHECK( has_tjunc(INDEX_DETAIL_WALL, INDEX_DETAIL_WALL));
+        SCOPED_TRACE("INDEX_DETAIL_WALL horizontal");
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_WALL, INDEX_DETAIL_WALL));
         // this one is tricky - the solid cuts a hole in the top
         // that hole (the detail_wall faces) are what weld with the side
-        CHECK( has_tjunc(INDEX_DETAIL_WALL, INDEX_SOLID));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_WALL, INDEX_SOLID));
         // same as INDEX_DETAIL_WALL, INDEX_SOLID
-        CHECK( has_tjunc(INDEX_DETAIL_WALL, INDEX_SOLID_DETAIL));
-        CHECK(!has_tjunc(INDEX_DETAIL_WALL, INDEX_TRANSPARENT_WATER));
-        CHECK(!has_tjunc(INDEX_DETAIL_WALL, INDEX_OPAQUE_WATER));
-        CHECK(!has_tjunc(INDEX_DETAIL_WALL, INDEX_OPAQUE_MIST));
-        CHECK(!has_tjunc(INDEX_DETAIL_WALL, INDEX_TRANSPARENT_WINDOW));
-        CHECK(!has_tjunc(INDEX_DETAIL_WALL, INDEX_OPAQUE_AUX));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_WALL, INDEX_SOLID_DETAIL));
+        // 2.0.0-alpha9: water welds with everything
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_WALL, INDEX_TRANSPARENT_WATER));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_WALL, INDEX_OPAQUE_WATER));
+        EXPECT_FALSE(has_tjunc(INDEX_DETAIL_WALL, INDEX_OPAQUE_MIST));
+        EXPECT_FALSE(has_tjunc(INDEX_DETAIL_WALL, INDEX_TRANSPARENT_WINDOW));
+        EXPECT_FALSE(has_tjunc(INDEX_DETAIL_WALL, INDEX_OPAQUE_AUX));
         // same as INDEX_DETAIL_WALL, INDEX_SOLID
-        CHECK( has_tjunc(INDEX_DETAIL_WALL, INDEX_SKY));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_WALL, INDEX_SKY));
     }
 
     {
-        INFO("INDEX_SOLID horizontal - welds with anything opaque except detail_wall");
-        CHECK(!has_tjunc(INDEX_SOLID, INDEX_DETAIL_WALL));
-        CHECK( has_tjunc(INDEX_SOLID, INDEX_SOLID));
-        CHECK( has_tjunc(INDEX_SOLID, INDEX_SOLID_DETAIL));
-        CHECK(!has_tjunc(INDEX_SOLID, INDEX_TRANSPARENT_WATER));
-        CHECK( has_tjunc(INDEX_SOLID, INDEX_OPAQUE_WATER));
-        CHECK( has_tjunc(INDEX_SOLID, INDEX_OPAQUE_MIST));
-        CHECK(!has_tjunc(INDEX_SOLID, INDEX_TRANSPARENT_WINDOW));
-        CHECK( has_tjunc(INDEX_SOLID, INDEX_OPAQUE_AUX));
-        CHECK( has_tjunc(INDEX_SOLID, INDEX_SKY));
+        SCOPED_TRACE("INDEX_SOLID horizontal - welds with anything opaque except detail_wall");
+        EXPECT_FALSE(has_tjunc(INDEX_SOLID, INDEX_DETAIL_WALL));
+        EXPECT_TRUE(has_tjunc(INDEX_SOLID, INDEX_SOLID));
+        EXPECT_TRUE(has_tjunc(INDEX_SOLID, INDEX_SOLID_DETAIL));
+        EXPECT_TRUE(has_tjunc(INDEX_SOLID, INDEX_TRANSPARENT_WATER));
+        EXPECT_TRUE(has_tjunc(INDEX_SOLID, INDEX_OPAQUE_WATER));
+        EXPECT_TRUE(has_tjunc(INDEX_SOLID, INDEX_OPAQUE_MIST));
+        EXPECT_FALSE(has_tjunc(INDEX_SOLID, INDEX_TRANSPARENT_WINDOW));
+        EXPECT_TRUE(has_tjunc(INDEX_SOLID, INDEX_OPAQUE_AUX));
+        EXPECT_TRUE(has_tjunc(INDEX_SOLID, INDEX_SKY));
     }
 
     {
-        INFO("INDEX_SOLID_DETAIL horizontal - same as INDEX_SOLID");
-        CHECK(!has_tjunc(INDEX_SOLID_DETAIL, INDEX_DETAIL_WALL));
-        CHECK( has_tjunc(INDEX_SOLID_DETAIL, INDEX_SOLID));
-        CHECK( has_tjunc(INDEX_SOLID_DETAIL, INDEX_SOLID_DETAIL));
-        CHECK(!has_tjunc(INDEX_SOLID_DETAIL, INDEX_TRANSPARENT_WATER));
-        CHECK( has_tjunc(INDEX_SOLID_DETAIL, INDEX_OPAQUE_WATER));
-        CHECK( has_tjunc(INDEX_SOLID_DETAIL, INDEX_OPAQUE_MIST));
-        CHECK(!has_tjunc(INDEX_SOLID_DETAIL, INDEX_TRANSPARENT_WINDOW));
-        CHECK( has_tjunc(INDEX_SOLID_DETAIL, INDEX_OPAQUE_AUX));
-        CHECK( has_tjunc(INDEX_SOLID_DETAIL, INDEX_SKY));
+        SCOPED_TRACE("INDEX_SOLID_DETAIL horizontal - same as INDEX_SOLID");
+        EXPECT_FALSE(has_tjunc(INDEX_SOLID_DETAIL, INDEX_DETAIL_WALL));
+        EXPECT_TRUE(has_tjunc(INDEX_SOLID_DETAIL, INDEX_SOLID));
+        EXPECT_TRUE(has_tjunc(INDEX_SOLID_DETAIL, INDEX_SOLID_DETAIL));
+        EXPECT_TRUE(has_tjunc(INDEX_SOLID_DETAIL, INDEX_TRANSPARENT_WATER));
+        EXPECT_TRUE(has_tjunc(INDEX_SOLID_DETAIL, INDEX_OPAQUE_WATER));
+        EXPECT_TRUE(has_tjunc(INDEX_SOLID_DETAIL, INDEX_OPAQUE_MIST));
+        EXPECT_FALSE(has_tjunc(INDEX_SOLID_DETAIL, INDEX_TRANSPARENT_WINDOW));
+        EXPECT_TRUE(has_tjunc(INDEX_SOLID_DETAIL, INDEX_OPAQUE_AUX));
+        EXPECT_TRUE(has_tjunc(INDEX_SOLID_DETAIL, INDEX_SKY));
     }
 
     {
-        INFO("INDEX_TRANSPARENT_WATER horizontal");
-        CHECK( has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_DETAIL_WALL));
-        CHECK( has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_SOLID));
-        CHECK( has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_SOLID_DETAIL));
-        CHECK( has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_TRANSPARENT_WATER));
-        CHECK( has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_OPAQUE_WATER));
+        SCOPED_TRACE("INDEX_TRANSPARENT_WATER horizontal");
+        EXPECT_TRUE(has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_DETAIL_WALL));
+        EXPECT_TRUE(has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_SOLID));
+        EXPECT_TRUE(has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_SOLID_DETAIL));
+        EXPECT_TRUE(has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_TRANSPARENT_WATER));
+        EXPECT_TRUE(has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_OPAQUE_WATER));
         // water is stronger than mist, so cuts away the bottom face of the mist
         // the top face of the water then doesn't need to weld because
-        CHECK(!has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_OPAQUE_MIST));
-        CHECK( has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_TRANSPARENT_WINDOW));
-        CHECK( has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_OPAQUE_AUX));
-        CHECK( has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_SKY));
+        EXPECT_FALSE(has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_OPAQUE_MIST));
+        EXPECT_TRUE(has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_TRANSPARENT_WINDOW));
+        EXPECT_TRUE(has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_OPAQUE_AUX));
+        EXPECT_TRUE(has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_SKY));
     }
 
     {
-        INFO("INDEX_OPAQUE_WATER horizontal");
+        SCOPED_TRACE("INDEX_OPAQUE_WATER horizontal");
         // detail wall is stronger than water, so cuts a hole and the water then welds with itself
-        CHECK( has_tjunc(INDEX_OPAQUE_WATER, INDEX_DETAIL_WALL));
-        CHECK( has_tjunc(INDEX_OPAQUE_WATER, INDEX_SOLID));
-        CHECK( has_tjunc(INDEX_OPAQUE_WATER, INDEX_SOLID_DETAIL));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_WATER, INDEX_DETAIL_WALL));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_WATER, INDEX_SOLID));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_WATER, INDEX_SOLID_DETAIL));
         // welds because opaque water and translucent don't get a face between them
-        CHECK( has_tjunc(INDEX_OPAQUE_WATER, INDEX_TRANSPARENT_WATER));
-        CHECK( has_tjunc(INDEX_OPAQUE_WATER, INDEX_OPAQUE_WATER));
-        CHECK( has_tjunc(INDEX_OPAQUE_WATER, INDEX_OPAQUE_MIST));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_WATER, INDEX_TRANSPARENT_WATER));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_WATER, INDEX_OPAQUE_WATER));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_WATER, INDEX_OPAQUE_MIST));
         // window is stronger and cuts a hole in the water
-        CHECK( has_tjunc(INDEX_OPAQUE_WATER, INDEX_TRANSPARENT_WINDOW));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_WATER, INDEX_TRANSPARENT_WINDOW));
         // same with aux
-        CHECK( has_tjunc(INDEX_OPAQUE_WATER, INDEX_OPAQUE_AUX));
-        CHECK( has_tjunc(INDEX_OPAQUE_WATER, INDEX_SKY));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_WATER, INDEX_OPAQUE_AUX));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_WATER, INDEX_SKY));
     }
 
     {
-        INFO("INDEX_OPAQUE_MIST horizontal");
+        SCOPED_TRACE("INDEX_OPAQUE_MIST horizontal");
         // detail wall is stronger, cuts mist
-        CHECK( has_tjunc(INDEX_OPAQUE_MIST, INDEX_DETAIL_WALL));
-        CHECK( has_tjunc(INDEX_OPAQUE_MIST, INDEX_SOLID));
-        CHECK( has_tjunc(INDEX_OPAQUE_MIST, INDEX_SOLID_DETAIL));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_MIST, INDEX_DETAIL_WALL));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_MIST, INDEX_SOLID));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_MIST, INDEX_SOLID_DETAIL));
         // water is stronger, cuts mist
-        CHECK( has_tjunc(INDEX_OPAQUE_MIST, INDEX_TRANSPARENT_WATER));
-        CHECK( has_tjunc(INDEX_OPAQUE_MIST, INDEX_OPAQUE_WATER));
-        CHECK( has_tjunc(INDEX_OPAQUE_MIST, INDEX_OPAQUE_MIST));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_MIST, INDEX_TRANSPARENT_WATER));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_MIST, INDEX_OPAQUE_WATER));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_MIST, INDEX_OPAQUE_MIST));
         // window is stronger, cuts mist
-        CHECK( has_tjunc(INDEX_OPAQUE_MIST, INDEX_TRANSPARENT_WINDOW));
-        CHECK( has_tjunc(INDEX_OPAQUE_MIST, INDEX_OPAQUE_AUX));
-        CHECK( has_tjunc(INDEX_OPAQUE_MIST, INDEX_SKY));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_MIST, INDEX_TRANSPARENT_WINDOW));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_MIST, INDEX_OPAQUE_AUX));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_MIST, INDEX_SKY));
     }
 
     {
-        INFO("INDEX_TRANSPARENT_WINDOW horizontal");
+        SCOPED_TRACE("INDEX_TRANSPARENT_WINDOW horizontal");
         // detail wall is stronger than window, cuts a hole in the window, so window
         // tjuncs with itself
-        CHECK( has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_DETAIL_WALL));
+        EXPECT_TRUE(has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_DETAIL_WALL));
         // solid cuts a hole in the window
-        CHECK( has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_SOLID));
-        CHECK( has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_SOLID_DETAIL));
+        EXPECT_TRUE(has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_SOLID));
+        EXPECT_TRUE(has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_SOLID_DETAIL));
         // translucent window and translucent water weld
-        CHECK( has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_TRANSPARENT_WATER));
-        CHECK(!has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_OPAQUE_WATER));
-        CHECK(!has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_OPAQUE_MIST));
-        CHECK( has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_TRANSPARENT_WINDOW));
+        EXPECT_TRUE(has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_TRANSPARENT_WATER));
+        EXPECT_TRUE(has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_OPAQUE_WATER));
+        EXPECT_FALSE(has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_OPAQUE_MIST));
+        EXPECT_TRUE(has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_TRANSPARENT_WINDOW));
         // note, aux is lower priority than window, so bottom face of aux gets cut away
-        CHECK(!has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_OPAQUE_AUX));
+        EXPECT_FALSE(has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_OPAQUE_AUX));
         // sky cuts hole in window
-        CHECK( has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_SKY));
+        EXPECT_TRUE(has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_SKY));
     }
 
     {
-        INFO("INDEX_OPAQUE_AUX horizontal");
+        SCOPED_TRACE("INDEX_OPAQUE_AUX horizontal");
         // detail_wall is higher priority, cuts a hole in aux, which welds with itself
-        CHECK( has_tjunc(INDEX_OPAQUE_AUX, INDEX_DETAIL_WALL));
-        CHECK( has_tjunc(INDEX_OPAQUE_AUX, INDEX_SOLID));
-        CHECK( has_tjunc(INDEX_OPAQUE_AUX, INDEX_SOLID_DETAIL));
-        CHECK(!has_tjunc(INDEX_OPAQUE_AUX, INDEX_TRANSPARENT_WATER));
-        CHECK( has_tjunc(INDEX_OPAQUE_AUX, INDEX_OPAQUE_WATER));
-        CHECK( has_tjunc(INDEX_OPAQUE_AUX, INDEX_OPAQUE_MIST));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_AUX, INDEX_DETAIL_WALL));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_AUX, INDEX_SOLID));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_AUX, INDEX_SOLID_DETAIL));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_AUX, INDEX_TRANSPARENT_WATER));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_AUX, INDEX_OPAQUE_WATER));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_AUX, INDEX_OPAQUE_MIST));
         // window is stronger, cuts a hole which causes aux to weld
-        CHECK( has_tjunc(INDEX_OPAQUE_AUX, INDEX_TRANSPARENT_WINDOW));
-        CHECK( has_tjunc(INDEX_OPAQUE_AUX, INDEX_OPAQUE_AUX));
-        CHECK( has_tjunc(INDEX_OPAQUE_AUX, INDEX_SKY));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_AUX, INDEX_TRANSPARENT_WINDOW));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_AUX, INDEX_OPAQUE_AUX));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_AUX, INDEX_SKY));
     }
 
     {
-        INFO("INDEX_SKY horizontal - same as INDEX_SOLID");
-        CHECK(!has_tjunc(INDEX_SKY, INDEX_DETAIL_WALL));
-        CHECK( has_tjunc(INDEX_SKY, INDEX_SOLID));
-        CHECK( has_tjunc(INDEX_SKY, INDEX_SOLID_DETAIL));
-        CHECK(!has_tjunc(INDEX_SKY, INDEX_TRANSPARENT_WATER));
-        CHECK( has_tjunc(INDEX_SKY, INDEX_OPAQUE_WATER));
-        CHECK( has_tjunc(INDEX_SKY, INDEX_OPAQUE_MIST));
-        CHECK(!has_tjunc(INDEX_SKY, INDEX_TRANSPARENT_WINDOW));
-        CHECK( has_tjunc(INDEX_SKY, INDEX_OPAQUE_AUX));
-        CHECK( has_tjunc(INDEX_SKY, INDEX_SKY));
+        SCOPED_TRACE("INDEX_SKY horizontal - same as INDEX_SOLID");
+        EXPECT_FALSE(has_tjunc(INDEX_SKY, INDEX_DETAIL_WALL));
+        EXPECT_TRUE(has_tjunc(INDEX_SKY, INDEX_SOLID));
+        EXPECT_TRUE(has_tjunc(INDEX_SKY, INDEX_SOLID_DETAIL));
+        EXPECT_TRUE(has_tjunc(INDEX_SKY, INDEX_TRANSPARENT_WATER));
+        EXPECT_TRUE(has_tjunc(INDEX_SKY, INDEX_OPAQUE_WATER));
+        EXPECT_TRUE(has_tjunc(INDEX_SKY, INDEX_OPAQUE_MIST));
+        EXPECT_FALSE(has_tjunc(INDEX_SKY, INDEX_TRANSPARENT_WINDOW));
+        EXPECT_TRUE(has_tjunc(INDEX_SKY, INDEX_OPAQUE_AUX));
+        EXPECT_TRUE(has_tjunc(INDEX_SKY, INDEX_SKY));
     }
 }
 
-TEST_CASE("q2_unknown_contents" * doctest::test_suite("testmaps_q2"))
+TEST(testmapsQ2, unknownContents)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_unknown_contents.map");
 
     {
-        INFO("leaf with contents 1<<10 which is not a valid contents");
+        SCOPED_TRACE("leaf with contents 1<<10 which is not a valid contents");
 
         auto *leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0});
 
         // FIXME: should the unknown contents get converted to SOLID in the leaf?
-        CHECK(leaf->contents == (Q2_CONTENTS_SOLID));
+        EXPECT_EQ(leaf->contents, (Q2_CONTENTS_SOLID | 1024));
 
-        CHECK(1 == Leaf_Brushes(&bsp, leaf).size());
+        EXPECT_EQ(1, Leaf_Brushes(&bsp, leaf).size());
         // FIXME: should the unknown contents have SOLID added in the brush?
-        CHECK((Q2_CONTENTS_SOLID | 1024)==
-              Leaf_Brushes(&bsp, leaf).at(0)->contents);
+        EXPECT_EQ((Q2_CONTENTS_SOLID | 1024), Leaf_Brushes(&bsp, leaf).at(0)->contents);
     }
 
     {
-        INFO("leaf with contents 1<<30 which is not a valid contents");
+        SCOPED_TRACE("leaf with contents 1<<30 which is not a valid contents");
 
         auto *leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], {64, 0, 0});
 
         // FIXME: should the unknown contents get converted to SOLID in the leaf?
-        CHECK(leaf->contents == (Q2_CONTENTS_SOLID));
+        EXPECT_EQ(leaf->contents, (Q2_CONTENTS_SOLID | nth_bit(30)));
 
-        CHECK(1 == Leaf_Brushes(&bsp, leaf).size());
+        EXPECT_EQ(1, Leaf_Brushes(&bsp, leaf).size());
         // FIXME: should the unknown contents have SOLID added in the brush?
-        CHECK((Q2_CONTENTS_SOLID | nth_bit(30))==
-              Leaf_Brushes(&bsp, leaf).at(0)->contents);
+        EXPECT_EQ((Q2_CONTENTS_SOLID | nth_bit(30)), Leaf_Brushes(&bsp, leaf).at(0)->contents);
     }
 
     {
-        INFO("face with contents 1<<10 which is not a valid surrflags");
+        SCOPED_TRACE("face with contents 1<<10 which is not a valid surrflags");
 
         auto *top_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {128, 0, 16}, {0, 0, 1});
-        REQUIRE(top_face);
+        ASSERT_TRUE(top_face);
 
         auto *texinfo = BSP_GetTexinfo(&bsp, top_face->texinfo);
-        REQUIRE(texinfo);
+        ASSERT_TRUE(texinfo);
 
-        CHECK(texinfo->flags.native == 1024);
+        EXPECT_EQ(texinfo->flags.native_q2, 1024);
     }
+}
+
+TEST(ltfaceQ2, noclipfacesNodraw)
+{
+    GTEST_SKIP();
+
+    SCOPED_TRACE("when _noclipfaces has a choice of faces, don't use the nodraw one");
+
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_noclipfaces_nodraw.map");
+
+    const qvec3d top_of_water = {0, 0, 0};
+
+    auto up_faces = BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], top_of_water, {0, 0, 1});
+    auto down_faces = BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], top_of_water, {0, 0, -1});
+
+    ASSERT_EQ(1, up_faces.size());
+    ASSERT_EQ(1, down_faces.size());
+
+    EXPECT_EQ(Face_TextureNameView(&bsp, up_faces[0]), "e1u1/water1_8");
+    EXPECT_EQ(Face_TextureNameView(&bsp, down_faces[0]), "e1u1/water1_8");
+}
+
+TEST(testmapsQ2, chopOrder0)
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_chop_order_0.map");
+
+    EXPECT_THAT(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0})),
+        testing::UnorderedElementsAre("e1u1/ggrat4_2"));
+}
+
+TEST(testmapsQ2, chopOrder1)
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_chop_order_1.map");
+
+    EXPECT_THAT(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0})),
+        testing::UnorderedElementsAre("e1u1/+0btshoot2"));
 }

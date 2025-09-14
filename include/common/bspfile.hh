@@ -62,3 +62,7 @@ void PrintBSPFileSizes(const bspdata_t *bspdata);
  * Returns false if the conversion failed.
  */
 bool ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version);
+
+std::string get_contents_display(contents_t bits);
+Json::Value get_contents_json(contents_t bits);
+contents_int_t set_contents_json(const Json::Value &json);

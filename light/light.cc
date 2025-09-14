@@ -63,14 +63,14 @@ static std::unique_ptr<lightsurf_t[]> light_surfaces;
 static std::span<lightsurf_t> light_surfaces_span;
 
 // light_surfaces filtered down to just the emissive ones
-static std::vector<lightsurf_t*> emissive_light_surfaces;
+static std::vector<lightsurf_t *> emissive_light_surfaces;
 
 std::span<lightsurf_t> &LightSurfaces()
 {
     return light_surfaces_span;
 }
 
-std::vector<lightsurf_t*> &EmissiveLightSurfaces()
+std::vector<lightsurf_t *> &EmissiveLightSurfaces()
 {
     return emissive_light_surfaces;
 }
@@ -108,6 +108,7 @@ std::vector<const modelinfo_t *> shadowworldonlylist;
 std::vector<const modelinfo_t *> switchableshadowlist;
 
 std::vector<surfflags_t> extended_texinfo_flags;
+std::vector<contentflags_t> extended_content_flags;
 
 int dump_facenum = -1;
 int dump_vertnum = -1;
@@ -153,6 +154,7 @@ modelinfo_t::modelinfo_t(const mbsp_t *b, const dmodelh2_t *m, float lmscale)
       lightcolorscale{this, "lightcolorscale", 1},
       object_channel_mask{this, "object_channel_mask", CHANNEL_MASK_DEFAULT},
       surflight_minlight_scale{this, "surflight_minlight_scale", 1.f},
+      surflight_atten{this, "surflight_atten", 1.f},
       autominlight{this, "autominlight", false},
       autominlight_target{this, "autominlight_target", ""}
 {
@@ -195,6 +197,7 @@ worldspawn_keys::worldspawn_keys()
       surflightskydist{this, "surflightskydist", 0.0, &worldspawn_group},
       surflightsubdivision{this, {"surflightsubdivision", "choplight"}, 16.0, 1.0, 8192.0, &worldspawn_group},
       surflight_minlight_scale{this, "surflight_minlight_scale", 1.0f, 0.f, 510.f, &worldspawn_group},
+      surflight_atten{this, "surflight_atten", 1.f, 0.f, std::numeric_limits<float>::max(), &worldspawn_group},
       sunlight{this, {"sunlight", "sun_light"}, 0.0, &worldspawn_group},
       sunlight_color{this, {"sunlight_color", "sun_color"}, 255.0, 255.0, 255.0, &worldspawn_group},
       sun2{this, "sun2", 0.0, &worldspawn_group},
@@ -313,26 +316,63 @@ light_settings::light_settings()
               {"rays", visapprox_t::RAYS}},
           &debug_group,
           "change approximate visibility algorithm. auto = choose default based on format. vis = use BSP vis data (slow but precise). rays = use sphere culling with fired rays (fast but may miss faces)"},
-      lit{this, "lit", [&](source) { write_litfile |= lightfile::external; }, &output_group, "write .lit file"},
-      lit2{this, "lit2", [&](source) { write_litfile = lightfile::lit2; }, &experimental_group, "write .lit2 file"},
-      bspxlit{this, "bspxlit", [&](source) { write_litfile |= lightfile::bspx; }, &experimental_group,
-          "writes rgb data into the bsp itself"},
-      lux{this, "lux", [&](source) { write_luxfile |= lightfile::external; }, &experimental_group, "write .lux file"},
-      bspxlux{this, "bspxlux", [&](source) { write_luxfile |= lightfile::bspx; }, &experimental_group,
-          "writes lux data into the bsp itself"},
+      lit{this, "lit",
+          [&](const std::string &, parser_base_t &, source) {
+              write_litfile |= lightfile_t::lit;
+              return true;
+          },
+          &output_group, "write .lit file"},
+      lit2{this, "lit2",
+          [&](const std::string &, parser_base_t &, source) {
+              write_litfile |= lightfile_t::lit2;
+              return true;
+          },
+          &experimental_group, "write .lit2 file"},
+      bspxlit{this, "bspxlit",
+          [&](const std::string &, parser_base_t &, source) {
+              write_litfile |= lightfile_t::bspx;
+              return true;
+          },
+          &experimental_group, "writes rgb data into the bsp itself"},
+      lux{this, "lux",
+          [&](const std::string &, parser_base_t &, source) {
+              write_luxfile |= luxfile_t::lux;
+              return true;
+          },
+          &experimental_group, "write .lux file"},
+      bspxlux{this, "bspxlux",
+          [&](const std::string &, parser_base_t &, source) {
+              write_luxfile |= luxfile_t::bspx;
+              return true;
+          },
+          &experimental_group, "writes lux data into the bsp itself"},
       bspxonly{this, "bspxonly",
-          [&](source source) {
-              write_litfile = lightfile::bspx;
-              write_luxfile = lightfile::bspx;
-              novanilla.set_value(true, source);
+          [&](const std::string &, parser_base_t &, source src) {
+              write_litfile |= lightfile_t::bspx;
+              write_luxfile |= luxfile_t::bspx;
+              novanilla.set_value(true, src);
+              return true;
           },
           &experimental_group, "writes both rgb and directions data *only* into the bsp itself"},
       bspx{this, "bspx",
-          [&](source source) {
-              write_litfile = lightfile::bspx;
-              write_luxfile = lightfile::bspx;
+          [&](const std::string &, parser_base_t &, source) {
+              write_litfile |= lightfile_t::bspx;
+              write_luxfile |= luxfile_t::bspx;
+              return true;
           },
           &experimental_group, "writes both rgb and directions data into the bsp itself"},
+      hdr{this, "hdr",
+          [&](const std::string &, parser_base_t &, source) {
+              write_litfile |= lightfile_t::lithdr;
+              return true;
+          },
+          &experimental_group, "write .lit file with e5bgr9 data"},
+      bspxhdr{this, "bspxhdr",
+          [&](const std::string &, parser_base_t &, source) {
+              write_litfile |= lightfile_t::bspxhdr;
+              return true;
+          },
+          &experimental_group, "writes e5bgr9 data into the bsp itself"},
       world_units_per_luxel{
           this, "world_units_per_luxel", 0, 0, 1024, &output_group, "enables output of DECOUPLED_LM BSPX lump"},
       litonly{this, "litonly", false, &output_group, "only write .lit file, don't modify BSP"},
@@ -349,60 +389,71 @@ light_settings::light_settings()
           &experimental_group, "lightgrid BSPX lump to use"},
 
       dirtdebug{this, {"dirtdebug", "debugdirt"},
-          [&](source) {
+          [&](const std::string &, parser_base_t &, source) {
               CheckNoDebugModeSet();
               debugmode = debugmodes::dirt;
+              return true;
           },
           &debug_group, "only save the AO values to the lightmap"},
 
       bouncedebug{this, "bouncedebug",
-          [&](source) {
+          [&](const std::string &, parser_base_t &, source) {
               CheckNoDebugModeSet();
               debugmode = debugmodes::bounce;
+              return true;
           },
           &debug_group, "only save bounced lighting to the lightmap"},
 
       bouncelightsdebug{this, "bouncelightsdebug",
-          [&](source) {
+          [&](const std::string &, parser_base_t &, source) {
               CheckNoDebugModeSet();
               debugmode = debugmodes::bouncelights;
+              return true;
           },
           &debug_group, "only save bounced emitters lighting to the lightmap"},
 
       phongdebug{this, "phongdebug",
-          [&](source) {
+          [&](const std::string &, parser_base_t &, source) {
               CheckNoDebugModeSet();
               debugmode = debugmodes::phong;
+              return true;
           },
           &debug_group, "only save phong normals to the lightmap"},
 
       phongdebug_obj{this, "phongdebug_obj",
-          [&](source) {
+          [&](const std::string &, parser_base_t &, source) {
               CheckNoDebugModeSet();
               debugmode = debugmodes::phong_obj;
+              return true;
           },
           &debug_group, "save map as .obj with phonged normals"},
 
       debugoccluded{this, "debugoccluded",
-          [&](source) {
+          [&](const std::string &, parser_base_t &, source) {
               CheckNoDebugModeSet();
               debugmode = debugmodes::debugoccluded;
+              return true;
           },
           &debug_group, "save light occlusion data to lightmap"},
 
       debugneighbours{this, "debugneighbours",
-          [&](source) {
+          [&](const std::string &, parser_base_t &, source) {
               CheckNoDebugModeSet();
               debugmode = debugmodes::debugneighbours;
+              return true;
           },
           &debug_group, "save neighboring faces data to lightmap (requires -debugface)"},
 
       debugmottle{this, "debugmottle",
-          [&](source) {
+          [&](const std::string &, parser_base_t &, source) {
               CheckNoDebugModeSet();
               debugmode = debugmodes::mottle;
+              return true;
           },
-          &debug_group, "save mottle pattern to lightmap"}
+          &debug_group, "save mottle pattern to lightmap"},
+
+      debug_lightgrid_octree{
+          this, "debug_lightgrid_octree", false, &debug_group, "write .octree.prt file for light grid"}
 {
 }
 
@@ -416,21 +467,23 @@ void light_settings::set_parameters(int argc, const char **argv)
 void light_settings::initialize(int argc, const char **argv)
 {
     try {
-        token_parser_t p(argc - 1, argv + 1, {"command line"});
-        auto remainder = parse(p);
+        common_settings::initialize(argc - 1, argv + 1);
 
         if (remainder.size() <= 0 || remainder.size() > 1) {
-            print_help();
+            print_help(true);
         }
 
         sourceMap = remainder[0];
     } catch (parse_exception &ex) {
+        print_help(false);
+        logging::print("ERROR OCCURRED WHEN TRYING TO PARSE ARGUMENTS:\n");
         logging::print(ex.what());
-        print_help();
+        logging::print("\n\n");
+        throw settings::quit_after_help_exception();
     }
 }
 
-void light_settings::postinitialize(int argc, const char **argv)
+void light_settings::light_postinitialize(int argc, const char **argv)
 {
     if (gate.value() > 1) {
         logging::print("WARNING: -gate value greater than 1 may cause artifacts\n");
@@ -450,26 +503,24 @@ void light_settings::postinitialize(int argc, const char **argv)
         }
     }
 
-    if (debugmode != debugmodes::none) {
-        write_litfile |= lightfile::external;
-    }
-
     if (litonly.value()) {
-        write_litfile |= lightfile::external;
+        write_litfile |= lightfile_t::lit;
     }
 
-    if (write_litfile == lightfile::lit2) {
-        logging::print("generating lit2 output only.\n");
-    } else {
-        if (write_litfile & lightfile::external)
-            logging::print(".lit colored light output requested on command line.\n");
-        if (write_litfile & lightfile::bspx)
-            logging::print("BSPX colored light output requested on command line.\n");
-        if (write_luxfile & lightfile::external)
-            logging::print(".lux light directions output requested on command line.\n");
-        if (write_luxfile & lightfile::bspx)
-            logging::print("BSPX light directions output requested on command line.\n");
-    }
+    if (write_litfile & lightfile_t::lit)
+        logging::print(".lit colored light output requested on command line.\n");
+    if (write_litfile & lightfile_t::bspx)
+        logging::print("BSPX colored light output requested on command line.\n");
+    if (write_litfile & lightfile_t::lit2)
+        logging::print(".lit (version 2) colored light output requested on command line.\n");
+    if (write_litfile & lightfile_t::lithdr)
+        logging::print(".lit (HDR) light output requested on command line.\n");
+    if (write_litfile & lightfile_t::bspxhdr)
+        logging::print("BSPX HDR light output requested on command line.\n");
+    if (write_luxfile & luxfile_t::lux)
+        logging::print(".lux light directions output requested on command line.\n");
+    if (write_luxfile & luxfile_t::bspx)
+        logging::print("BSPX light directions output requested on command line.\n");
 
     if (debugmode == debugmodes::dirt) {
         light_options.dirt.set_value(true, settings::source::COMMANDLINE);
@@ -493,8 +544,6 @@ void light_settings::postinitialize(int argc, const char **argv)
     if (light_options.facestyles.value() > MAXLIGHTMAPS && !light_options.compilerstyle_max.is_changed()) {
         light_options.compilerstyle_max.set_value(INVALID_LIGHTSTYLE, settings::source::COMMANDLINE);
     }
-
-    common_settings::postinitialize(argc, argv);
 }
 
 void light_settings::reset()
@@ -503,8 +552,8 @@ void light_settings::reset()
 
     sourceMap = fs::path();
 
-    write_litfile = lightfile::none;
-    write_luxfile = lightfile::none;
+    write_litfile = lightfile_t::none;
+    write_luxfile = luxfile_t::none;
     debugmode = debugmodes::none;
 }
 } // namespace settings
@@ -604,7 +653,7 @@ static void CacheTextures(const mbsp_t &bsp)
 static void CreateLightmapSurfaces(mbsp_t *bsp)
 {
     light_surfaces = std::make_unique<lightsurf_t[]>(bsp->dfaces.size());
-    light_surfaces_span = { light_surfaces.get(), light_surfaces.get() + bsp->dfaces.size() };
+    light_surfaces_span = {light_surfaces.get(), light_surfaces.get() + bsp->dfaces.size()};
     logging::funcheader();
     logging::parallel_for(static_cast<size_t>(0), bsp->dfaces.size(), [&bsp](size_t i) {
         auto facesup = faces_sup.empty() ? nullptr : &faces_sup[i];
@@ -700,6 +749,13 @@ static void FindModelInfo(const mbsp_t *bsp)
         // apply settings
         info->set_settings(*entdict, settings::source::MAP);
 
+        // vanilla-compatible switchable shadows
+        if (auto *light = LightWithSwitchableShadowTargetValue(entdict->get("targetname"))) {
+            // take the "style" key from this light entity and enable switchable shadows on ourself
+            info->switchableshadow.set_value(true, settings::source::DEFAULT);
+            info->switchshadstyle.set_value(light->style.value(), settings::source::DEFAULT);
+        }
+
         /* Check if this model will cast shadows (shadow => shadowself) */
         if (info->switchableshadow.boolValue()) {
             Q_assert(info->switchshadstyle.value() != 0);
@@ -749,7 +805,7 @@ static void LightWorld(bspdata_t *bspdata, const fs::path &source, bool forcedsc
 
     auto lmshift_lump = bspdata->bspx.entries.find("LMSHIFT");
 
-    if (lmshift_lump == bspdata->bspx.entries.end() && light_options.write_litfile != lightfile::lit2 &&
+    if (lmshift_lump == bspdata->bspx.entries.end() && !(light_options.write_litfile & lightfile_t::lit2) &&
         light_options.facestyles.value() <= 4) {
         faces_sup.clear(); // no scales, no lit2
     } else { // we have scales or lit2 output. yay...
@@ -809,9 +865,9 @@ static void LightWorld(bspdata_t *bspdata, const fs::path &source, bool forcedsc
 
             logging::parallel_for(static_cast<size_t>(0), bsp.dfaces.size(), [i, &bsp](size_t f) {
                 if (Face_IsLightmapped(&bsp, &bsp.dfaces[f])) {
-    #if defined(HAVE_EMBREE) && defined(__SSE2__)
+#if defined(HAVE_EMBREE) && defined(__SSE2__)
                     _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
-    #endif
+#endif
 
                     IndirectLightFace(&bsp, light_surfaces[f], light_options, i);
                 }
@@ -937,123 +993,6 @@ static void LightWorld(bspdata_t *bspdata, const fs::path &source, bool forcedsc
     }
 }
 
-static void LoadExtendedTexinfoFlags(const fs::path &sourcefilename, const mbsp_t *bsp)
-{
-    // always create the zero'ed array
-    extended_texinfo_flags.resize(bsp->texinfo.size());
-
-    fs::path filename(sourcefilename);
-    filename.replace_extension("texinfo.json");
-
-    std::ifstream texinfofile(filename, std::ios_base::in | std::ios_base::binary);
-
-    if (!texinfofile)
-        return;
-
-    logging::print("Loading extended texinfo flags from {}...\n", filename);
-
-    Json::Value j;
-
-    texinfofile >> j;
-
-    for (auto &key : j.getMemberNames()) {
-        size_t index = std::stoull(key);
-        if (index >= bsp->texinfo.size()) {
-            logging::print("WARNING: Extended texinfo flags in {} does not match bsp, ignoring\n", filename);
-            memset(extended_texinfo_flags.data(), 0, bsp->texinfo.size() * sizeof(surfflags_t));
-            return;
-        }
-
-        auto &val = j[key];
-        auto &flags = extended_texinfo_flags[index];
-
-        if (val.isMember("is_nodraw")) {
-            flags.is_nodraw = val["is_nodraw"].as<bool>();
-        }
-        if (val.isMember("is_hint")) {
-            flags.is_hint = val["is_hint"].as<bool>();
-        }
-        if (val.isMember("is_hintskip")) {
-            flags.is_hintskip = val["is_hintskip"].as<bool>();
-        }
-        if (val.isMember("no_dirt")) {
-            flags.no_dirt = val["no_dirt"].as<bool>();
-        }
-        if (val.isMember("no_shadow")) {
-            flags.no_shadow = val["no_shadow"].as<bool>();
-        }
-        if (val.isMember("no_bounce")) {
-            flags.no_bounce = val["no_bounce"].as<bool>();
-        }
-        if (val.isMember("no_minlight")) {
-            flags.no_minlight = val["no_minlight"].as<bool>();
-        }
-        if (val.isMember("no_expand")) {
-            flags.no_expand = val["no_expand"].as<bool>();
-        }
-        if (val.isMember("no_phong")) {
-            flags.no_expand = val["no_phong"].as<bool>();
-        }
-        if (val.isMember("light_ignore")) {
-            flags.light_ignore = val["light_ignore"].as<bool>();
-        }
-        if (val.isMember("surflight_rescale")) {
-            flags.surflight_rescale = val["surflight_rescale"].as<bool>();
-        }
-        if (val.isMember("surflight_style")) {
-            flags.surflight_style = val["surflight_style"].as<int32_t>();
-        }
-        if (val.isMember("surflight_targetname")) {
-            flags.surflight_targetname = val["surflight_targetname"].as<std::string>();
-        }
-        if (val.isMember("surflight_color")) {
-            flags.surflight_color = from_json<int, 3>(val["surflight_color"]);
-        }
-        if (val.isMember("surflight_minlight_scale")) {
-            flags.surflight_minlight_scale = val["surflight_minlight_scale"].as<float>();
-        }
-        if (val.isMember("phong_angle")) {
-            flags.phong_angle = val["phong_angle"].as<float>();
-        }
-        if (val.isMember("phong_angle_concave")) {
-            flags.phong_angle_concave = val["phong_angle_concave"].as<float>();
-        }
-        if (val.isMember("phong_group")) {
-            flags.phong_group = val["phong_group"].as<int>();
-        }
-        if (val.isMember("minlight")) {
-            flags.minlight = val["minlight"].as<float>();
-        }
-        if (val.isMember("maxlight")) {
-            flags.maxlight = val["maxlight"].as<float>();
-        }
-        if (val.isMember("minlight_color")) {
-            flags.minlight_color = from_json<int, 3>(val["minlight_color"]);
-        }
-        if (val.isMember("light_alpha")) {
-            flags.light_alpha = val["light_alpha"].as<float>();
-        }
-        if (val.isMember("light_twosided")) {
-            flags.light_twosided = val["light_twosided"].as<bool>();
-        }
-        if (val.isMember("lightcolorscale")) {
-            flags.lightcolorscale = val["lightcolorscale"].as<float>();
-        }
-        if (val.isMember("surflight_group")) {
-            flags.surflight_group = val["surflight_group"].as<int32_t>();
-        }
-        if (val.isMember("world_units_per_luxel")) {
-            flags.world_units_per_luxel = val["world_units_per_luxel"].as<float>();
-        }
-        if (val.isMember("object_channel_mask")) {
-            flags.object_channel_mask = val["object_channel_mask"].as<int32_t>();
-        }
-        if (val.isMember("surflight_minlight_scale")) {
-            flags.surflight_minlight_scale = val["surflight_minlight_scale"].as<float>();
-        }
-    }
-}
-
 // obj
 
 static void ExportObjFace(std::ofstream &f, const mbsp_t *bsp, const mface_t *face, int *vertcount)
@@ -1169,41 +1108,22 @@ static void FindDebugVert(const mbsp_t *bsp)
     dump_vertnum = v;
 }
 
-static void SetLitNeeded()
+void SetLitNeeded(const bspdata_t &bspdata)
 {
+    if (bspdata.loadversion->game->has_rgb_lightmap) {
+        return;
+    }
+
     if (!light_options.write_litfile) {
         if (light_options.novanilla.value()) {
-            light_options.write_litfile = lightfile::bspx;
+            light_options.write_litfile = lightfile_t::bspx;
             logging::print("Colored light entities/settings detected: "
                            "bspxlit output enabled.\n");
         } else {
-            light_options.write_litfile = lightfile::external;
+            light_options.write_litfile = lightfile_t::lit;
             logging::print("Colored light entities/settings detected: "
                            ".lit output enabled.\n");
         }
-    }
-}
-
-static void CheckLitNeeded(const settings::worldspawn_keys &cfg)
-{
-    // check lights
-    for (const auto &light : GetLights()) {
-        if (!qv::epsilonEqual(vec3_white, light->color.value(), LIGHT_EQUAL_EPSILON) ||
-            light->projectedmip != nullptr) { // mxd. Projected mips could also use .lit output
-            SetLitNeeded();
-            return;
-        }
-    }
-
-    // check global settings
-    if (cfg.bouncecolorscale.value() != 0 ||
-        !qv::epsilonEqual(cfg.minlight_color.value(), vec3_white, LIGHT_EQUAL_EPSILON) ||
-        !qv::epsilonEqual(cfg.sunlight_color.value(), vec3_white, LIGHT_EQUAL_EPSILON) ||
-        !qv::epsilonEqual(cfg.sun2_color.value(), vec3_white, LIGHT_EQUAL_EPSILON) ||
-        !qv::epsilonEqual(cfg.sunlight2_color.value(), vec3_white, LIGHT_EQUAL_EPSILON) ||
-        !qv::epsilonEqual(cfg.sunlight3_color.value(), vec3_white, LIGHT_EQUAL_EPSILON)) {
-        SetLitNeeded();
-        return;
     }
 }
 
@@ -1303,6 +1223,7 @@ static void ResetLight()
     switchableshadowlist.clear();
 
     extended_texinfo_flags.clear();
+    extended_content_flags.clear();
 
     dump_facenum = -1;
     dump_vertnum = -1;
@@ -1334,6 +1255,7 @@ int light_main(int argc, const char **argv)
 
     light_options.preinitialize(argc, argv);
     light_options.initialize(argc, argv);
+    light_options.postinitialize(argc, argv);
 
     auto start = I_FloatTime();
     fs::path source = light_options.sourceMap;
@@ -1400,13 +1322,15 @@ int light_main(int argc, const char **argv)
 
     img::load_textures(&bsp, light_options);
 
-    LoadExtendedTexinfoFlags(source, &bsp);
+    extended_texinfo_flags = LoadExtendedTexinfoFlags(source, &bsp);
+    extended_content_flags = LoadExtendedContentFlags(source, &bsp);
 
     CacheTextures(bsp);
 
     LoadEntities(light_options, &bsp);
 
-    light_options.postinitialize(argc, argv);
+    light_options.light_postinitialize(argc, argv);
+    light_options.print_summary();
 
     all_uncompressed_vis = DecompressAllVis(&bsp, true);
     FindModelInfo(&bsp);
@@ -1430,10 +1354,6 @@ int light_main(int argc, const char **argv)
     // PrintLights();
 
     if (!light_options.onlyents.value()) {
-        if (!bspdata.loadversion->game->has_rgb_lightmap) {
-            CheckLitNeeded(light_options);
-        }
-
         SetupDirt(light_options);
 
         LightWorld(&bspdata, source, light_options.lightmap_scale.is_changed());
@@ -1449,13 +1369,13 @@ int light_main(int argc, const char **argv)
             WriteNormals(bsp, bspdata);
         }
 
-        if (light_options.write_litfile == lightfile::lit2) {
+        if (light_options.write_litfile & lightfile_t::lit2) {
             return 0; // run away before any files are written
         }
     }
 
     /* -novanilla + internal lighting = no grey lightmap */
-    if (light_options.novanilla.value() && (light_options.write_litfile & lightfile::bspx)) {
+    if (light_options.novanilla.value() && (light_options.write_litfile & lightfile_t::bspx)) {
         bsp.dlightdata.clear();
     }
 

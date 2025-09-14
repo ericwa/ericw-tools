@@ -73,7 +73,7 @@ enum class conversion_t
 struct extended_texinfo_t
 {
     uint32_t contents_native = 0;
-    surfflags_t flags = {0};
+    surfflags_t flags = {};
     int value = 0;
     std::string animation;
 };
@@ -174,7 +174,7 @@ public:
     setting_int32 subdivide;
     setting_bool nofill;
     setting_bool nomerge;
-    setting_bool nomergeacrossliquids;
+    setting_bool nomergeacrossliquids; // deprecated
     setting_bool noedgereuse;
     setting_bool noclip;
     setting_bool noskip;
@@ -211,6 +211,7 @@ public:
     setting_tjunc tjunc;
     setting_bool objexport;
     setting_bool noextendedsurfflags;
+    setting_bool noextendedcontentflags;
     setting_bool wrbrushes;
     setting_redirect wrbrushesonly;
     setting_bool bmodelcontents;
@@ -232,6 +233,8 @@ public:
     setting_scalar scale;
     setting_bool loghulls;
     setting_bool logbmodels;
+    setting_bool debug_missing_portal_sides;
+    setting_bool fixupdetailfence;
 
     void set_parameters(int argc, const char **argv) override;
     void initialize(int argc, const char **argv) override;
@@ -336,8 +339,7 @@ public:
     [[nodiscard]] qbsp_plane_t operator-() const;
 
     [[nodiscard]] const plane_type_t &get_type() const;
-    [[nodiscard]] const double &get_dist() const;
-    [[nodiscard]] double &get_dist();
+    [[nodiscard]] double get_dist() const;
     [[nodiscard]] const qvec3d &get_normal() const;
     bool set_normal(const qvec3d &vec, bool flip = false);
     bool set_plane(const qplane3d &plane, bool flip = false);
@@ -392,7 +394,8 @@ struct bspbrush_t;
 struct side_t;
 class mapbrush_t;
 
-struct nodedata_t {
+struct nodedata_t
+{
     // information for decision nodes
     size_t planenum; // decision node only
 
@@ -407,7 +410,8 @@ struct nodedata_t {
                            // are detail.
 };
 
-struct leafdata_t {
+struct leafdata_t
+{
     // information for leafs
     std::vector<face_t *> markfaces; // leaf nodes only, point to node faces
     int outside_distance; // -1 = can't reach outside, 0 = first void node, >0 = distance from void, in number of
@@ -436,26 +440,17 @@ struct node_t
     int visleafnum; // -1 = solid
     int viscluster; // detail cluster for faster vis
 
-    bool is_leaf() const {
-        return data.index() == 1;
-    }
+    bool is_leaf() const { return data.index() == 1; }
 
-    nodedata_t *get_nodedata() {
-        return std::get_if<0>(&data);
-    }
-    const nodedata_t *get_nodedata() const {
-        return std::get_if<0>(&data);
-    }
+    nodedata_t *get_nodedata() { return std::get_if<0>(&data); }
+    const nodedata_t *get_nodedata() const { return std::get_if<0>(&data); }
 
-    leafdata_t *get_leafdata() {
-        return std::get_if<1>(&data);
-    }
-    const leafdata_t *get_leafdata() const {
-        return std::get_if<1>(&data);
-    }
+    leafdata_t *get_leafdata() { return std::get_if<1>(&data); }
+    const leafdata_t *get_leafdata() const { return std::get_if<1>(&data); }
 
     // defaults to node
-    leafdata_t *make_leaf() {
+    leafdata_t *make_leaf()
+    {
         data = leafdata_t{};
         return get_leafdata();
     }

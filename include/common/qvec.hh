@@ -109,12 +109,7 @@ private:
     template<typename FT, std::size_t... pack>
     constexpr void copy_trunc_impl(const FT &from, std::index_sequence<pack...> packed)
     {
-        ((
-            (pack < N) ?
-                (v[pack] = ((pack < from.size() ? (from[pack]) : 0)))
-            :
-                (false)
-         ), ...);
+        (((pack < N) ? (v[pack] = ((pack < from.size() ? (from[pack]) : 0))) : (false)), ...);
     }
 
 public:
@@ -142,12 +137,7 @@ public:
     [[nodiscard]] constexpr size_t size() const { return N; }
 
     // Sort support
-    [[nodiscard]] constexpr bool operator<(const qvec &other) const { return v < other.v; }
-    [[nodiscard]] constexpr bool operator<=(const qvec &other) const { return v <= other.v; }
-    [[nodiscard]] constexpr bool operator>(const qvec &other) const { return v > other.v; }
-    [[nodiscard]] constexpr bool operator>=(const qvec &other) const { return v >= other.v; }
-    [[nodiscard]] constexpr bool operator==(const qvec &other) const { return v == other.v; }
-    [[nodiscard]] constexpr bool operator!=(const qvec &other) const { return v != other.v; }
+    [[nodiscard]] constexpr auto operator<=>(const qvec &) const = default;
 
     [[nodiscard]] constexpr const T &at(const size_t idx) const
     {
@@ -163,14 +153,14 @@ public:
 
     [[nodiscard]] constexpr const T &operator[](const size_t idx) const { return at(idx); }
     [[nodiscard]] constexpr T &operator[](const size_t idx) { return at(idx); }
-    
+
 private:
     // OUT = op THIS[N]
     template<class UnaryOperation, std::size_t... pack>
     constexpr auto utransform_impl(UnaryOperation func, std::index_sequence<pack...>) const
     {
         using R = decltype(-T());
-        return qvec<R, N> { func(at(pack))... };
+        return qvec<R, N>{func(at(pack))...};
     }
 
     // OUT = THIS[N] op IN
@@ -178,15 +168,15 @@ private:
     constexpr auto transform_impl(BinaryOperation func, const InputType &b, std::index_sequence<pack...>) const
     {
         using R = decltype(func(T(), InputType()));
-        return qvec<R, N> { func(at(pack), b)... };
+        return qvec<R, N>{func(at(pack), b)...};
     }
-    
+
     // OUT = THIS[N] op IN[N]
     template<class BinaryOperation, typename InputType, std::size_t... pack>
     constexpr auto transformv_impl(BinaryOperation func, const InputType &b, std::index_sequence<pack...>) const
     {
         using R = decltype(func(T(), InputType()[0]));
-        return qvec<R, N> { func(at(pack), b[pack])... };
+        return qvec<R, N>{func(at(pack), b[pack])...};
     }
 
 public:
@@ -213,7 +203,7 @@ public:
     {
         return transformv(std::plus(), other);
     }
-    
+
     template<typename F>
     [[nodiscard]] constexpr inline auto operator-(const qvec<F, N> &other) const
     {
@@ -244,10 +234,7 @@ public:
         return transformv(std::divides(), scale);
     }
 
-    [[nodiscard]] constexpr inline auto operator-() const
-    {
-        return utransform(std::negate());
-    }
+    [[nodiscard]] constexpr inline auto operator-() const { return utransform(std::negate()); }
 
     template<typename F>
     constexpr qvec operator+=(const qvec<F, N> &other)
@@ -296,6 +283,13 @@ public:
     constexpr auto end() const { return v.end(); }
     constexpr auto cbegin() const { return v.cbegin(); }
     constexpr auto cend() const { return v.cend(); }
+
+    // gtest support
+    friend std::ostream &operator<<(std::ostream &os, const qvec &point)
+    {
+        os << fmt::format("{}", point);
+        return os;
+    }
 };
 
 // Fmt support
@@ -781,17 +775,9 @@ public:
     {
     }
 
-private:
-    auto as_tuple() const { return std::tie(normal, dist); }
-
 public:
     // Sort support
-    [[nodiscard]] constexpr bool operator<(const qplane3 &other) const { return as_tuple() < other.as_tuple(); }
-    [[nodiscard]] constexpr bool operator<=(const qplane3 &other) const { return as_tuple() <= other.as_tuple(); }
-    [[nodiscard]] constexpr bool operator>(const qplane3 &other) const { return as_tuple() > other.as_tuple(); }
-    [[nodiscard]] constexpr bool operator>=(const qplane3 &other) const { return as_tuple() >= other.as_tuple(); }
-    [[nodiscard]] constexpr bool operator==(const qplane3 &other) const { return as_tuple() == other.as_tuple(); }
-    [[nodiscard]] constexpr bool operator!=(const qplane3 &other) const { return as_tuple() != other.as_tuple(); }
+    [[nodiscard]] constexpr auto operator<=>(const qplane3 &other) const = default;
 
     [[nodiscard]] constexpr const qvec<T, 4> vec4() const { return qvec<T, 4>(normal[0], normal[1], normal[2], dist); }
 
@@ -906,12 +892,7 @@ public:
     }
 
     // Sort support
-    [[nodiscard]] constexpr bool operator<(const qmat &other) const { return m_values < other.m_values; }
-    [[nodiscard]] constexpr bool operator<=(const qmat &other) const { return m_values <= other.m_values; }
-    [[nodiscard]] constexpr bool operator>(const qmat &other) const { return m_values > other.m_values; }
-    [[nodiscard]] constexpr bool operator>=(const qmat &other) const { return m_values >= other.m_values; }
-    [[nodiscard]] constexpr bool operator==(const qmat &other) const { return m_values == other.m_values; }
-    [[nodiscard]] constexpr bool operator!=(const qmat &other) const { return m_values != other.m_values; }
+    [[nodiscard]] constexpr auto operator<=>(const qmat &other) const = default;
 
     // access to elements
 
@@ -1171,16 +1152,19 @@ std::vector<V> PointsAlongLine(const V &start, const V &end, const float step)
     return result;
 }
 
-bool LinesOverlap(const qvec3f &p0, const qvec3f &p1, const qvec3f &q0, const qvec3f &q1,
-    const double &on_epsilon = DEFAULT_ON_EPSILON);
+bool LinesOverlap(
+    const qvec3f &p0, const qvec3f &p1, const qvec3f &q0, const qvec3f &q1, double on_epsilon = DEFAULT_ON_EPSILON);
 
+/**
+ * Same as a std::array<T, 2> with the added semantics that arr[0] is "the front" and arr[1] is "the back".
+ */
 template<typename T>
 struct twosided
 {
     T front, back;
 
     // 0 is front, 1 is back
-    constexpr T &operator[](const int32_t &i)
+    constexpr T &operator[](int32_t i)
     {
         switch (i) {
             case 0: return front;
@@ -1190,7 +1174,7 @@ struct twosided
         throw std::exception();
     }
     // 0 is front, 1 is back
-    constexpr const T &operator[](const int32_t &i) const
+    constexpr const T &operator[](int32_t i) const
     {
         switch (i) {
             case 0: return front;
@@ -1209,6 +1193,10 @@ struct twosided
 
     // swap the front and back values
     constexpr void swap() { std::swap(front, back); }
+
+    // std::array compat
+    using value_type = T;
+    constexpr size_t size() const { return 2; }
 };
 
 namespace qv

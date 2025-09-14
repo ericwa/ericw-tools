@@ -72,7 +72,7 @@ struct dmodelq1_t
 {
     qvec3f mins;
     qvec3f maxs;
-    qvec3f origin;
+    qvec3f origin; /* unused */
     std::array<int32_t, MAX_MAP_HULLS_Q1> headnode; /* 4 for backward compat, only 3 hulls exist */
     int32_t visleafs; /* not including the solid leaf 0 */
     int32_t firstface;
@@ -81,10 +81,10 @@ struct dmodelq1_t
     dmodelq1_t() = default;
 
     // convert from mbsp_t
-    dmodelq1_t(const dmodelh2_t &model);
+    explicit dmodelq1_t(const dmodelh2_t &model);
 
     // convert to mbsp_t
-    operator dmodelh2_t() const;
+    explicit operator dmodelh2_t() const;
 
     // serialize for streams
     void stream_write(std::ostream &s) const;
@@ -110,7 +110,7 @@ constexpr static int BSPXBRUSHES_CONTENTS_CLIP = -8;
 struct bsp29_dnode_t
 {
     int32_t planenum;
-    std::array<int16_t, 2>
+    twosided<int16_t>
         children; /* negative numbers are -(leafs+1), not nodes. children[0] is front, children[1] is back */
     qvec3s mins; /* for sphere culling */
     qvec3s maxs;
@@ -120,10 +120,10 @@ struct bsp29_dnode_t
     bsp29_dnode_t() = default;
 
     // convert from mbsp_t
-    bsp29_dnode_t(const bsp2_dnode_t &model);
+    explicit bsp29_dnode_t(const bsp2_dnode_t &model);
 
     // convert to mbsp_t
-    operator bsp2_dnode_t() const;
+    explicit operator bsp2_dnode_t() const;
 
     // serialize for streams
     void stream_write(std::ostream &s) const;
@@ -133,7 +133,7 @@ struct bsp29_dnode_t
 struct bsp2rmq_dnode_t
 {
     int32_t planenum;
-    std::array<int32_t, 2> children; /* negative numbers are -(leafs+1), not nodes */
+    twosided<int32_t> children; /* negative numbers are -(leafs+1), not nodes */
     qvec3s mins; /* for sphere culling */
     qvec3s maxs;
     uint32_t firstface;
@@ -142,10 +142,10 @@ struct bsp2rmq_dnode_t
     bsp2rmq_dnode_t() = default;
 
     // convert from mbsp_t
-    bsp2rmq_dnode_t(const bsp2_dnode_t &model);
+    explicit bsp2rmq_dnode_t(const bsp2_dnode_t &model);
 
     // convert to mbsp_t
-    operator bsp2_dnode_t() const;
+    explicit operator bsp2_dnode_t() const;
 
     // serialize for streams
     void stream_write(std::ostream &s) const;
@@ -162,15 +162,15 @@ struct bsp2rmq_dnode_t
 struct bsp29_dclipnode_t
 {
     int32_t planenum;
-    std::array<int16_t, 2> children; /* negative numbers are contents */
+    twosided<int16_t> children; /* negative numbers are contents */
 
     bsp29_dclipnode_t() = default;
 
     // convert from mbsp_t
-    bsp29_dclipnode_t(const bsp2_dclipnode_t &model);
+    explicit bsp29_dclipnode_t(const bsp2_dclipnode_t &model);
 
     // convert to mbsp_t
-    operator bsp2_dclipnode_t() const;
+    explicit operator bsp2_dclipnode_t() const;
 
     // serialize for streams
     void stream_write(std::ostream &s) const;
@@ -197,10 +197,10 @@ struct texinfo_t
     texinfo_t() = default;
 
     // convert from mbsp_t
-    texinfo_t(const mtexinfo_t &model);
+    explicit texinfo_t(const mtexinfo_t &model);
 
     // convert to mbsp_t
-    operator mtexinfo_t() const;
+    explicit operator mtexinfo_t() const;
 
     // serialize for streams
     void stream_write(std::ostream &s) const;
@@ -228,10 +228,10 @@ struct bsp29_dface_t
     bsp29_dface_t() = default;
 
     // convert from mbsp_t
-    bsp29_dface_t(const mface_t &model);
+    explicit bsp29_dface_t(const mface_t &model);
 
     // convert to mbsp_t
-    operator mface_t() const;
+    explicit operator mface_t() const;
 
     // serialize for streams
     void stream_write(std::ostream &s) const;
@@ -253,10 +253,10 @@ struct bsp2_dface_t
     bsp2_dface_t() = default;
 
     // convert from mbsp_t
-    bsp2_dface_t(const mface_t &model);
+    explicit bsp2_dface_t(const mface_t &model);
 
     // convert to mbsp_t
-    operator mface_t() const;
+    explicit operator mface_t() const;
 
     // serialize for streams
     void stream_write(std::ostream &s) const;
@@ -276,10 +276,10 @@ struct bsp29_dleaf_t
     bsp29_dleaf_t() = default;
 
     // convert from mbsp_t
-    bsp29_dleaf_t(const mleaf_t &model);
+    explicit bsp29_dleaf_t(const mleaf_t &model);
 
     // convert to mbsp_t
-    operator mleaf_t() const;
+    explicit operator mleaf_t() const;
 
     // serialize for streams
     void stream_write(std::ostream &s) const;
@@ -299,10 +299,10 @@ struct bsp2rmq_dleaf_t
     bsp2rmq_dleaf_t() = default;
 
     // convert from mbsp_t
-    bsp2rmq_dleaf_t(const mleaf_t &model);
+    explicit bsp2rmq_dleaf_t(const mleaf_t &model);
 
     // convert to mbsp_t
-    operator mleaf_t() const;
+    explicit operator mleaf_t() const;
 
     // serialize for streams
     void stream_write(std::ostream &s) const;
@@ -322,10 +322,10 @@ struct bsp2_dleaf_t
     bsp2_dleaf_t() = default;
 
     // convert from mbsp_t
-    bsp2_dleaf_t(const mleaf_t &model);
+    explicit bsp2_dleaf_t(const mleaf_t &model);
 
     // convert to mbsp_t
-    operator mleaf_t() const;
+    explicit operator mleaf_t() const;
 
     // serialize for streams
     void stream_write(std::ostream &s) const;

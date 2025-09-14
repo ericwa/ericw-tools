@@ -1,12 +1,36 @@
 #include "test_main.hh"
 
-#define DOCTEST_CONFIG_IMPLEMENT
-#include <doctest/doctest.h>
+#include <gtest/gtest.h>
 
 #include <common/log.hh>
 #include <common/threads.hh>
+#include <common/fs.hh>
+#include <common/imglib.hh>
 
 bool tests_verbose = false;
+
+class clear_shared_data_listener : public testing::TestEventListener
+{
+public:
+    void OnTestProgramStart(const testing::UnitTest &unit_test) override { }
+    void OnTestIterationStart(const testing::UnitTest &unit_test, int iteration) override { }
+    void OnEnvironmentsSetUpStart(const testing::UnitTest &unit_test) override { }
+    void OnEnvironmentsSetUpEnd(const testing::UnitTest &unit_test) override { }
+    void OnTestSuiteStart(const testing::TestSuite &test_suite) override { }
+    void OnTestStart(const testing::TestInfo &test_info) override
+    {
+        fs::clear();
+        img::clear();
+    }
+    void OnTestDisabled(const testing::TestInfo &test_info) override { }
+    void OnTestPartResult(const testing::TestPartResult &test_part_result) override { }
+    void OnTestEnd(const testing::TestInfo &test_info) override { }
+    void OnTestSuiteEnd(const testing::TestSuite &test_suite) override { }
+    void OnEnvironmentsTearDownStart(const testing::UnitTest &unit_test) override { }
+    void OnEnvironmentsTearDownEnd(const testing::UnitTest &unit_test) override { }
+    void OnTestIterationEnd(const testing::UnitTest &unit_test, int iteration) override { }
+    void OnTestProgramEnd(const testing::UnitTest &unit_test) override { }
+};
 
 int main(int argc, char **argv)
 {
@@ -26,20 +50,17 @@ int main(int argc, char **argv)
             continue;
         }
         // parse "-verbose"
-        if (!strcmp("-verbose", argv[i]) || !strcmp("--verbose", argv[i])) {
+        if (!strcmp("-verbose", argv[i]) || !strcmp("--verbose", argv[i]) || !strcmp("-v", argv[i])) {
             tests_verbose = true;
             continue;
         }
     }
 
-    doctest::Context context;
+    testing::InitGoogleTest(&argc, argv);
 
-    context.applyCommandLine(argc, argv);
-    int res = context.run();
+    // clear fs, etc., between each test
+    testing::TestEventListeners &listeners = testing::UnitTest::GetInstance()->listeners();
+    listeners.Append(new clear_shared_data_listener());
 
-    if (context.shouldExit()) {
-        return res;
-    }
-
-    return res;
+    return RUN_ALL_TESTS();
 }

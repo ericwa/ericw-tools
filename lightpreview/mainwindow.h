@@ -29,9 +29,9 @@ class GLView;
 class QFileSystemWatcher;
 class QLineEdit;
 class QCheckBox;
-class QStringList;
 class QTextEdit;
 class StatsPanel;
+class QLabel;
 
 enum class ETLogTab
 {
@@ -73,10 +73,12 @@ private:
     QString m_mapFile;
     bspdata_t m_bspdata;
     std::vector<uint8_t> m_litdata;
+    std::vector<uint32_t> m_hdr_litdata;
     settings::common_settings render_settings;
     qint64 m_fileSize = -1;
     ETLogTab m_activeLogTab = ETLogTab::TAB_LIGHTPREVIEW;
     QThread *m_compileThread = nullptr;
+    QLabel *m_cameraStatus = nullptr;
 
 public:
     explicit MainWindow(QWidget *parent = nullptr);
@@ -99,7 +101,8 @@ private:
     int compileMap(const QString &file, bool is_reload);
     void compileThreadExited();
     bspdata_t QbspVisLight_Common(const fs::path &name, std::vector<std::string> extra_common_args,
-        std::vector<std::string> extra_qbsp_args, std::vector<std::string> extra_vis_args, std::vector<std::string> extra_light_args, bool run_vis, bool run_light);
+        std::vector<std::string> extra_qbsp_args, std::vector<std::string> extra_vis_args,
+        std::vector<std::string> extra_light_args, bool run_vis, bool run_light);
 
 protected:
     void dragEnterEvent(QDragEnterEvent *event) override;

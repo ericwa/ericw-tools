@@ -28,6 +28,7 @@
 
 #include <cstdint>
 #include <limits.h>
+#include <system_error>
 
 #include <fmt/core.h>
 
@@ -48,74 +49,79 @@ static std::vector<qvec3b> make_palette(std::initializer_list<uint8_t> bytes)
     return result;
 }
 
+// clang-format off
+/**
+ * Keep up to date with contents_t enum.
+ */
 static constexpr const char *bitflag_names[] = {
-    "SOLID",
-    "SKY",
-    "DETAIL_WALL",
-    "WINDOW",
-    "AUX",
-    "LAVA",
-    "SLIME",
-    "WATER",
-    "MIST",
-    "ORIGIN",
-    "PLAYERCLIP",
-    "MONSTERCLIP",
-    "AREAPORTAL",
-    "ILLUSIONARY_VISBLOCKER",
-    "DETAIL",
-    "MIRROR_INSIDE",
-    "MIRROR_INSIDE_SET",
-    "SUPPRESS_CLIPPING_SAME_TYPE",
-    "CURRENT_0",
-    "CURRENT_90",
-    "CURRENT_180",
-    "CURRENT_270",
-    "CURRENT_UP",
-    "CURRENT_DOWN",
-    "TRANSLUCENT",
-    "LADDER",
-    "MONSTER",
-    "DEADMONSTER",
-    "Q2_UNUSED_7",
-    "Q2_UNUSED_8",
-    "Q2_UNUSED_9",
-    "Q2_UNUSED_10",
-    "Q2_UNUSED_11",
-    "Q2_UNUSED_12",
-    "Q2_UNUSED_13",
-    "Q2_UNUSED_14",
-    "Q2_UNUSED_30",
-    "Q2_UNUSED_31",
-    "INVALID_BIT_38",
-    "INVALID_BIT_39",
-    "INVALID_BIT_40",
-    "INVALID_BIT_41",
-    "INVALID_BIT_42",
-    "INVALID_BIT_43",
-    "INVALID_BIT_44",
-    "INVALID_BIT_45",
-    "INVALID_BIT_46",
-    "INVALID_BIT_47",
-    "INVALID_BIT_48",
-    "INVALID_BIT_49",
-    "INVALID_BIT_50",
-    "INVALID_BIT_51",
-    "INVALID_BIT_52",
-    "INVALID_BIT_53",
-    "INVALID_BIT_54",
-    "INVALID_BIT_55",
-    "INVALID_BIT_56",
-    "INVALID_BIT_57",
-    "INVALID_BIT_58",
-    "INVALID_BIT_59",
-    "INVALID_BIT_60",
-    "INVALID_BIT_61",
-    "INVALID_BIT_62",
-    "INVALID_BIT_63"
+    "SOLID", // bit 0
+    "SKY", // bit 1
+    "DETAIL_WALL", // bit 2
+    "WINDOW", // bit 3
+    "ILLUSIONARY_VISBLOCKER", // bit 4
+    "AUX", // bit 5
+    "LAVA", // bit 6
+    "SLIME", // bit 7
+    "WATER", // bit 8
+    "MIST", // bit 9
+    "ORIGIN", // bit 10
+    "PLAYERCLIP", // bit 11
+    "MONSTERCLIP", // bit 12
+    "AREAPORTAL", // bit 13
+    "NO_WATERJUMP", // bit 14
+    "PROJECTILECLIP", // bit 15
+    "MIRROR_INSIDE", // bit 16
+    "MIRROR_INSIDE_SET", // bit 17
+    "SUPPRESS_CLIPPING_SAME_TYPE", // bit 18
+    "CURRENT_0", // bit 19
+    "CURRENT_90", // bit 20
+    "CURRENT_180", // bit 21
+    "CURRENT_270", // bit 22
+    "CURRENT_UP", // bit 23
+    "CURRENT_DOWN", // bit 24
+    "TRANSLUCENT", // bit 25
+    "LADDER", // bit 26
+    "MONSTER", // bit 27
+    "DEADMONSTER", // bit 28
+    "DETAIL", // bit 29
+    "Q2_UNUSED_7", // bit 30
+    "Q2_UNUSED_8", // bit 31
+    "Q2_UNUSED_9", // bit 32
+    "Q2_UNUSED_10", // bit 33
+    "Q2_UNUSED_11", // bit 34
+    "Q2_UNUSED_12", // bit 35
+    "Q2_UNUSED_30", // bit 36
+    "Q2_UNUSED_31", // bit 37
+    "INVALID_BIT_38", // bit 38
+    "INVALID_BIT_39", // bit 39
+    "INVALID_BIT_40", // bit 40
+    "INVALID_BIT_41", // bit 41
+    "INVALID_BIT_42", // bit 42
+    "INVALID_BIT_43", // bit 43
+    "INVALID_BIT_44", // bit 44
+    "INVALID_BIT_45", // bit 45
+    "INVALID_BIT_46", // bit 46
+    "INVALID_BIT_47", // bit 47
+    "INVALID_BIT_48", // bit 48
+    "INVALID_BIT_49", // bit 49
+    "INVALID_BIT_50", // bit 50
+    "INVALID_BIT_51", // bit 51
+    "INVALID_BIT_52", // bit 52
+    "INVALID_BIT_53", // bit 53
+    "INVALID_BIT_54", // bit 54
+    "INVALID_BIT_55", // bit 55
+    "INVALID_BIT_56", // bit 56
+    "INVALID_BIT_57", // bit 57
+    "INVALID_BIT_58", // bit 58
+    "INVALID_BIT_59", // bit 59
+    "INVALID_BIT_60", // bit 60
+    "INVALID_BIT_61", // bit 61
+    "INVALID_BIT_62", // bit 62
+    "INVALID_BIT_63" // bit 63
 };
+// clang-format on
 
-static std::string get_contents_display(contents_t bits)
+std::string get_contents_display(contents_t bits)
 {
     if (bits == EWT_VISCONTENTS_EMPTY) {
         return "EMPTY";
@@ -134,6 +140,42 @@ static std::string get_contents_display(contents_t bits)
     }
 
     return s;
+}
+
+nlohmann::json get_contents_json(contents_t bits)
+{
+    nlohmann::json result = nlohmann::json::array();
+
+    for (uint32_t i = 0; i < std::size(bitflag_names); i++) {
+        if (bits & nth_bit<contents_int_t>(i)) {
+            result.push_back(bitflag_names[i]);
+        }
+    }
+
+    return result;
+}
+
+contents_int_t set_contents_json(const nlohmann::json &json)
+{
+    contents_int_t result = EWT_VISCONTENTS_EMPTY;
+
+    if (!json.is_array()) {
+        return result;
+    }
+
+    for (const nlohmann::json &entry : json) {
+        if (!entry.is_string())
+            continue;
+
+        const std::string entry_str = entry.get<std::string>();
+
+        for (uint32_t i = 0; i < std::size(bitflag_names); i++) {
+            if (!Q_strcasecmp(entry_str.c_str(), bitflag_names[i]))
+                result |= nth_bit<contents_int_t>(i);
+        }
+    }
+
+    return result;
 }
 
 template<gameid_t ID>
@@ -157,7 +199,7 @@ public:
         if (!Q_strcasecmp(texname, "skip"))
             return false;
 
-        return !(flags.native & TEX_SPECIAL);
+        return !(flags.native_q1 & TEX_SPECIAL);
     }
 
     bool surf_is_emissive(const surfflags_t &flags, const char *texname) const override
@@ -169,20 +211,20 @@ public:
         return true;
     }
 
-    bool surf_is_subdivided(const surfflags_t &flags) const override { return !(flags.native & TEX_SPECIAL); }
+    bool surf_is_subdivided(const surfflags_t &flags) const override { return !(flags.native_q1 & TEX_SPECIAL); }
 
     bool surfflags_are_valid(const surfflags_t &flags) const override
     {
         // Q1 only supports TEX_SPECIAL
-        return (flags.native & ~TEX_SPECIAL) == 0;
+        return (flags.native_q1 & ~TEX_SPECIAL) == 0;
     }
 
     bool surfflags_may_phong(const surfflags_t &a, const surfflags_t &b) const override
     {
-        return (a.native & TEX_SPECIAL) == (b.native & TEX_SPECIAL);
+        return (a.native_q1 & TEX_SPECIAL) == (b.native_q1 & TEX_SPECIAL);
     }
 
-    int32_t surfflags_from_string(const std::string_view &str) const override
+    int32_t surfflags_from_string(std::string_view str) const override
     {
         if (string_iequals(str, "special")) {
             return TEX_SPECIAL;
@@ -191,32 +233,21 @@ public:
         return 0;
     }
 
-    bool texinfo_is_hintskip(const surfflags_t &flags, const std::string &name) const override
+    contentflags_t create_contents_from_native(int32_t native) const override
     {
-        // anything texname other than "hint" in a hint brush is treated as "hintskip", and discarded
-        return !string_iequals(name, "hint");
-    }
-
-    contentflags_t create_contents_from_native(int32_t native) const override {
         switch (native) {
-            case CONTENTS_SOLID:
-                return contentflags_t::make(EWT_VISCONTENTS_SOLID);
-            case CONTENTS_SKY:
-                return contentflags_t::make(EWT_VISCONTENTS_SKY);
-            case CONTENTS_LAVA:
-                return contentflags_t::make(EWT_VISCONTENTS_LAVA);
-            case CONTENTS_SLIME:
-                return contentflags_t::make(EWT_VISCONTENTS_SLIME);
-            case CONTENTS_WATER:
-                return contentflags_t::make(EWT_VISCONTENTS_WATER);
-            case CONTENTS_EMPTY:
-                return contentflags_t::make(EWT_VISCONTENTS_EMPTY);
+            case CONTENTS_SOLID: return contentflags_t::make(EWT_VISCONTENTS_SOLID);
+            case CONTENTS_SKY: return contentflags_t::make(EWT_VISCONTENTS_SKY);
+            case CONTENTS_LAVA: return contentflags_t::make(EWT_VISCONTENTS_LAVA);
+            case CONTENTS_SLIME: return contentflags_t::make(EWT_VISCONTENTS_SLIME);
+            case CONTENTS_WATER: return contentflags_t::make(EWT_VISCONTENTS_WATER);
+            case CONTENTS_EMPTY: return contentflags_t::make(EWT_VISCONTENTS_EMPTY);
         }
-        throw std::invalid_argument(
-                fmt::format("create_contents_from_native: unknown Q1 contents {}", native));
+        throw std::invalid_argument(fmt::format("create_contents_from_native: unknown Q1 contents {}", native));
     }
 
-    int32_t contents_to_native(const contentflags_t &contents) const override {
+    int32_t contents_to_native(contentflags_t contents) const override
+    {
         if (contents.flags & EWT_VISCONTENTS_SOLID) {
             return CONTENTS_SOLID;
         } else if (contents.flags & EWT_VISCONTENTS_SKY) {
@@ -225,6 +256,8 @@ public:
             throw std::invalid_argument("EWT_VISCONTENTS_DETAIL_WALL not representable in Q1");
         } else if (contents.flags & EWT_VISCONTENTS_WINDOW) {
             throw std::invalid_argument("EWT_VISCONTENTS_WINDOW not representable in Q1");
+        } else if (contents.flags & EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER) {
+            throw std::invalid_argument("EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER not representable in Q1");
         } else if (contents.flags & EWT_VISCONTENTS_AUX) {
             throw std::invalid_argument("EWT_VISCONTENTS_AUX not representable in Q1");
         } else if (contents.flags & EWT_VISCONTENTS_LAVA) {
@@ -239,227 +272,13 @@ public:
         return CONTENTS_EMPTY;
     }
 
-    contentflags_t cluster_contents(const contentflags_t &contents0, const contentflags_t &contents1) const override
-    {
-        contents_int_t combined = contents0.flags | contents1.flags;
-
-        // a cluster may include some solid detail areas, but
-        // still be seen into
-        if (!(contents0.flags & EWT_VISCONTENTS_SOLID) || !(contents1.flags & EWT_VISCONTENTS_SOLID)) {
-            combined &= ~EWT_VISCONTENTS_SOLID;
-        }
-
-        return contentflags_t::make(combined);
-    }
-
-    contentflags_t create_empty_contents() const override
-    {
-        return contentflags_t::make(EWT_VISCONTENTS_EMPTY);
-    }
-
-    contentflags_t create_solid_contents() const override
-    {
-        return contentflags_t::make(EWT_VISCONTENTS_SOLID);
-    }
-
-    contentflags_t create_detail_illusionary_contents(const contentflags_t &original) const override
-    {
-        return contentflags_t::make(EWT_VISCONTENTS_MIST | EWT_CFLAG_DETAIL);
-    }
-
-    contentflags_t create_detail_fence_contents(const contentflags_t &original) const override
-    {
-        return contentflags_t::make(EWT_VISCONTENTS_WINDOW | EWT_CFLAG_DETAIL);
-    }
-
-    contentflags_t create_detail_wall_contents(const contentflags_t &original) const override
-    {
-        return contentflags_t::make(EWT_VISCONTENTS_DETAIL_WALL | EWT_CFLAG_DETAIL);
-    }
-
-    contentflags_t create_detail_solid_contents(const contentflags_t &original) const override
-    {
-        return contentflags_t::make(EWT_VISCONTENTS_SOLID | EWT_CFLAG_DETAIL);
-    }
-
-    contentflags_t clear_detail(const contentflags_t &original) const override
-    {
-        return contentflags_t::make(original.flags & (~EWT_CFLAG_DETAIL));
-    }
-
-    contentflags_t set_detail(const contentflags_t &original) const override
-    {
-        return contentflags_t::make(original.flags | EWT_CFLAG_DETAIL);
-    }
-
-    bool contents_are_type_equal(const contentflags_t &self, const contentflags_t &other) const override
-    {
-        // fixme-brushbsp: document what this is supposed to do, remove if unneeded?
-        // is it checking for equality of visible content bits (in q2 terminology)?
-        // same highest-priority visible content bit?
-
-        return self.flags == other.flags;
-    }
-
-    bool contents_are_equal(const contentflags_t &self, const contentflags_t &other) const override
-    {
-        return self.flags == other.flags;
-    }
-
-    bool contents_are_any_detail(const contentflags_t &contents) const override
-    {
-        return (contents.flags & EWT_CFLAG_DETAIL) != 0;
-    }
-
-    bool contents_are_detail_solid(const contentflags_t &contents) const override
-    {
-        // fixme-brushbsp: document whether this is an exclusive test (i.e. what does it return for water|solid|detail)
-        return (contents.flags & EWT_CFLAG_DETAIL)
-        && (contents.flags & EWT_VISCONTENTS_SOLID);
-    }
-
-    bool contents_are_detail_wall(const contentflags_t &contents) const override
-    {
-        // fixme-brushbsp: document whether this is an exclusive test (i.e. what does it return for water|fence|detail)
-        return (contents.flags & EWT_CFLAG_DETAIL)
-               && (contents.flags & EWT_VISCONTENTS_DETAIL_WALL);
-    }
-
-    bool contents_are_detail_fence(const contentflags_t &contents) const override
-    {
-        // fixme-brushbsp: document whether this is an exclusive test (i.e. what does it return for water|fence|detail)
-        return (contents.flags & EWT_CFLAG_DETAIL)
-               && (contents.flags & EWT_VISCONTENTS_WINDOW);
-
-    }
-
-    bool contents_are_detail_illusionary(const contentflags_t &contents) const override
-    {
-        // fixme-brushbsp: document whether this is an exclusive test (i.e. what does it return for water|mist|detail)
-        return (contents.flags & EWT_CFLAG_DETAIL)
-               && (contents.flags & EWT_VISCONTENTS_MIST);
-    }
-
-    bool contents_are_origin(const contentflags_t &contents) const override
-    {
-        // fixme-brushbsp: document whether this is an exclusive test (i.e. what does it return for water|origin)
-        return (contents.flags & EWT_INVISCONTENTS_ORIGIN) != 0;
-    }
-
-    bool contents_are_clip(const contentflags_t &contents) const override
-    {
-        // fixme-brushbsp: document whether this is an exclusive test (i.e. what does it return for water|clip)
-        return (contents.flags & EWT_INVISCONTENTS_PLAYERCLIP) != 0;
-    }
-
-    bool contents_clip_same_type(const contentflags_t &self, const contentflags_t &other) const override
-    {
-        if (!self.equals(this, other))
-            return false;
-
-        // they're equal types...
-
-        if (self.flags & EWT_CFLAG_SUPPRESS_CLIPPING_SAME_TYPE)
-            return false; // don't clip
-
-        return true;
-    }
-
-    bool contents_are_empty(const contentflags_t &contents) const override
-    {
-        if (contents.flags & EWT_INVISCONTENTS_ORIGIN)
-            return false;
-        if (contents.flags & EWT_INVISCONTENTS_PLAYERCLIP)
-            return false;
-        return (contents.flags & EWT_ALL_VISIBLE_CONTENTS) == 0;
-    }
-
-    bool contents_are_any_solid(const contentflags_t &contents) const override
-    {
-        return (contents.flags & EWT_VISCONTENTS_SOLID) != 0;
-    }
-
-    // fixme-brushbsp: this is a leftover from q1 tools, and not really used in qbsp3, remove if possible
-    bool contents_are_solid(const contentflags_t &contents) const override
-    {
-        return (contents.flags & EWT_VISCONTENTS_SOLID)
-            && !(contents.flags & EWT_CFLAG_DETAIL);
-    }
-
-    bool contents_are_sky(const contentflags_t &contents) const override
-    {
-        return (contents.flags & EWT_VISCONTENTS_SKY);
-    }
-
-    bool contents_are_liquid(const contentflags_t &contents) const override
-    {
-        return (contents.visible_contents().flags  & EWT_ALL_LIQUIDS) != 0;
-    }
-
-    bool contents_are_valid(const contentflags_t &contents, bool strict) const override
-    {
-        // fixme-brushbsp: document exactly what this is supposed to do
-        return true;
-    }
-
-    int32_t contents_from_string(const std::string_view &str) const override
+    int32_t contents_from_string(std::string_view str) const override
     {
         // Q1 doesn't get contents from files
         return 0;
     }
 
-    bool portal_can_see_through(
-        const contentflags_t &contents0, const contentflags_t &contents1, bool transwater) const override
-    {
-        contents_int_t bits_a = contents0.flags;
-        contents_int_t bits_b = contents1.flags;
-
-        // can't see through solid
-        if ((bits_a & EWT_VISCONTENTS_SOLID) || (bits_b & EWT_VISCONTENTS_SOLID)) {
-            return false;
-        }
-
-        bool a_translucent = transwater ? ((bits_a & EWT_ALL_LIQUIDS) != 0) : false;
-        bool b_translucent = transwater ? ((bits_b & EWT_ALL_LIQUIDS) != 0) : false;
-
-        if (((bits_a ^ bits_b) & EWT_ALL_VISIBLE_CONTENTS) == 0)
-            return true;
-
-        if ((bits_a & EWT_CFLAG_DETAIL) || a_translucent)
-            bits_a = 0;
-        if ((bits_b & EWT_CFLAG_DETAIL) || b_translucent)
-            bits_b = 0;
-
-        if ((bits_a ^ bits_b) == 0)
-            return true; // identical on both sides
-
-        if (((bits_a ^ bits_b) & EWT_ALL_VISIBLE_CONTENTS) == 0)
-            return true;
-        return false;
-    }
-
-    bool contents_seals_map(const contentflags_t &contents) const override
-    {
-        return contents_are_solid(contents) || contents_are_sky(contents);
-    }
-
-    bool contents_are_opaque(const contentflags_t &contents, bool transwater) const override
-    {
-        auto bits = contents.visible_contents().flags;
-
-        if (bits == EWT_VISCONTENTS_SOLID) return true;
-        else if (bits == EWT_VISCONTENTS_SKY) return true;
-        else if (bits == EWT_VISCONTENTS_DETAIL_WALL) return true;
-        else if (bits == EWT_VISCONTENTS_WINDOW) return false;
-        else if (bits == EWT_VISCONTENTS_LAVA) return !transwater;
-        else if (bits == EWT_VISCONTENTS_SLIME) return !transwater;
-        else if (bits == EWT_VISCONTENTS_WATER) return !transwater;
-        else if (bits == EWT_VISCONTENTS_MIST) return false;
-
-        return false;
-    }
-
-    contentflags_t contents_remap_for_export(const contentflags_t &contents, remap_type_t type) const override
+    contentflags_t contents_remap_for_export(contentflags_t contents, remap_type_t type) const override
     {
         /*
          * This is for func_detail_wall.. we want to write a solid leaf that has faces,
@@ -467,131 +286,61 @@ public:
          *
          * Normally solid leafs are not written and just referenced as leaf 0.
          */
-        if (contents_are_detail_fence(contents) || contents_are_detail_wall(contents)) {
-            return create_solid_contents();
+        if (contents.is_detail_fence() || contents.is_detail_wall()) {
+            return contentflags_t::make(EWT_VISCONTENTS_SOLID);
         }
+
         if (contents.flags & EWT_VISCONTENTS_MIST) {
             // clear mist. detail_illusionary on its own becomes CONTENTS_EMPTY,
             // detail_illusionary in water becomes CONTENTS_WATER, etc.
-            return contentflags_t::make(contents.flags & ~EWT_VISCONTENTS_MIST);
+            contents = contentflags_t::make(contents.flags & ~EWT_VISCONTENTS_MIST);
+        }
+        if (contents.flags & EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER) {
+            // this exports as empty
+            contents = contentflags_t::make(contents.flags & ~EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER);
         }
 
         return contents;
     }
 
-    contentflags_t combine_contents(const contentflags_t &a, const contentflags_t &b) const override
+    std::span<const aabb3d> get_hull_sizes() const override
     {
-        auto bits_a = a.flags;
-        auto bits_b = b.flags;
-
-        if (contents_are_solid(a) || contents_are_solid(b)) {
-            return create_solid_contents();
-        }
-        if (contents_are_sky(a) || contents_are_sky(b)) {
-            return contentflags_t::make(EWT_VISCONTENTS_SKY);
-        }
-
-        return contentflags_t::make(bits_a | bits_b);
-    }
-
-    contentflags_t portal_visible_contents(const contentflags_t &a, const contentflags_t &b) const override
-    {
-        auto bits_a = a.flags;
-        auto bits_b = b.flags;
-
-        // aviods spamming "sides not found" warning on Q1 maps with sky
-        if ((bits_a & (EWT_VISCONTENTS_SOLID | EWT_VISCONTENTS_SKY))
-            && (bits_b & (EWT_VISCONTENTS_SOLID | EWT_VISCONTENTS_SKY)))
-            return create_empty_contents();
-
-        contents_int_t result;
-
-        if ((bits_a & EWT_CFLAG_SUPPRESS_CLIPPING_SAME_TYPE) || (bits_b & EWT_CFLAG_SUPPRESS_CLIPPING_SAME_TYPE)) {
-            result = bits_a | bits_b;
-        } else {
-            result = bits_a ^ bits_b;
-        }
-
-        auto strongest_contents_change = contentflags_t::make(result).visible_contents();
-
-        return strongest_contents_change;
-    }
-
-    bool portal_generates_face(const contentflags_t &portal_visible_contents, const contentflags_t &brushcontents,
-        planeside_t brushside_side) const override
-    {
-        auto bits_portal = portal_visible_contents.flags;
-        auto bits_brush = brushcontents.flags;
-
-        // find the highest visible content bit set in portal
-        int32_t index = portal_visible_contents.visible_contents_index();
-        if (index == -1) {
-            return false;
-        }
-
-        // check if it's not set in the brush
-        if (!(bits_brush & nth_bit(index))) {
-            return false;
-        }
-
-        if (brushside_side == SIDE_BACK) {
-            // explicit override?
-            if (bits_brush & EWT_CFLAG_MIRROR_INSIDE_SET) {
-                return (bits_brush & EWT_CFLAG_MIRROR_INSIDE) != 0;
-            }
-
-            return (bits_brush & EWT_ALL_LIQUIDS) != 0;
-        }
-        return true;
-    }
-
-    std::string get_contents_display(const contentflags_t &contents) const override
-    {
-        return ::get_contents_display(contents.flags);
-    }
-
-    void contents_make_valid(contentflags_t &contents) const override
-    {
-        // fixme-brushbsp: probably wrong?
-        // todo: anything smarter we can do here?
-        // think this can't even happen in Q1 anyways
-        if (!contents_are_valid(contents, false)) {
-            contents = contentflags_t::make(EWT_VISCONTENTS_SOLID);
-        }
-    }
-
-    const std::initializer_list<aabb3d> &get_hull_sizes() const override
-    {
-        static std::initializer_list<aabb3d> hulls = {
+        static constexpr aabb3d hulls[] = {
             {{0, 0, 0}, {0, 0, 0}}, {{-16, -16, -32}, {16, 16, 24}}, {{-32, -32, -64}, {32, 32, 24}}};
 
         return hulls;
     }
 
     contentflags_t face_get_contents(
-        const std::string &texname, const surfflags_t &flags, const contentflags_t &) const override
+        const std::string &texname, const surfflags_t &flags, contentflags_t, bool transwater) const override
     {
         // check for strong content indicators
         if (!Q_strcasecmp(texname.data(), "origin")) {
             return contentflags_t::make(EWT_INVISCONTENTS_ORIGIN);
         } else if (!Q_strcasecmp(texname.data(), "hint") || !Q_strcasecmp(texname.data(), "hintskip")) {
-            return create_empty_contents();
+            return contentflags_t::make(EWT_VISCONTENTS_EMPTY);
         } else if (!Q_strcasecmp(texname.data(), "clip")) {
             return contentflags_t::make(EWT_INVISCONTENTS_PLAYERCLIP);
         } else if (texname[0] == '*') {
+            // non-Q2: -transwater implies liquids are detail and translucent
+            contents_int_t liquid_flags = 0;
+            if (transwater) {
+                liquid_flags = EWT_CFLAG_DETAIL | EWT_CFLAG_TRANSLUCENT;
+            }
+
             if (!Q_strncasecmp(texname.data() + 1, "lava", 4)) {
-                return contentflags_t::make(EWT_VISCONTENTS_LAVA);
+                return contentflags_t::make(EWT_VISCONTENTS_LAVA | liquid_flags);
             } else if (!Q_strncasecmp(texname.data() + 1, "slime", 5)) {
-                return contentflags_t::make(EWT_VISCONTENTS_SLIME);
+                return contentflags_t::make(EWT_VISCONTENTS_SLIME | liquid_flags);
             } else {
-                return contentflags_t::make(EWT_VISCONTENTS_WATER);
+                return contentflags_t::make(EWT_VISCONTENTS_WATER | liquid_flags);
             }
         } else if (!Q_strncasecmp(texname.data(), "sky", 3)) {
             return contentflags_t::make(EWT_VISCONTENTS_SKY);
         }
 
         // and anything else is assumed to be a regular solid.
-        return create_solid_contents();
+        return contentflags_t::make(EWT_VISCONTENTS_SOLID);
     }
 
     void init_filesystem(const fs::path &map_or_bsp, const settings::common_settings &options) const override
@@ -653,46 +402,6 @@ public:
         static const auto palette = make_palette(palette_bytes);
         return palette;
     }
-
-private:
-    struct content_stats_t : public content_stats_base_t
-    {
-        std::mutex stat_mutex;
-        std::unordered_map<contents_t, size_t> native_types;
-        std::atomic<size_t> total_brushes;
-    };
-
-public:
-    std::unique_ptr<content_stats_base_t> create_content_stats() const override
-    {
-        return std::unique_ptr<content_stats_base_t>(new content_stats_t{});
-    }
-
-    void count_contents_in_stats(const contentflags_t &contents, content_stats_base_t &stats_any) const override
-    {
-        content_stats_t &stats = dynamic_cast<content_stats_t &>(stats_any);
-
-        {
-            std::unique_lock lock(stats.stat_mutex);
-            stats.native_types[contents.flags]++;
-        }
-
-        stats.total_brushes++;
-    }
-
-    void print_content_stats(const content_stats_base_t &stats_any, const char *what) const override
-    {
-        const content_stats_t &stats = dynamic_cast<const content_stats_t &>(stats_any);
-        logging::stat_tracker_t stat_print;
-
-        for (auto [bits, count] : stats.native_types) {
-            auto c = contentflags_t{.flags = bits};
-            stat_print.register_stat(fmt::format("{} {}", get_contents_display(c), what))
-                .count += count;
-        }
-
-        stat_print.register_stat(fmt::format("{} total", what)).count += stats.total_brushes;
-    }
 };
 
 struct gamedef_h2_t : public gamedef_q1_like_t<GAME_HEXEN_II>
@@ -702,9 +411,9 @@ struct gamedef_h2_t : public gamedef_q1_like_t<GAME_HEXEN_II>
     {
     }
 
-    const std::initializer_list<aabb3d> &get_hull_sizes() const override
+    std::span<const aabb3d> get_hull_sizes() const override
     {
-        static std::initializer_list<aabb3d> hulls = {{{0, 0, 0}, {0, 0, 0}}, {{-16, -16, -32}, {16, 16, 24}},
+        static constexpr aabb3d hulls[] = {{{0, 0, 0}, {0, 0, 0}}, {{-16, -16, -32}, {16, 16, 24}},
             {{-24, -24, -20}, {24, 24, 20}}, {{-16, -16, -16}, {16, 16, 12}},
             {{-8, -8, -8}, {8, 8, 8}}, // {{-40, -40, -42}, {40, 40, 42}} = original game
             {{-28, -28, -40}, {28, 28, 40}}};
@@ -759,9 +468,9 @@ struct gamedef_hl_t : public gamedef_q1_like_t<GAME_HALF_LIFE>
         has_rgb_lightmap = true;
     }
 
-    const std::initializer_list<aabb3d> &get_hull_sizes() const override
+    std::span<const aabb3d> get_hull_sizes() const override
     {
-        static std::initializer_list<aabb3d> hulls = {{{0, 0, 0}, {0, 0, 0}}, {{-16, -16, -36}, {16, 16, 36}},
+        static constexpr aabb3d hulls[] = {{{0, 0, 0}, {0, 0, 0}}, {{-16, -16, -36}, {16, 16, 36}},
             {{-32, -32, -32}, {32, 32, 32}}, {{-16, -16, -18}, {16, 16, 18}}};
 
         return hulls;
@@ -793,22 +502,22 @@ struct gamedef_q2_t : public gamedef_t
             return false;
 
         // Q2RTX should light nodraw faces
-        if (light_nodraw && (flags.native & Q2_SURF_NODRAW)) {
+        if (light_nodraw && flags.is_nodraw()) {
             return true;
         }
 
         // The only reason to lightmap sky faces in Q2 is to light models floating over sky.
         // If lightgrid is in use, this reason is no longer relevant, so skip lightmapping.
-        if (lightgrid_enabled && (flags.native & Q2_SURF_SKY)) {
+        if (lightgrid_enabled && (flags.native_q2 & Q2_SURF_SKY)) {
             return false;
         }
 
-        return !(flags.native & (Q2_SURF_NODRAW | Q2_SURF_SKIP));
+        return !(flags.native_q2 & (Q2_SURF_NODRAW | Q2_SURF_SKIP));
     }
 
     bool surf_is_emissive(const surfflags_t &flags, const char *texname) const override { return true; }
 
-    bool surf_is_subdivided(const surfflags_t &flags) const override { return !(flags.native & Q2_SURF_SKY); }
+    bool surf_is_subdivided(const surfflags_t &flags) const override { return !(flags.native_q2 & Q2_SURF_SKY); }
 
     bool surfflags_are_valid(const surfflags_t &flags) const override
     {
@@ -820,7 +529,7 @@ struct gamedef_q2_t : public gamedef_t
     {
         // these are the bits we'll require to match in order to allow phonging `a` and `b`
         auto mask = [](const surfflags_t &flags) {
-            return flags.native &
+            return flags.native_q2 &
                    (Q2_SURF_SKY | Q2_SURF_WARP | Q2_SURF_TRANS33 | Q2_SURF_TRANS66 | Q2_SURF_FLOWING | Q2_SURF_NODRAW);
         };
 
@@ -831,7 +540,7 @@ struct gamedef_q2_t : public gamedef_t
         "FLOWING", "NODRAW", "HINT", "512", "1024", "2048", "4096", "8192", "16384", "32768", "65536", "131072",
         "262144", "524288", "1048576", "2097152", "4194304", "8388608", "16777216", "ALPHATEST"};
 
-    int32_t surfflags_from_string(const std::string_view &str) const override
+    int32_t surfflags_from_string(std::string_view str) const override
     {
         for (size_t i = 0; i < std::size(surf_bitflag_names); i++) {
             if (string_iequals(str, surf_bitflag_names[i])) {
@@ -842,288 +551,170 @@ struct gamedef_q2_t : public gamedef_t
         return 0;
     }
 
-    bool texinfo_is_hintskip(const surfflags_t &flags, const std::string &name) const override
+    contentflags_t create_contents_from_native(int32_t native) const override
     {
-        // any face in a hint brush that isn't HINT are treated as "hintskip", and discarded
-        return !(flags.native & Q2_SURF_HINT);
-    }
-
-    contentflags_t create_contents_from_native(int32_t native) const override {
         contents_int_t result = 0;
 
         // visible contents
-        if (native & Q2_CONTENTS_SOLID) result |= EWT_VISCONTENTS_SOLID;
-        if (native & Q2_CONTENTS_WINDOW) result |= EWT_VISCONTENTS_WINDOW;
-        if (native & Q2_CONTENTS_AUX) result |= EWT_VISCONTENTS_AUX;
-        if (native & Q2_CONTENTS_LAVA) result |= EWT_VISCONTENTS_LAVA;
-        if (native & Q2_CONTENTS_SLIME) result |= EWT_VISCONTENTS_SLIME;
-        if (native & Q2_CONTENTS_WATER) result |= EWT_VISCONTENTS_WATER;
-        if (native & Q2_CONTENTS_MIST) result |= EWT_VISCONTENTS_MIST;
+        if (native & Q2_CONTENTS_SOLID)
+            result |= EWT_VISCONTENTS_SOLID;
+        if (native & Q2_CONTENTS_WINDOW)
+            result |= EWT_VISCONTENTS_WINDOW;
+        if (native & Q2_CONTENTS_AUX)
+            result |= EWT_VISCONTENTS_AUX;
+        if (native & Q2_CONTENTS_LAVA)
+            result |= EWT_VISCONTENTS_LAVA;
+        if (native & Q2_CONTENTS_SLIME)
+            result |= EWT_VISCONTENTS_SLIME;
+        if (native & Q2_CONTENTS_WATER)
+            result |= EWT_VISCONTENTS_WATER;
+        if (native & Q2_CONTENTS_MIST)
+            result |= EWT_VISCONTENTS_MIST;
 
         // invisible contents
-        if (native & Q2_CONTENTS_AREAPORTAL) result |= EWT_INVISCONTENTS_AREAPORTAL;
-        if (native & Q2_CONTENTS_PLAYERCLIP) result |= EWT_INVISCONTENTS_PLAYERCLIP;
-        if (native & Q2_CONTENTS_MONSTERCLIP) result |= EWT_INVISCONTENTS_MONSTERCLIP;
-        if (native & Q2_CONTENTS_ORIGIN) result |= EWT_INVISCONTENTS_ORIGIN;
+        if (native & Q2_CONTENTS_AREAPORTAL)
+            result |= EWT_INVISCONTENTS_AREAPORTAL;
+        if (native & Q2_CONTENTS_PLAYERCLIP)
+            result |= EWT_INVISCONTENTS_PLAYERCLIP;
+        if (native & Q2_CONTENTS_MONSTERCLIP)
+            result |= EWT_INVISCONTENTS_MONSTERCLIP;
+        if (native & Q2_CONTENTS_PROJECTILECLIP)
+            result |= EWT_INVISCONTENTS_PROJECTILECLIP;
+        if (native & Q2_CONTENTS_ORIGIN)
+            result |= EWT_INVISCONTENTS_ORIGIN;
+        if (native & Q2_CONTENTS_NO_WATERJUMP)
+            result |= EWT_INVISCONTENTS_NO_WATERJUMP;
 
         // contents flags
-        if (native & Q2_CONTENTS_CURRENT_0) result |= EWT_CFLAG_CURRENT_0;
-        if (native & Q2_CONTENTS_CURRENT_90) result |= EWT_CFLAG_CURRENT_90;
-        if (native & Q2_CONTENTS_CURRENT_180) result |= EWT_CFLAG_CURRENT_180;
-        if (native & Q2_CONTENTS_CURRENT_270) result |= EWT_CFLAG_CURRENT_270;
-        if (native & Q2_CONTENTS_CURRENT_UP) result |= EWT_CFLAG_CURRENT_UP;
-        if (native & Q2_CONTENTS_CURRENT_DOWN) result |= EWT_CFLAG_CURRENT_DOWN;
-        if (native & Q2_CONTENTS_DETAIL) result |= EWT_CFLAG_DETAIL;
-        if (native & Q2_CONTENTS_TRANSLUCENT) result |= EWT_CFLAG_TRANSLUCENT;
-        if (native & Q2_CONTENTS_LADDER) result |= EWT_CFLAG_LADDER;
+        if (native & Q2_CONTENTS_CURRENT_0)
+            result |= EWT_CFLAG_CURRENT_0;
+        if (native & Q2_CONTENTS_CURRENT_90)
+            result |= EWT_CFLAG_CURRENT_90;
+        if (native & Q2_CONTENTS_CURRENT_180)
+            result |= EWT_CFLAG_CURRENT_180;
+        if (native & Q2_CONTENTS_CURRENT_270)
+            result |= EWT_CFLAG_CURRENT_270;
+        if (native & Q2_CONTENTS_CURRENT_UP)
+            result |= EWT_CFLAG_CURRENT_UP;
+        if (native & Q2_CONTENTS_CURRENT_DOWN)
+            result |= EWT_CFLAG_CURRENT_DOWN;
+        if (native & Q2_CONTENTS_DETAIL)
+            result |= EWT_CFLAG_DETAIL;
+        if (native & Q2_CONTENTS_TRANSLUCENT)
+            result |= EWT_CFLAG_TRANSLUCENT;
+        if (native & Q2_CONTENTS_LADDER)
+            result |= EWT_CFLAG_LADDER;
 
         // disallowed flags
-        if (native & Q2_CONTENTS_MONSTER) result |= EWT_CFLAG_MONSTER;
-        if (native & Q2_CONTENTS_DEADMONSTER) result |= EWT_CFLAG_DEADMONSTER;
+        if (native & Q2_CONTENTS_MONSTER)
+            result |= EWT_CFLAG_MONSTER;
+        if (native & Q2_CONTENTS_DEADMONSTER)
+            result |= EWT_CFLAG_DEADMONSTER;
 
         // other unused flags which are illegal
-        if (native & Q2_CONTENTS_UNUSED_7) result |= EWT_CFLAG_Q2_UNUSED_7;
-        if (native & Q2_CONTENTS_UNUSED_8) result |= EWT_CFLAG_Q2_UNUSED_8;
-        if (native & Q2_CONTENTS_UNUSED_9) result |= EWT_CFLAG_Q2_UNUSED_9;
-        if (native & Q2_CONTENTS_UNUSED_10) result |= EWT_CFLAG_Q2_UNUSED_10;
-        if (native & Q2_CONTENTS_UNUSED_11) result |= EWT_CFLAG_Q2_UNUSED_11;
-        if (native & Q2_CONTENTS_UNUSED_12) result |= EWT_CFLAG_Q2_UNUSED_12;
-        if (native & Q2_CONTENTS_UNUSED_13) result |= EWT_CFLAG_Q2_UNUSED_13;
-        if (native & Q2_CONTENTS_UNUSED_14) result |= EWT_CFLAG_Q2_UNUSED_14;
-        if (native & Q2_CONTENTS_UNUSED_30) result |= EWT_CFLAG_Q2_UNUSED_30;
-        if (native & Q2_CONTENTS_UNUSED_31) result |= EWT_CFLAG_Q2_UNUSED_31;
+        if (native & Q2_CONTENTS_UNUSED_7)
+            result |= EWT_CFLAG_Q2_UNUSED_7;
+        if (native & Q2_CONTENTS_UNUSED_8)
+            result |= EWT_CFLAG_Q2_UNUSED_8;
+        if (native & Q2_CONTENTS_UNUSED_9)
+            result |= EWT_CFLAG_Q2_UNUSED_9;
+        if (native & Q2_CONTENTS_UNUSED_10)
+            result |= EWT_CFLAG_Q2_UNUSED_10;
+        if (native & Q2_CONTENTS_UNUSED_11)
+            result |= EWT_CFLAG_Q2_UNUSED_11;
+        if (native & Q2_CONTENTS_UNUSED_12)
+            result |= EWT_CFLAG_Q2_UNUSED_12;
+        if (native & Q2_CONTENTS_UNUSED_30)
+            result |= EWT_CFLAG_Q2_UNUSED_30;
+        if (native & Q2_CONTENTS_UNUSED_31)
+            result |= EWT_CFLAG_Q2_UNUSED_31;
 
         return contentflags_t::make(result);
     }
 
-    int32_t contents_to_native(const contentflags_t &contents) const override {
+    int32_t contents_to_native(contentflags_t contents) const override
+    {
         int32_t result = 0;
 
-        if (contents.flags & EWT_VISCONTENTS_SOLID) result |= Q2_CONTENTS_SOLID;
-        if (contents.flags & EWT_VISCONTENTS_SKY) throw std::invalid_argument("sky not a contents in Q2");
-        if (contents.flags & EWT_VISCONTENTS_DETAIL_WALL) throw std::invalid_argument("detail wall not a contents in Q2");
-        if (contents.flags & EWT_VISCONTENTS_WINDOW) result |= Q2_CONTENTS_WINDOW;
-        if (contents.flags & EWT_VISCONTENTS_AUX) result |= Q2_CONTENTS_AUX;
-        if (contents.flags & EWT_VISCONTENTS_LAVA) result |= Q2_CONTENTS_LAVA;
-        if (contents.flags & EWT_VISCONTENTS_SLIME) result |= Q2_CONTENTS_SLIME;
-        if (contents.flags & EWT_VISCONTENTS_WATER) result |= Q2_CONTENTS_WATER;
-        if (contents.flags & EWT_VISCONTENTS_MIST) result |= Q2_CONTENTS_MIST;
-        if (contents.flags & EWT_INVISCONTENTS_ORIGIN) result |= Q2_CONTENTS_ORIGIN;
-        if (contents.flags & EWT_INVISCONTENTS_PLAYERCLIP) result |= Q2_CONTENTS_PLAYERCLIP;
-        if (contents.flags & EWT_INVISCONTENTS_MONSTERCLIP) result |= Q2_CONTENTS_MONSTERCLIP;
-        if (contents.flags & EWT_INVISCONTENTS_AREAPORTAL) result |= Q2_CONTENTS_AREAPORTAL;
-        if (contents.flags & EWT_INVISCONTENTS_ILLUSIONARY_VISBLOCKER) throw std::invalid_argument("illusionary visblocker not a contents in Q2");
-        if (contents.flags & EWT_CFLAG_DETAIL) result |= Q2_CONTENTS_DETAIL;
+        if (contents.flags & EWT_VISCONTENTS_SOLID)
+            result |= Q2_CONTENTS_SOLID;
+        if (contents.flags & EWT_VISCONTENTS_SKY)
+            throw std::invalid_argument("sky not a contents in Q2");
+        if (contents.flags & EWT_VISCONTENTS_DETAIL_WALL)
+            throw std::invalid_argument("detail wall not a contents in Q2");
+        if (contents.flags & EWT_VISCONTENTS_WINDOW)
+            result |= Q2_CONTENTS_WINDOW;
+        if (contents.flags & EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER)
+            throw std::invalid_argument("illusionary visblocker not a contents in Q2");
+        if (contents.flags & EWT_VISCONTENTS_AUX)
+            result |= Q2_CONTENTS_AUX;
+        if (contents.flags & EWT_VISCONTENTS_LAVA)
+            result |= Q2_CONTENTS_LAVA;
+        if (contents.flags & EWT_VISCONTENTS_SLIME)
+            result |= Q2_CONTENTS_SLIME;
+        if (contents.flags & EWT_VISCONTENTS_WATER)
+            result |= Q2_CONTENTS_WATER;
+        if (contents.flags & EWT_VISCONTENTS_MIST)
+            result |= Q2_CONTENTS_MIST;
+        if (contents.flags & EWT_INVISCONTENTS_ORIGIN)
+            result |= Q2_CONTENTS_ORIGIN;
+        if (contents.flags & EWT_INVISCONTENTS_NO_WATERJUMP)
+            result |= Q2_CONTENTS_NO_WATERJUMP;
+        if (contents.flags & EWT_INVISCONTENTS_PLAYERCLIP)
+            result |= Q2_CONTENTS_PLAYERCLIP;
+        if (contents.flags & EWT_INVISCONTENTS_MONSTERCLIP)
+            result |= Q2_CONTENTS_MONSTERCLIP;
+        if (contents.flags & EWT_INVISCONTENTS_PROJECTILECLIP)
+            result |= Q2_CONTENTS_PROJECTILECLIP;
+        if (contents.flags & EWT_INVISCONTENTS_AREAPORTAL)
+            result |= Q2_CONTENTS_AREAPORTAL;
+        if (contents.flags & EWT_CFLAG_DETAIL)
+            result |= Q2_CONTENTS_DETAIL;
 
         // cflags
-        if (contents.flags & EWT_CFLAG_CURRENT_0) result |= Q2_CONTENTS_CURRENT_0;
-        if (contents.flags & EWT_CFLAG_CURRENT_90) result |= Q2_CONTENTS_CURRENT_90;
-        if (contents.flags & EWT_CFLAG_CURRENT_180) result |= Q2_CONTENTS_CURRENT_180;
-        if (contents.flags & EWT_CFLAG_CURRENT_270) result |= Q2_CONTENTS_CURRENT_270;
-        if (contents.flags & EWT_CFLAG_CURRENT_UP) result |= Q2_CONTENTS_CURRENT_UP;
-        if (contents.flags & EWT_CFLAG_CURRENT_DOWN) result |= Q2_CONTENTS_CURRENT_DOWN;
-        if (contents.flags & EWT_CFLAG_TRANSLUCENT) result |= Q2_CONTENTS_TRANSLUCENT;
-        if (contents.flags & EWT_CFLAG_LADDER) result |= Q2_CONTENTS_LADDER;
-        if (contents.flags & EWT_CFLAG_MONSTER) result |= Q2_CONTENTS_MONSTER;
-        if (contents.flags & EWT_CFLAG_DEADMONSTER) result |= Q2_CONTENTS_DEADMONSTER;
-        if (contents.flags & EWT_CFLAG_Q2_UNUSED_7) result |= Q2_CONTENTS_UNUSED_7;
-        if (contents.flags & EWT_CFLAG_Q2_UNUSED_8) result |= Q2_CONTENTS_UNUSED_8;
-        if (contents.flags & EWT_CFLAG_Q2_UNUSED_9) result |= Q2_CONTENTS_UNUSED_9;
-        if (contents.flags & EWT_CFLAG_Q2_UNUSED_10) result |= Q2_CONTENTS_UNUSED_10;
-        if (contents.flags & EWT_CFLAG_Q2_UNUSED_11) result |= Q2_CONTENTS_UNUSED_11;
-        if (contents.flags & EWT_CFLAG_Q2_UNUSED_12) result |= Q2_CONTENTS_UNUSED_12;
-        if (contents.flags & EWT_CFLAG_Q2_UNUSED_13) result |= Q2_CONTENTS_UNUSED_13;
-        if (contents.flags & EWT_CFLAG_Q2_UNUSED_14) result |= Q2_CONTENTS_UNUSED_14;
-        if (contents.flags & EWT_CFLAG_Q2_UNUSED_30) result |= Q2_CONTENTS_UNUSED_30;
-        if (contents.flags & EWT_CFLAG_Q2_UNUSED_31) result |= Q2_CONTENTS_UNUSED_31;
+        if (contents.flags & EWT_CFLAG_CURRENT_0)
+            result |= Q2_CONTENTS_CURRENT_0;
+        if (contents.flags & EWT_CFLAG_CURRENT_90)
+            result |= Q2_CONTENTS_CURRENT_90;
+        if (contents.flags & EWT_CFLAG_CURRENT_180)
+            result |= Q2_CONTENTS_CURRENT_180;
+        if (contents.flags & EWT_CFLAG_CURRENT_270)
+            result |= Q2_CONTENTS_CURRENT_270;
+        if (contents.flags & EWT_CFLAG_CURRENT_UP)
+            result |= Q2_CONTENTS_CURRENT_UP;
+        if (contents.flags & EWT_CFLAG_CURRENT_DOWN)
+            result |= Q2_CONTENTS_CURRENT_DOWN;
+        if (contents.flags & EWT_CFLAG_TRANSLUCENT)
+            result |= Q2_CONTENTS_TRANSLUCENT;
+        if (contents.flags & EWT_CFLAG_LADDER)
+            result |= Q2_CONTENTS_LADDER;
+        if (contents.flags & EWT_CFLAG_MONSTER)
+            result |= Q2_CONTENTS_MONSTER;
+        if (contents.flags & EWT_CFLAG_DEADMONSTER)
+            result |= Q2_CONTENTS_DEADMONSTER;
+        if (contents.flags & EWT_CFLAG_Q2_UNUSED_7)
+            result |= Q2_CONTENTS_UNUSED_7;
+        if (contents.flags & EWT_CFLAG_Q2_UNUSED_8)
+            result |= Q2_CONTENTS_UNUSED_8;
+        if (contents.flags & EWT_CFLAG_Q2_UNUSED_9)
+            result |= Q2_CONTENTS_UNUSED_9;
+        if (contents.flags & EWT_CFLAG_Q2_UNUSED_10)
+            result |= Q2_CONTENTS_UNUSED_10;
+        if (contents.flags & EWT_CFLAG_Q2_UNUSED_11)
+            result |= Q2_CONTENTS_UNUSED_11;
+        if (contents.flags & EWT_CFLAG_Q2_UNUSED_12)
+            result |= Q2_CONTENTS_UNUSED_12;
+        if (contents.flags & EWT_CFLAG_Q2_UNUSED_30)
+            result |= Q2_CONTENTS_UNUSED_30;
+        if (contents.flags & EWT_CFLAG_Q2_UNUSED_31)
+            result |= Q2_CONTENTS_UNUSED_31;
 
         return result;
     }
 
-    contentflags_t cluster_contents(const contentflags_t &contents0, const contentflags_t &contents1) const override
-    {
-        contents_int_t combined = contents0.flags | contents1.flags;
-
-        // a cluster may include some solid detail areas, but
-        // still be seen into
-        if (!(contents0.flags & EWT_VISCONTENTS_SOLID) || !(contents1.flags & EWT_VISCONTENTS_SOLID)) {
-            combined &= ~EWT_VISCONTENTS_SOLID;
-        }
-
-        return contentflags_t::make(combined);
-    }
-
-    inline int32_t get_content_type(const contentflags_t &contents) const
+    inline int32_t get_content_type(contentflags_t contents) const
     {
         return contents.flags & (EWT_ALL_VISIBLE_CONTENTS | EWT_ALL_INVISCONTENTS);
-    }
-
-    contentflags_t create_empty_contents() const override { return contentflags_t::make(EWT_VISCONTENTS_EMPTY); }
-
-    contentflags_t create_solid_contents() const override { return contentflags_t::make(EWT_VISCONTENTS_SOLID); }
-
-    contentflags_t create_detail_illusionary_contents(const contentflags_t &original) const override
-    {
-        contents_int_t flags = original.flags;
-        flags &= ~EWT_VISCONTENTS_SOLID;
-        flags |= EWT_VISCONTENTS_MIST | EWT_CFLAG_DETAIL;
-        return contentflags_t::make(flags);
-    }
-
-    contentflags_t create_detail_fence_contents(const contentflags_t &original) const override
-    {
-        contents_int_t flags = original.flags;
-        flags &= ~EWT_VISCONTENTS_SOLID;
-        flags |= (EWT_VISCONTENTS_WINDOW | EWT_CFLAG_TRANSLUCENT | EWT_CFLAG_DETAIL);
-        return contentflags_t::make(flags);
-    }
-
-    contentflags_t create_detail_wall_contents(const contentflags_t &original) const override
-    {
-        contents_int_t flags = original.flags;
-        flags &= ~EWT_VISCONTENTS_SOLID;
-        flags |= (EWT_VISCONTENTS_DETAIL_WALL | EWT_CFLAG_DETAIL);
-        return contentflags_t::make(flags);
-    }
-
-    contentflags_t create_detail_solid_contents(const contentflags_t &original) const override
-    {
-        contents_int_t flags = original.flags;
-        flags |= (EWT_VISCONTENTS_SOLID | EWT_CFLAG_DETAIL);
-        return contentflags_t::make(flags);
-    }
-
-    contentflags_t clear_detail(const contentflags_t &original) const override
-    {
-        return contentflags_t::make(original.flags & (~EWT_CFLAG_DETAIL));
-    }
-
-    contentflags_t set_detail(const contentflags_t &original) const override
-    {
-        return contentflags_t::make(original.flags | EWT_CFLAG_DETAIL);
-    }
-
-    bool contents_are_type_equal(const contentflags_t &self, const contentflags_t &other) const override
-    {
-        return get_content_type(self) == get_content_type(other);
-    }
-
-    bool contents_are_equal(const contentflags_t &self, const contentflags_t &other) const override
-    {
-        return self.flags == other.flags;
-    }
-
-    bool contents_are_any_detail(const contentflags_t &contents) const override
-    {
-        return (contents.flags & EWT_CFLAG_DETAIL) != 0;
-    }
-
-    bool contents_are_detail_solid(const contentflags_t &contents) const override
-    {
-        return (contents.flags & EWT_CFLAG_DETAIL)
-               && (contents.flags & EWT_VISCONTENTS_SOLID);
-    }
-
-    bool contents_are_detail_wall(const contentflags_t &contents) const override
-    {
-        // fixme: Q1 is different
-        if (contents.flags & EWT_VISCONTENTS_SOLID) {
-            return false;
-        }
-
-        contents_int_t test = (EWT_CFLAG_DETAIL | EWT_VISCONTENTS_DETAIL_WALL);
-        return ((contents.flags & test) == test);
-    }
-
-    bool contents_are_detail_fence(const contentflags_t &contents) const override
-    {
-        // fixme: Q1 is different
-        if (contents.flags & EWT_VISCONTENTS_SOLID) {
-            return false;
-        }
-
-        contents_int_t test = (EWT_CFLAG_DETAIL | EWT_VISCONTENTS_WINDOW);
-        return ((contents.flags & test) == test);
-    }
-
-    bool contents_are_detail_illusionary(const contentflags_t &contents) const override
-    {
-        // fixme: Q1 is different
-        if (contents.flags & EWT_VISCONTENTS_SOLID) {
-            return false;
-        }
-
-        contents_int_t mist1_type = (EWT_CFLAG_DETAIL | EWT_VISCONTENTS_MIST);
-        contents_int_t mist2_type = (EWT_CFLAG_DETAIL | EWT_VISCONTENTS_AUX);
-
-        return ((contents.flags & mist1_type) == mist1_type) || ((contents.flags & mist2_type) == mist2_type);
-    }
-
-    bool contents_are_origin(const contentflags_t &contents) const override
-    {
-        return contents.flags & EWT_INVISCONTENTS_ORIGIN;
-    }
-
-    bool contents_are_clip(const contentflags_t &contents) const override
-    {
-        return (contents.flags & (EWT_INVISCONTENTS_PLAYERCLIP | EWT_INVISCONTENTS_MONSTERCLIP)) != 0;
-    }
-
-    bool contents_clip_same_type(const contentflags_t &self, const contentflags_t &other) const override
-    {
-        if ((self.flags & EWT_ALL_VISIBLE_CONTENTS) !=
-                   (other.flags & EWT_ALL_VISIBLE_CONTENTS))
-            return false; // not same type
-
-        if (self.flags & EWT_CFLAG_SUPPRESS_CLIPPING_SAME_TYPE)
-            return false;
-
-        return true;
-    }
-
-    inline bool contents_has_extended(const contentflags_t &contents) const { return false; }
-
-    bool contents_are_empty(const contentflags_t &contents) const override
-    {
-        return !contents_has_extended(contents) && !get_content_type(contents);
-    }
-
-    bool contents_are_any_solid(const contentflags_t &contents) const override
-    {
-        return (contents.flags & EWT_VISCONTENTS_SOLID) != 0;
-    }
-
-    bool contents_are_solid(const contentflags_t &contents) const override
-    {
-        return !contents_has_extended(contents) && (contents.flags & EWT_VISCONTENTS_SOLID) &&
-               !(contents.flags & EWT_CFLAG_DETAIL);
-    }
-
-    bool contents_are_sky(const contentflags_t &contents) const override { return false; }
-
-    bool contents_are_liquid(const contentflags_t &contents) const override
-    {
-        if (contents_has_extended(contents))
-            return false;
-
-        if (contents.flags & EWT_INVISCONTENTS_AREAPORTAL)
-            return true; // HACK: treat areaportal as a liquid for the purposes of the CSG code
-
-        return (contents.flags & EWT_ALL_LIQUIDS) != 0;
-    }
-
-    bool contents_are_valid(const contentflags_t &contents, bool strict) const override
-    {
-        // check that we don't have more than one visible contents type
-        // FIXME: we don't do that
-        const int32_t x = contents.flags & EWT_ALL_VISIBLE_CONTENTS;
-
-        // TODO: check other invalid mixes
-        if (!x && strict) {
-            return false;
-        }
-
-        return true;
     }
 
     static constexpr const char *bitflag_names[] = {"SOLID", "WINDOW", "AUX", "LAVA", "SLIME", "WATER", "MIST", "128",
@@ -1131,7 +722,7 @@ struct gamedef_q2_t : public gamedef_t
         "CURRENT_90", "CURRENT_180", "CURRENT_270", "CURRENT_UP", "CURRENT_DOWN", "ORIGIN", "MONSTER", "DEADMONSTER",
         "DETAIL", "TRANSLUCENT", "LADDER", "1073741824", "2147483648"};
 
-    int32_t contents_from_string(const std::string_view &str) const override
+    int32_t contents_from_string(std::string_view str) const override
     {
         for (size_t i = 0; i < std::size(bitflag_names); i++) {
             if (string_iequals(str, bitflag_names[i])) {
@@ -1142,174 +733,32 @@ struct gamedef_q2_t : public gamedef_t
         return 0;
     }
 
-    contentflags_t portal_visible_contents(const contentflags_t &a, const contentflags_t &b) const override
-    {
-        auto bits_a = a.flags;
-        auto bits_b = b.flags;
-
-        contents_int_t result;
-
-        if ((bits_a & EWT_CFLAG_SUPPRESS_CLIPPING_SAME_TYPE) || (bits_b & EWT_CFLAG_SUPPRESS_CLIPPING_SAME_TYPE)) {
-            result = bits_a | bits_b;
-        } else {
-            result = bits_a ^ bits_b;
-        }
-
-        auto strongest_contents_change = contentflags_t::make(result).visible_contents();
-
-        return strongest_contents_change;
-    }
-
-    bool portal_can_see_through(
-        const contentflags_t &contents0, const contentflags_t &contents1, bool) const override
-    {
-        contents_int_t c0 = contents0.flags, c1 = contents1.flags;
-
-        // can't see through solid
-        if ((c0 & EWT_VISCONTENTS_SOLID) || (c1 & EWT_VISCONTENTS_SOLID)) {
-            return false;
-        }
-
-        if (((c0 ^ c1) & EWT_ALL_VISIBLE_CONTENTS) == 0)
-            return true;
-
-        if ((c0 & EWT_CFLAG_TRANSLUCENT) || (c0 & EWT_CFLAG_DETAIL)) {
-            c0 = 0;
-        }
-        if ((c1 & EWT_CFLAG_TRANSLUCENT) || (c1 & EWT_CFLAG_DETAIL)) {
-            c1 = 0;
-        }
-
-        // identical on both sides
-        if (!(c0 ^ c1))
-            return true;
-
-        return (((c0 ^ c1) & EWT_ALL_VISIBLE_CONTENTS) != 0);
-    }
-
-    bool contents_seals_map(const contentflags_t &contents) const override
-    {
-        return contents_are_solid(contents) || contents_are_sky(contents);
-    }
-
-    bool contents_are_opaque(const contentflags_t &contents, bool transwater) const override
-    {
-        int32_t c = contents.flags;
-
-        if (contents.visible_contents().flags == EWT_VISCONTENTS_EMPTY)
-            return false;
-
-        // it's visible..
-
-        if (c & EWT_CFLAG_TRANSLUCENT) {
-            return false;
-        }
-
-        return true;
-    }
-
-    contentflags_t contents_remap_for_export(const contentflags_t &contents, remap_type_t type) const override
+    contentflags_t contents_remap_for_export(contentflags_t contents, remap_type_t type) const override
     {
         if (contents.flags & EWT_VISCONTENTS_DETAIL_WALL) {
-            return create_solid_contents();
+            contents_int_t result = contents.flags;
+            result &= (~EWT_VISCONTENTS_DETAIL_WALL);
+            result |= EWT_VISCONTENTS_SOLID;
+            return contentflags_t::make(result);
         }
-        // Solid wipes out any other contents
-        // Previously, this was done in LeafNode but we've changed to detail-solid being
-        // non-sealing.
-        if (type == remap_type_t::leaf) {
-            if (contents.flags & EWT_VISCONTENTS_SOLID) {
-                return create_solid_contents();
-            }
+
+        if (contents.flags & EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER) {
+            contents_int_t result = contents.flags;
+            result &= (~EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER);
+            result |= EWT_VISCONTENTS_MIST;
+            return contentflags_t::make(result);
         }
 
         return contents;
     }
 
-    contentflags_t combine_contents(const contentflags_t &a, const contentflags_t &b) const override
-    {
-        // structural solid (but not detail solid) eats any other contents
-        if (contents_are_solid(a) || contents_are_solid(b)) {
-            return create_solid_contents();
-        }
-
-        auto bits_a = a.flags;
-        auto bits_b = b.flags;
-
-        return contentflags_t::make(bits_a | bits_b);
-    }
-
-    bool portal_generates_face(const contentflags_t &portal_visible_contents, const contentflags_t &brushcontents,
-        planeside_t brushside_side) const override
-    {
-        auto bits_portal = portal_visible_contents.flags;
-        auto bits_brush = brushcontents.flags;
-
-        // find the highest visible content bit set in portal
-        int32_t index = portal_visible_contents.visible_contents_index();
-        if (index == -1) {
-            return false;
-        }
-
-        // check if it's not set in the brush
-        if (!(bits_brush & nth_bit(index))) {
-            return false;
-        }
-
-        if (brushside_side == SIDE_BACK) {
-            // explicit override?
-            if (bits_brush & EWT_CFLAG_MIRROR_INSIDE_SET) {
-                return (bits_brush & EWT_CFLAG_MIRROR_INSIDE) != 0;
-            }
-            if (portal_visible_contents.flags & (EWT_VISCONTENTS_WINDOW | EWT_VISCONTENTS_AUX)) {
-                // windows or aux don't generate inside faces
-                return false;
-            }
-            // other types get mirrored by default
-            return true;
-        }
-        return true;
-    }
-
-    std::string get_contents_display(const contentflags_t &contents) const override
-    {
-        return ::get_contents_display(contents.flags);
-    }
-
-    void contents_make_valid(contentflags_t &contents) const override
-    {
-        if (contents_are_valid(contents, false)) {
-            return;
-        }
-
-        // clear all visible contents bits except the strongest one
-        bool got = false;
-        contents_int_t flags = contents.flags;
-
-        for (int32_t i = 0; i <= EWT_LAST_VISIBLE_CONTENTS_INDEX; i++) {
-            if (!got) {
-                if (flags & nth_bit(i)) {
-                    got = true;
-                    continue;
-                }
-            } else {
-                flags &= ~nth_bit(i);
-            }
-        }
-
-        contents = contentflags_t::make(flags);
-    }
-
-    const std::initializer_list<aabb3d> &get_hull_sizes() const override
-    {
-        static constexpr std::initializer_list<aabb3d> hulls = {};
-        return hulls;
-    }
+    std::span<const aabb3d> get_hull_sizes() const override { return {}; }
 
     contentflags_t face_get_contents(
-        const std::string &texname, const surfflags_t &flags, const contentflags_t &contents) const override
+        const std::string &texname, const surfflags_t &flags, contentflags_t contents, bool transwater) const override
     {
         // hints and skips are never detail, and have no content
-        if (flags.native & (Q2_SURF_HINT | Q2_SURF_SKIP)) {
+        if (flags.native_q2 & (Q2_SURF_HINT | Q2_SURF_SKIP)) {
             return contentflags_t::make(EWT_VISCONTENTS_EMPTY);
         }
 
@@ -1322,7 +771,7 @@ struct gamedef_q2_t : public gamedef_t
 
         // if we have TRANS33 or TRANS66 or ALPHATEST, we have to be marked as WINDOW,
         // so unset SOLID, give us WINDOW, and give us TRANSLUCENT
-        if (flags.native & (Q2_SURF_TRANS33 | Q2_SURF_TRANS66 | Q2_SURF_ALPHATEST)) {
+        if (flags.native_q2 & (Q2_SURF_TRANS33 | Q2_SURF_TRANS66 | Q2_SURF_ALPHATEST)) {
             surf_contents |= EWT_CFLAG_TRANSLUCENT;
 
             if (surf_contents & EWT_VISCONTENTS_SOLID) {
@@ -1333,7 +782,18 @@ struct gamedef_q2_t : public gamedef_t
         // translucent objects are automatically classified as detail
         if (surf_contents & EWT_CFLAG_TRANSLUCENT) {
             surf_contents |= EWT_CFLAG_DETAIL;
-        } else if (surf_contents & (EWT_VISCONTENTS_MIST | EWT_VISCONTENTS_AUX)) {
+        }
+
+        // MIST and AUX are forced to be detail because:
+        // - you can see out of AUX if you go inside it, since the inside faces are omitted, so it doesn't make sense
+        //   to be visblocking
+        // - MIST is typically used for small details that the mapper doesn't want the player to collide with.
+        //
+        //   If the mapper really wants visblocking mist, we have a separate feature for that,
+        //   func_illusionary_visblocker (but this feature is likely to let the player
+        //   see into the void when their camera is right on top of the bordering faces, at least in the
+        //   Q2 remaster engine, so it's not recommended.)
+        if (surf_contents & (EWT_VISCONTENTS_MIST | EWT_VISCONTENTS_AUX)) {
             surf_contents |= EWT_CFLAG_DETAIL;
         }
 
@@ -1455,9 +915,10 @@ public:
                 }
             }
 
+            std::error_code ec;
             if (!exists(basedir)) {
                 logging::print("WARNING: failed to find basedir '{}'\n", basedir);
-            } else if (!equivalent(gamedir, basedir)) {
+            } else if (!equivalent(gamedir, basedir, ec)) {
                 addArchive(basedir);
                 logging::print("using basedir: '{}'\n", basedir);
             }
@@ -1512,46 +973,6 @@ public:
         static const auto palette = make_palette(palette_bytes);
         return palette;
     }
-
-private:
-    struct content_stats_t : public content_stats_base_t
-    {
-        std::mutex stat_mutex;
-        std::unordered_map<contents_t, size_t> native_types;
-        std::atomic<size_t> total_brushes;
-    };
-
-public:
-    std::unique_ptr<content_stats_base_t> create_content_stats() const override
-    {
-        return std::unique_ptr<content_stats_base_t>(new content_stats_t{});
-    }
-
-    void count_contents_in_stats(const contentflags_t &contents, content_stats_base_t &stats_any) const override
-    {
-        content_stats_t &stats = dynamic_cast<content_stats_t &>(stats_any);
-
-        {
-            std::unique_lock lock(stats.stat_mutex);
-            stats.native_types[contents.flags]++;
-        }
-
-        stats.total_brushes++;
-    }
-
-    void print_content_stats(const content_stats_base_t &stats_any, const char *what) const override
-    {
-        const content_stats_t &stats = dynamic_cast<const content_stats_t &>(stats_any);
-        logging::stat_tracker_t stat_print;
-
-        for (auto [bits, count] : stats.native_types) {
-            auto c = contentflags_t{.flags = bits};
-            stat_print.register_stat(fmt::format("{} {}", get_contents_display(c), what))
-                    .count += count;
-        }
-
-        stat_print.register_stat(fmt::format("{} total", what)).count += stats.total_brushes;
-    }
 };
 
 // Game definitions, used for the bsp versions below
@@ -1562,12 +983,8 @@ static const gamedef_q2_t gamedef_q2;
 
 const std::initializer_list<const gamedef_t *> &gamedef_list()
 {
-    static constexpr std::initializer_list<const gamedef_t *> gamedefs {
-        &gamedef_q1,
-        &gamedef_h2,
-        &gamedef_hl,
-        &gamedef_q2
-    };
+    static constexpr std::initializer_list<const gamedef_t *> gamedefs{
+        &gamedef_q1, &gamedef_h2, &gamedef_hl, &gamedef_q2};
     return gamedefs;
 }
 
@@ -1775,9 +1192,9 @@ inline void CopyArray(std::vector<F> &from, std::vector<T> &to)
 
     for (auto &v : from) {
         if constexpr (std::is_arithmetic_v<T> && std::is_arithmetic_v<F>)
-            to.emplace_back(numeric_cast<T>(v));
+            to.push_back(numeric_cast<T>(v));
         else
-            to.emplace_back(v);
+            to.push_back(static_cast<T>(v));
     }
 }
 
@@ -1798,9 +1215,9 @@ inline void CopyArray(std::vector<std::array<F, N>> &from, std::vector<std::arra
 
     for (auto &v : from) {
         if constexpr (std::is_arithmetic_v<T> && std::is_arithmetic_v<F>)
-            to.emplace_back(array_cast<std::array<T, N>>(v));
+            to.push_back(array_cast<std::array<T, N>>(v));
         else
-            to.emplace_back(v);
+            to.push_back(v);
     }
 }
 

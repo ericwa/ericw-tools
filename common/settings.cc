@@ -80,7 +80,7 @@ bool setting_base::change_source(source new_source)
 
 // setting_func
 
-setting_func::setting_func(setting_container *dictionary, const nameset &names, std::function<void(source)> func,
+setting_func::setting_func(setting_container *dictionary, const nameset &names, func_type func,
     const setting_group *group, const char *description)
     : setting_base(dictionary, names, group, description),
       _func(func)
@@ -96,8 +96,7 @@ void setting_func::reset() { }
 
 bool setting_func::parse(const std::string &setting_name, parser_base_t &parser, source source)
 {
-    _func(source);
-    return true;
+    return _func(setting_name, parser, source);
 }
 
 std::string setting_func::string_value() const
@@ -251,6 +250,7 @@ const char *setting_base::sourceString() const
     switch (_source) {
         case source::DEFAULT: return "default";
         case source::GAME_TARGET: return "game target";
+        case source::IMPLIED: return "implied";
         case source::MAP: return "map";
         case source::COMMANDLINE: return "command line";
         default: FError("Error: unknown setting source");
@@ -260,7 +260,7 @@ const char *setting_base::sourceString() const
 // setting_string
 
 setting_string::setting_string(setting_container *dictionary, const nameset &names, std::string v,
-    const std::string_view &format, const setting_group *group, const char *description)
+    std::string_view format, const setting_group *group, const char *description)
     : setting_value(dictionary, names, v, group, description),
       _format(format)
 {
@@ -317,7 +317,7 @@ std::string setting_path::format() const
 
 // setting_set
 
-setting_set::setting_set(setting_container *dictionary, const nameset &names, const std::string_view &format,
+setting_set::setting_set(setting_container *dictionary, const nameset &names, std::string_view format,
     const setting_group *group, const char *description)
     : setting_base(dictionary, names, group, description),
       _format(format)
@@ -431,6 +431,70 @@ std::string setting_vec3::format() const
     return "x y z";
 }
 
+// setting_light
+
+setting_light::setting_light(setting_container *dictionary, const nameset &names, settings::setting_color *color,
+    float a, const setting_group *group, const char *description)
+    : setting_value(dictionary, names, a, group, description),
+      _color(color)
+{
+}
+
+bool setting_light::parse(const std::string &setting_name, parser_base_t &parser, source source)
+{
+    // first, parse into a vec4 and record how many components we got
+    qvec4f vec{};
+    int num_parsed = 0;
+
+    for (int i = 0; i < 4; i++) {
+        if (!parser.parse_token()) {
+            break;
+        }
+
+        try {
+            vec[i] = std::stod(parser.token);
+        } catch (std::exception &) {
+            return false;
+        }
+
+        num_parsed++;
+    }
+
+    if (num_parsed == 4) {
+        // color and brightness
+        _color->set_value(vec.xyz(), settings::source::IMPLIED);
+
+        // set our brightness
+        set_value(vec[3], source);
+
+        return true;
+    } else if (num_parsed == 3) {
+        // rgb, missing last value
+        _color->set_value(vec.xyz(), settings::source::IMPLIED);
+
+        // reset brightness
+        reset();
+
+        return true;
+    } else if (num_parsed == 1) {
+        // set our brightness
+        set_value(vec[0], source);
+
+        return true;
+    }
+    return false;
+}
+
+std::string setting_light::string_value() const
+{
+    return fmt::format("{}", _value);
+}
+
+std::string setting_light::format() const
+{
+    return "[r g b] [n]";
+}
+
 // setting_mangle
 
 qvec3f setting_mangle::transform_vec3_value(const qvec3f &val) const
@@ -534,7 +598,7 @@ void setting_container::set_settings(const entdict_t &epairs, source source)
     }
 }
 
-void setting_container::print_help()
+void setting_container::print_help(bool fatal)
 {
     fmt::print("{}usage: {} [-help/-h/-?] [-options] {}\n\n", program_description, program_name, remainder_name);
 
@@ -544,7 +608,8 @@ void setting_container::print_help()
         }
 
         for (auto setting : grouped.second) {
-            size_t numPadding = std::max(static_cast<size_t>(0), 28 - (setting->primary_name().size() + 4));
+            size_t numPadding =
+                std::max(static_cast<size_t>(0), 28 - std::min((size_t)28, (setting->primary_name().size() + 4)));
             fmt::print(
                 "  -{} {:{}}    {}\n", setting->primary_name(), setting->format(), numPadding, setting->description());
 
@@ -556,7 +621,9 @@ void setting_container::print_help()
         printf("\n");
     }
 
-    throw quit_after_help_exception();
+    if (fatal) {
+        throw quit_after_help_exception();
+    }
 }
 
 void setting_container::print_summary()
@@ -598,7 +665,7 @@ void setting_container::print_rst_documentation()
     for (auto &[group, settings] : grouped()) {
         if (group == nullptr || group->type == expected_source::commandline) {
             if (group == nullptr) {
-                print_rst_heading("Uncategeorized", '-');
+                print_rst_heading("Uncategorized", '-');
             } else {
                 print_rst_heading(group->name, '-');
             }
@@ -680,9 +747,8 @@ std::vector<std::string> setting_container::parse(parser_base_t &parser)
         }
 
         if (parser.token == "help" || parser.token == "h" || parser.token == "?") {
-            print_help();
-        }
-        if (parser.token == "rst") {
+            print_help(true);
+        } else if (parser.token == "rst") {
             print_rst_documentation();
         }
 
@@ -710,10 +776,16 @@ std::vector<std::string> setting_container::parse(parser_base_t &parser)
             break;
         }
 
-        remainder.emplace_back(std::move(parser.token));
+        remainder.push_back(std::move(parser.token));
     }
 
     return remainder;
+}
+
+std::vector<std::string> setting_container::parse_string(std::string_view string)
+{
+    parser_t parser(string, parser_source_location());
+    return this->parse(parser);
 }
 
 // global settings
@@ -742,7 +814,10 @@ common_settings::common_settings()
       defaultpaths{this, "defaultpaths", true, &game_group,
           "whether the compiler should attempt to automatically derive game/base paths for games that support it"},
       tex_saturation_boost{this, "tex_saturation_boost", 0.0f, 0.0f, 1.0f, &game_group,
-          "increase texture saturation to match original Q2 tools"}
+          "increase texture saturation to match original Q2 tools"},
+      logfile{this, "logfile", "auto", "\"path\"", &logging_group,
+          "File to output logging data to. If unchanged, it is set by the tool."},
+      logappend{this, "logappend", false, &logging_group, "Whether to append to log file or replace"}
 {
 }
 
@@ -760,13 +835,11 @@ void common_settings::preinitialize(int argc, const char **argv)
 void common_settings::initialize(int argc, const char **argv)
 {
     token_parser_t p(argc, argv, {"command line"});
-    parse(p);
+    remainder = parse(p);
 }
 
 void common_settings::postinitialize(int argc, const char **argv)
 {
-    print_summary();
-
     configureTBB(threads.value(), lowpriority.value());
 
     if (verbose.value()) {
@@ -788,12 +861,5 @@ void common_settings::postinitialize(int argc, const char **argv)
     if (nocolor.value()) {
         logging::enable_color_codes = false;
     }
-}
-
-void common_settings::run(int argc, const char **argv)
-{
-    preinitialize(argc, argv);
-    initialize(argc, argv);
-    postinitialize(argc, argv);
 }
 } // namespace settings

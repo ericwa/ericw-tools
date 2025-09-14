@@ -42,6 +42,7 @@ static std::vector<std::pair<std::string, int>> lightstyleForTargetname;
 static std::vector<std::unique_ptr<light_t>> surfacelight_templates;
 static std::ofstream surflights_dump_file;
 static fs::path surflights_dump_filename;
+static std::map<std::string, light_t *> lights_by_switchableshadow_target;
 
 /**
  * Resets global data in this file
@@ -58,6 +59,7 @@ void ResetLightEntities()
     surfacelight_templates.clear();
     surflights_dump_file = {};
     surflights_dump_filename.clear();
+    lights_by_switchableshadow_target.clear();
 }
 
 std::vector<std::unique_ptr<light_t>> &GetLights()
@@ -80,12 +82,22 @@ std::vector<entdict_t> &GetRadLights()
     return radlights;
 }
 
+light_t *LightWithSwitchableShadowTargetValue(const std::string &target)
+{
+    auto it = lights_by_switchableshadow_target.find(target);
+
+    if (it == lights_by_switchableshadow_target.end())
+        return nullptr;
+
+    return it->second;
+}
+
 /* surface lights */
 static void MakeSurfaceLights(const mbsp_t *bsp);
 
 // light_t
 light_t::light_t()
-    : light{this, "light", DEFAULTLIGHTLEVEL},
+    : light{this, "light", &color, DEFAULTLIGHTLEVEL},
       atten{this, "wait", 1.0f, 0.0f, std::numeric_limits<float>::max()},
       formula{this, "delay", LF_LINEAR,
           {{"linear", LF_LINEAR}, {"inverse", LF_INVERSE}, {"inverse2", LF_INVERSE2}, {"infinite", LF_INFINITE},
@@ -118,9 +130,11 @@ light_t::light_t()
       nostaticlight{this, "nostaticlight", false},
       surflight_group{this, "surflight_group", 0},
       surflight_minlight_scale{this, "surflight_minlight_scale", 1.f},
+      surflight_atten{this, "surflight_atten", 1.f},
       light_channel_mask{this, "light_channel_mask", CHANNEL_MASK_DEFAULT},
       shadow_channel_mask{this, "shadow_channel_mask", CHANNEL_MASK_DEFAULT},
-      nonudge{this, "nonudge", false}
+      nonudge{this, "nonudge", false},
+      switchableshadow_target{this, "switchableshadow_target", ""}
 {
 }
 
@@ -320,6 +334,13 @@ static void CheckEntityFields(const mbsp_t *bsp, const settings::worldspawn_keys
         entity->falloff.set_value(0.0f, settings::source::MAP);
     }
 
+    if (entity->getFormula() < 0 || entity->getFormula() >= LF_COUNT) {
+        logging::print("WARNING: unknown delay {} on {} at [{}]\n", static_cast<int>(entity->getFormula()),
+            entity->classname(), entity->origin.value());
+        entity->formula.set_value(LF_LINEAR, settings::source::MAP);
+        entity->light.set_value(0.0f, settings::source::MAP);
+    }
+
     /* set up deviance and samples defaults */
     if (entity->deviance.value() > 0 && entity->samples.value() == 0) {
         entity->samples.set_value(16, settings::source::MAP);
@@ -350,6 +371,12 @@ static void CheckEntityFields(const mbsp_t *bsp, const settings::worldspawn_keys
             // this default value mimicks the fullbright-ish nature of emissive surfaces
             // in Q2.
             entity->surflight_minlight_scale.set_value(64.0f, settings::source::DEFAULT);
+        }
+    }
+
+    if (!entity->surflight_atten.is_changed()) {
+        if (cfg.surflight_atten.is_changed()) {
+            entity->surflight_atten.set_value(cfg.surflight_atten.value(), settings::source::DEFAULT);
         }
     }
 }
@@ -474,7 +501,7 @@ static void SetupSuns(const settings::worldspawn_keys &cfg)
                 entity->targetent->get_vector("origin", target_pos);
                 sunvec = target_pos - entity->origin.value();
             } else if (qv::length2(entity->mangle.value()) > 0) {
-                sunvec = entity->mangle.value();
+                sunvec = qv::vec_from_mangle(entity->mangle.value());
             } else { // Use { 0, 0, 0 } as sun target...
                 logging::print("WARNING: sun missing target, entity origin used.\n");
                 sunvec = -entity->origin.value();
@@ -1016,8 +1043,7 @@ void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
             if (!entity->project_texture.value().empty()) {
                 auto texname = entity->project_texture.value();
                 entity->projectedmip = img::find(texname);
-                if (entity->projectedmip == nullptr ||
-                    entity->projectedmip->pixels.empty()) {
+                if (entity->projectedmip == nullptr || entity->projectedmip->pixels.empty()) {
                     logging::print(
                         "WARNING: light has \"_project_texture\" \"{}\", but this texture was not found\n", texname);
                     entity->projectedmip = nullptr;
@@ -1048,6 +1074,14 @@ void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
                         entity->projfov.value(), entity->projectionmatrix);
             }
 
+            // vanilla-compatible switchable shadows
+            const std::string &switchableshadow_target = entity->switchableshadow_target.value();
+            if (!switchableshadow_target.empty()) {
+                entity->nostaticlight.set_value(true, settings::source::DEFAULT);
+
+                lights_by_switchableshadow_target[switchableshadow_target] = entity.get();
+            }
+
             CheckEntityFields(bsp, cfg, entity.get());
         }
     }
@@ -1058,7 +1092,7 @@ void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
 std::tuple<qvec3f, bool> FixLightOnFace(const mbsp_t *bsp, const qvec3f &point, bool warn, float max_dist)
 {
     // FIXME: Check all shadow casters
-    if (!Light_PointInWorld(bsp, point)) {
+    if (!Light_PointInWorld(bsp, extended_content_flags, point)) {
         return {point, true};
     }
 
@@ -1072,7 +1106,7 @@ std::tuple<qvec3f, bool> FixLightOnFace(const mbsp_t *bsp, const qvec3f &point, 
         testpoint[axis] += (add ? max_dist : -max_dist);
 
         // FIXME: Check all shadow casters
-        if (!Light_PointInWorld(bsp, testpoint)) {
+        if (!Light_PointInWorld(bsp, extended_content_flags, testpoint)) {
             return {testpoint, true};
         }
     }
@@ -1146,7 +1180,7 @@ aabb3f EstimateVisibleBoundsAtPoint(const qvec3f &point)
     rs.tracePushedRaysIntersection(nullptr, CHANNEL_MASK_DEFAULT);
 
     for (int i = 0; i < N2; i++) {
-        const float &dist = rs.getPushedRayHitDist(i);
+        const float dist = rs.getPushedRayHitDist(i);
         const qvec3f &dir = rs.getPushedRayDir(i);
 
         // get the intersection point
@@ -1336,10 +1370,8 @@ bool FaceMatchesSurfaceLightTemplate(
 
     const surfflags_t &extended_flags = extended_texinfo_flags[face->texinfo];
 
-    if (extended_flags.surflight_group) {
-        if (surflight.surflight_group.value() && surflight.surflight_group.value() != extended_flags.surflight_group) {
-            return false;
-        }
+    if (surflight.surflight_group.value() != extended_flags.surflight_group) {
+        return false;
     }
 
     return !Q_strcasecmp(texname, surflight.epairs->get("_surface"));
@@ -1517,11 +1549,13 @@ static void MakeSurfaceLights(const mbsp_t *bsp)
                 entity->epairs->get("origin"));
 
             // Warning if no faces exist matching the texture
-            const bool found_face = std::any_of(bsp->dfaces.begin(), bsp->dfaces.end(), [&](const mface_t &face) -> bool {
-                return !Q_strcasecmp(Face_TextureName(bsp, &face), entity->epairs->get("_surface"));
-            });
+            const bool found_face =
+                std::any_of(bsp->dfaces.begin(), bsp->dfaces.end(), [&](const mface_t &face) -> bool {
+                    return !Q_strcasecmp(Face_TextureName(bsp, &face), entity->epairs->get("_surface"));
+                });
             if (!found_face) {
-                logging::print("WARNING: no faces found with texture {} (qbsp may have been run with .wad's missing?)\n",
+                logging::print(
+                    "WARNING: no faces found with texture {} (qbsp may have been run with .wad's missing?)\n",
                     entity->epairs->get("_surface"));
             }
         }

@@ -117,7 +117,7 @@ if (WIN32)
 
 	if (MSVC)
 		# request 8MB stack for all .exe's
-		set(STACKSIZE 8388608)
+		set(STACKSIZE 16388608)
 		set(CMAKE_EXE_LINKER_FLAGS "/STACK:${STACKSIZE}")
 
 		add_definitions("/wd4244") # disable "conversion from .. to .., possible loss of data" warning
@@ -152,18 +152,7 @@ endif()
 set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15)
 
 find_package(TBB REQUIRED)
-
-set(embree_DIR_BAK ${embree_DIR})
-
-find_package(embree 3)
-if (NOT embree_FOUND)
-	# find_package clears embree_DIR, so restore it in case we provided
-	# that on the command line to specify the embree4 location
-	set(embree_DIR ${embree_DIR_BAK})
-
-	find_package(embree 4 REQUIRED)
-	add_compile_definitions(HAVE_EMBREE4)
-endif()
+find_package(embree 4 REQUIRED)
 
 set(TEST_QUAKE_MAP_EXPORT_DIR "" CACHE PATH "When running unit tests, export Quake maps to this directory (useful for testing in game)")
 set(TEST_QUAKE2_MAP_EXPORT_DIR "" CACHE PATH "When running unit tests, export Quake 2 maps to this directory (useful for testing in game)")

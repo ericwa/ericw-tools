@@ -8,14 +8,29 @@
 		</Expand>
 	</Type>
 	<Type Name="qmat&lt;*,*,*&gt;">
-		<DisplayString>{$T2} x {$T3} matrix</DisplayString>
+		<DisplayString>{$T2} row x {$T3} col matrix, column major</DisplayString>
 		<Expand>
-			<ArrayItems>
-				<Direction>Backward</Direction>
-				<Rank>$T2 - 1</Rank>
-				<Size>$T3</Size>
-				<ValuePointer>($T1 *) (&amp; m_values)</ValuePointer>
-			</ArrayItems>
+		  <!-- $T1 is element type  -->
+		  <!-- $T2 is # rows  -->
+		  <!-- $T3 is # cols  -->
+
+		  <CustomListItems>
+		    <!--
+		    CLion workaround, we can't read template variables like $T2 in the array size
+		    specifier.
+		    -->
+			<Variable Name="rows" InitialValue="$T2"/>
+			<Variable Name="col" InitialValue="0"/>
+			<Loop Condition="col &lt; $T3">
+			  <!-- NTOE:
+			  the ",[$T2]" is a size specifier, see:
+			  https://learn.microsoft.com/en-us/visualstudio/debugger/format-specifiers-in-cpp?view=vs-2022#BKMK_Size_specifiers_for_pointers_as_arrays_in_Visual_Studio_2012
+			  the "na" is a specifier for "no address", i.e. don't print the address of each element
+			  -->
+			  <Item Name="col {col,na}">&amp;m_values[col * $T2],[rows]na</Item>
+			  <Exec>++col</Exec>
+			</Loop>
+		  </CustomListItems>
 		</Expand>
 	</Type>
 	<Type Name="polylib::winding_base_t&lt;*&gt;">

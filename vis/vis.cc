@@ -35,6 +35,11 @@ int leafbytes; // (portalleafs+63)>>3
 int leaflongs;
 int leafbytes_real; // (portalleafs_real+63)>>3, not used for Q2.
 
+namespace vis
+{
+std::vector<surfflags_t> extended_texinfo_flags;
+}
+
 namespace settings
 {
 setting_group vis_output_group{"Output", 200, expected_source::commandline};
@@ -43,17 +48,19 @@ setting_group vis_advanced_group{"Advanced", 300, expected_source::commandline};
 void vis_settings::initialize(int argc, const char **argv)
 {
     try {
-        token_parser_t p(argc - 1, argv + 1, {"command line"});
-        auto remainder = parse(p);
+        common_settings::initialize(argc - 1, argv + 1);
 
-        if (remainder.size() <= 0 || remainder.size() > 1) {
-            print_help();
+        if (remainder.size() <= 0 || remainder.size() > 2) {
+            print_help(true);
         }
 
         sourceMap = DefaultExtension(remainder[0], "bsp");
     } catch (parse_exception &ex) {
+        print_help(false);
+        logging::print("ERROR OCCURRED WHEN TRYING TO PARSE ARGUMENTS:\n");
         logging::print(ex.what());
-        print_help();
+        logging::print("\n\n");
+        throw settings::quit_after_help_exception();
     }
 }
 } // namespace settings
@@ -346,7 +353,7 @@ static void PortalCompleted(visstats_t &stats, visportal_t *completed)
     portal_mutex.unlock();
 }
 
-time_point starttime, endtime, statetime;
+qtime_point starttime, endtime, statetime;
 static duration stateinterval;
 
 /*
@@ -405,7 +412,7 @@ static void ClusterFlow(int clusternum, leafbits_t &buffer, mbsp_t *bsp)
     }
 
     if (buffer[clusternum])
-       logging::print("WARNING: Leaf portals saw into cluster ({})\n", clusternum);
+        logging::print("WARNING: Leaf portals saw into cluster ({})\n", clusternum);
 
     buffer[clusternum] = true;
 
@@ -510,13 +517,9 @@ visstats_t CalcPortalVis(const mbsp_t *bsp)
     std::vector<visstats_t> stats_perportal;
     stats_perportal.resize(numportals * 2);
 
-    logging::parallel_for(startcount, numportals * 2, [&](size_t i) {
-        stats_perportal[i] = LeafThread();
-    });
+    logging::parallel_for(startcount, numportals * 2, [&](size_t i) { stats_perportal[i] = LeafThread(); });
 
-    const visstats_t stats = std::accumulate(stats_perportal.begin(),
-        stats_perportal.end(),
-        visstats_t{});
+    const visstats_t stats = std::accumulate(stats_perportal.begin(), stats_perportal.end(), visstats_t{});
 
     SaveVisState();
 
@@ -702,14 +705,16 @@ void vis_reset()
 
     portalIndex = 0;
 
-    starttime = time_point();
-    endtime = time_point();
-    statetime = time_point();
+    starttime = {};
+    endtime = {};
+    statetime = {};
 
     stateinterval = duration();
 
     totalvis = 0;
     compressed.clear();
+
+    vis::extended_texinfo_flags.clear();
 }
 
 int vis_main(int argc, const char **argv)
@@ -719,7 +724,9 @@ int vis_main(int argc, const char **argv)
     bspdata_t bspdata;
     const bspversion_t *loadversion;
 
-    vis_options.run(argc, argv);
+    vis_options.preinitialize(argc, argv);
+    vis_options.initialize(argc, argv);
+    vis_options.postinitialize(argc, argv);
 
     vis_options.sourceMap.replace_extension("bsp");
 
@@ -727,6 +734,8 @@ int vis_main(int argc, const char **argv)
                       .replace_filename(vis_options.sourceMap.stem().string() + "-vis")
                       .replace_extension("log"),
         vis_options);
+
+    vis_options.print_summary();
 
     stateinterval = std::chrono::minutes(5); /* 5 minutes */
     starttime = statetime = I_FloatTime();
@@ -739,6 +748,8 @@ int vis_main(int argc, const char **argv)
     ConvertBSPFormat(&bspdata, &bspver_generic);
 
     mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);
+
+    vis::extended_texinfo_flags = LoadExtendedTexinfoFlags(vis_options.sourceMap, &bsp);
 
     if (vis_options.phsonly.value()) {
         if (bsp.loadversion->game->id != GAME_QUAKE_II) {

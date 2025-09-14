@@ -27,6 +27,7 @@
 #include <array>
 #include <list>
 #include <stdexcept>
+#include <system_error>
 #include <unordered_map>
 
 namespace fs
@@ -159,8 +160,25 @@ struct wad_archive : archive_like
         uint8_t compression;
         padding<2> pad;
         std::array<char, 16> name; // must be null terminated
+                                   // NOTE: textures using all 16 exist in the wild, e.g. openquartzmirror
+                                   // in free_wad.wad
 
         auto stream_data() { return std::tie(filepos, disksize, size, type, compression, pad, name); }
+
+        std::string name_as_string() const
+        {
+            size_t length = 0;
+
+            // count the number of leading non-null characters
+            for (int i = 0; i < 16; ++i) {
+                if (name[i] != 0)
+                    ++length;
+                else
+                    break;
+            }
+
+            return std::string(name.data(), length);
+        }
     };
 
     std::unordered_map<std::string, std::tuple<uint32_t, uint32_t>, case_insensitive_hash, case_insensitive_equal>
@@ -189,7 +207,11 @@ struct wad_archive : archive_like
 
             wadstream >= file;
 
-            files[file.name.data()] = std::make_tuple(file.filepos, file.disksize);
+            std::string tex_name = file.name_as_string();
+            if (tex_name.size() == 16) {
+                logging::print("WARNING: texture name {} ({}) is not null-terminated\n", tex_name, pathname);
+            }
+            files[tex_name] = std::make_tuple(file.filepos, file.disksize);
         }
     }
 
@@ -225,7 +247,8 @@ inline std::shared_ptr<archive_like> addArchiveInternal(const path &p, bool exte
 {
     if (is_directory(p)) {
         for (auto &dir : directories) {
-            if (equivalent(dir->pathname, p)) {
+            std::error_code ec;
+            if (equivalent(dir->pathname, p, ec)) {
                 return dir;
             }
         }
@@ -235,7 +258,8 @@ inline std::shared_ptr<archive_like> addArchiveInternal(const path &p, bool exte
         return arch;
     } else {
         for (auto &arch : archives) {
-            if (equivalent(arch->pathname, p)) {
+            std::error_code ec;
+            if (equivalent(arch->pathname, p, ec)) {
                 return arch;
             }
         }

@@ -26,7 +26,8 @@
 
 constexpr size_t PRT_MAX_WINDING_FIXED = 24;
 
-using prtfile_winding_t = polylib::winding_base_t<polylib::winding_storage_hybrid_t<double, PRT_MAX_WINDING_FIXED>>;
+using prtfile_winding_storage_t = polylib::winding_storage_hybrid_t<double, PRT_MAX_WINDING_FIXED>;
+using prtfile_winding_t = polylib::winding_base_t<prtfile_winding_storage_t>;
 
 struct prtfile_portal_t
 {
@@ -50,4 +51,7 @@ struct prtfile_t
 
 struct bspversion_t;
 prtfile_t LoadPrtFile(const fs::path &name, const bspversion_t *loadversion);
+void WritePortalfile(
+    const fs::path &name, const prtfile_t &prtfile, const bspversion_t *loadversion, bool uses_detail, bool forceprt1);
+
 void WriteDebugPortals(const std::vector<polylib::winding_t> &portals, fs::path name);

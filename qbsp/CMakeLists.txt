@@ -34,9 +34,7 @@ set(QBSP_SOURCES
 
 add_library(libqbsp STATIC ${QBSP_SOURCES})
 
-find_package(jsoncpp CONFIG REQUIRED)
-
-target_link_libraries(libqbsp common ${CMAKE_THREAD_LIBS_INIT} TBB::tbb TBB::tbbmalloc fmt::fmt JsonCpp::JsonCpp pareto)
+target_link_libraries(libqbsp common ${CMAKE_THREAD_LIBS_INIT} TBB::tbb TBB::tbbmalloc fmt::fmt jsoncpp_static pareto)
 
 add_executable(qbsp main.cc)
 target_link_libraries(qbsp libqbsp)

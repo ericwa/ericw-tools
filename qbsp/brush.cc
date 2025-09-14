@@ -51,8 +51,8 @@ bool side_t::is_visible() const
 {
     // workaround for qbsp_q2_mist_clip.map - we want to treat nodraw faces as "!visible"
     // so they're used as splitters after mist
-    if (get_texinfo().flags.is_nodraw) {
-        if (get_texinfo().flags.is_hint) {
+    if (get_texinfo().flags.is_nodraw()) {
+        if (get_texinfo().flags.is_hint()) {
             return true;
         }
 
@@ -551,7 +551,7 @@ LoadBrush
 Converts a mapbrush to a bsp brush
 ===============
 */
-std::optional<bspbrush_t> LoadBrush(const mapentity_t &src, mapbrush_t &mapbrush, const contentflags_t &contents,
+std::optional<bspbrush_t> LoadBrush(const mapentity_t &src, mapbrush_t &mapbrush, contentflags_t contents,
     hull_index_t hullnum, std::optional<std::reference_wrapper<size_t>> num_clipped)
 {
     // create the brush
@@ -568,12 +568,12 @@ std::optional<bspbrush_t> LoadBrush(const mapentity_t &src, mapbrush_t &mapbrush
         // to the world extents (winding & bounds) which throws
         // a lot of warnings. is this how this should be working?
 #if 0
-        if (!hullnum.value_or(0) && mapbrush.is_hint) {
+        if (!hullnum.value_or(0) && mapbrush.is_hint()) {
             /* Don't generate hintskip faces */
             const maptexinfo_t &texinfo = src.get_texinfo();
 
             // any face that isn't a hint is assumed to be hintskip
-            if (!texinfo.flags.is_hint) {
+            if (!texinfo.flags.is_hint()) {
                 continue;
             }
         }
@@ -600,7 +600,7 @@ std::optional<bspbrush_t> LoadBrush(const mapentity_t &src, mapbrush_t &mapbrush
 
     // expand the brushes for the hull
     if (hullnum.value_or(0)) {
-        auto &hulls = qbsp_options.target_game->get_hull_sizes();
+        auto hulls = qbsp_options.target_game->get_hull_sizes();
         Q_assert(hullnum < hulls.size());
         auto &hull = *(hulls.begin() + hullnum.value());
 
@@ -678,7 +678,7 @@ std::optional<bspbrush_t> LoadBrush(const mapentity_t &src, mapbrush_t &mapbrush
 
 //=============================================================================
 
-static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hullnum, content_stats_base_t &stats,
+static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hullnum, content_stats_t &stats,
     bspbrush_t::container &brushes, logging::percent_clock &clock, size_t &num_clipped)
 {
     clock.max += src.mapbrushes.size();
@@ -741,11 +741,11 @@ static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hu
         contentflags_t contents = mapbrush.contents;
 
         if (qbsp_options.nodetail.value()) {
-            contents = qbsp_options.target_game->clear_detail(contents);
+            contents = contentflags_t::make(contents.flags & (~EWT_CFLAG_DETAIL));
         }
 
         /* "origin" brushes always discarded beforehand */
-        Q_assert(!contents.is_origin(qbsp_options.target_game));
+        Q_assert(!contents.is_origin());
 
         // per-brush settings
         bool detail = false;
@@ -768,19 +768,19 @@ static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hu
             continue;
         if ((qbsp_options.omitdetail.value() || qbsp_options.omitdetailwall.value()) && detail_wall)
             continue;
-        if (qbsp_options.omitdetail.value() && contents.is_any_detail(qbsp_options.target_game))
+        if (qbsp_options.omitdetail.value() && contents.is_any_detail())
             continue;
 
         /* turn solid brushes into detail, if we're in hull0 */
-        if (!hullnum.value_or(0) && contents.is_any_solid(qbsp_options.target_game)) {
+        if (!hullnum.value_or(0) && contents.is_any_solid()) {
             if (detail_illusionary) {
-                contents = qbsp_options.target_game->create_detail_illusionary_contents(contents);
+                contents = contentflags_t::create_detail_illusionary_contents(contents);
             } else if (detail_fence) {
-                contents = qbsp_options.target_game->create_detail_fence_contents(contents);
+                contents = contentflags_t::create_detail_fence_contents(contents);
             } else if (detail_wall) {
-                contents = qbsp_options.target_game->create_detail_wall_contents(contents);
+                contents = contentflags_t::create_detail_wall_contents(contents);
             } else if (detail) {
-                contents = qbsp_options.target_game->create_detail_solid_contents(contents);
+                contents = contentflags_t::create_detail_solid_contents(contents);
             }
         }
 
@@ -795,7 +795,7 @@ static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hu
          * include them in the model bounds so collision detection works
          * correctly.
          */
-        if (hullnum.has_value() && contents.is_clip(qbsp_options.target_game)) {
+        if (hullnum.has_value() && contents.is_clip()) {
             if (hullnum.value() == 0) {
                 if (auto brush = LoadBrush(src, mapbrush, contents, hullnum, num_clipped)) {
                     dst.bounds += brush->bounds;
@@ -803,7 +803,7 @@ static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hu
                 continue;
                 // for hull1, 2, etc., convert clip to CONTENTS_SOLID
             } else {
-                contents = qbsp_options.target_game->create_solid_contents();
+                contents = contentflags_t::make(EWT_VISCONTENTS_SOLID);
             }
         }
 
@@ -812,7 +812,7 @@ static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hu
             if (hullnum.value_or(0)) {
                 continue;
             }
-            contents = qbsp_options.target_game->create_empty_contents();
+            contents = contentflags_t::make(EWT_VISCONTENTS_EMPTY);
         }
 
         /* entities in some games never use water merging */
@@ -823,25 +823,25 @@ static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hu
             // to allow use of _mirrorinside, we'll set it to detail fence, which will get remapped back
             // to CONTENTS_SOLID at export. (we wouldn't generate inside faces if the content was CONTENTS_SOLID
             // from the start.)
-            contents = qbsp_options.target_game->create_detail_fence_contents(
-                qbsp_options.target_game->create_solid_contents());
+            contents = contentflags_t::create_detail_fence_contents(contentflags_t::make(EWT_VISCONTENTS_SOLID));
         }
 
         if (hullnum.value_or(0)) {
             /* nonsolid brushes don't show up in clipping hulls */
-            if (!contents.is_any_solid(qbsp_options.target_game) && !contents.is_sky(qbsp_options.target_game) &&
-                !contents.is_fence(qbsp_options.target_game)) {
+            if (!contents.is_any_solid() && !contents.is_sky() && !contents.is_fence()) {
                 continue;
             }
 
             /* all used brushes are solid in the collision hulls */
-            contents = qbsp_options.target_game->create_solid_contents();
+            contents = contentflags_t::make(EWT_VISCONTENTS_SOLID);
         }
 
         // fixme-brushbsp: function calls above can override the values below
         // so we have to re-set them to be sure they stay what the mapper intended..
-        contents.set_mirrored(mapbrush.contents.mirror_inside());
-        contents.set_clips_same_type(mapbrush.contents.clips_same_type());
+        if (mapbrush.contents.mirror_inside())
+            contents.set_mirrored(mapbrush.contents.mirror_inside());
+        if (mapbrush.contents.clips_same_type())
+            contents.set_clips_same_type(mapbrush.contents.clips_same_type());
 
         auto brush = LoadBrush(src, mapbrush, contents, hullnum, num_clipped);
 
@@ -849,7 +849,7 @@ static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hu
             continue;
         }
 
-        qbsp_options.target_game->count_contents_in_stats(brush->contents, stats);
+        stats.count_contents_in_stats(brush->contents);
 
         dst.bounds += brush->bounds;
         brushes.push_back(bspbrush_t::make_ptr(std::move(*brush)));
@@ -870,11 +870,11 @@ void Brush_LoadEntity(mapentity_t &entity, hull_index_t hullnum, bspbrush_t::con
 
     bool is_world_entity = map.is_world_entity(entity);
 
-    auto stats = qbsp_options.target_game->create_content_stats();
+    auto stats = content_stats_t();
     logging::percent_clock clock(0);
     clock.displayElapsed = is_world_entity;
 
-    Brush_LoadEntity(entity, entity, hullnum, *stats, brushes, clock, num_clipped);
+    Brush_LoadEntity(entity, entity, hullnum, stats, brushes, clock, num_clipped);
 
     /*
      * If this is the world entity, find all func_group and func_detail
@@ -891,7 +891,7 @@ void Brush_LoadEntity(mapentity_t &entity, hull_index_t hullnum, bspbrush_t::con
             ProcessAreaPortal(source);
 
             if (IsWorldBrushEntity(source) || IsNonRemoveWorldBrushEntity(source)) {
-                Brush_LoadEntity(entity, source, hullnum, *stats, brushes, clock, num_clipped);
+                Brush_LoadEntity(entity, source, hullnum, stats, brushes, clock, num_clipped);
             }
         }
     }
@@ -900,7 +900,7 @@ void Brush_LoadEntity(mapentity_t &entity, hull_index_t hullnum, bspbrush_t::con
 
     logging::header("CountBrushes");
 
-    qbsp_options.target_game->print_content_stats(*stats, "brushes");
+    stats.print_content_stats("brushes");
 
     logging::stat_tracker_t stat_print;
     auto &visible_sides_stat = stat_print.register_stat("visible sides");

@@ -10,7 +10,9 @@ set(LIGHT_INCLUDES
 	../include/light/surflight.hh
 	../include/light/ltface.hh
 	../include/light/trace.hh
-	../include/light/write.hh)
+	../include/light/write.hh
+	../include/light/spatialindex.hh
+)
 
 set(LIGHT_SOURCES
 	entities.cc
@@ -22,7 +24,9 @@ set(LIGHT_SOURCES
 	bounce.cc
 	surflight.cc
 	write.cc
-	${LIGHT_INCLUDES})
+	spatialindex.cc
+	${LIGHT_INCLUDES}
+)
 
 if (embree_FOUND)
 	MESSAGE(STATUS "Embree library found: ${EMBREE_LIBRARY}")
@@ -43,9 +47,7 @@ endif(embree_FOUND)
 
 add_library(liblight STATIC ${LIGHT_SOURCES})
 
-find_package(jsoncpp CONFIG REQUIRED)
-
-target_link_libraries(liblight PRIVATE common ${CMAKE_THREAD_LIBS_INIT} fmt::fmt JsonCpp::JsonCpp)
+target_link_libraries(liblight PRIVATE common ${CMAKE_THREAD_LIBS_INIT} fmt::fmt jsoncpp_static)
 
 add_executable(light main.cc)
 target_link_libraries(light PRIVATE common liblight)

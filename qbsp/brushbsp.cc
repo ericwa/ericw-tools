@@ -50,7 +50,7 @@ constexpr int PSIDE_FACING = 4;
 
 struct bspstats_t : logging::stat_tracker_t
 {
-    std::unique_ptr<content_stats_base_t> leafstats;
+    content_stats_t leafstats;
     // total number of nodes, includes c_nonvis
     stat &c_nodes = register_stat("nodes");
     // number of nodes created by splitting on a side_t which had !visible
@@ -315,9 +315,9 @@ static int TestBrushToPlanenum(
                     back = 1;
             }
             if (front && back) {
-                if (!(side.get_texinfo().flags.is_hintskip)) {
+                if (!(side.get_texinfo().flags.is_hintskip())) {
                     (*numsplits)++;
-                    if (side.get_texinfo().flags.is_hint) {
+                    if (side.get_texinfo().flags.is_hint()) {
                         *hintsplit = true;
                     }
                 }
@@ -351,15 +351,15 @@ static void LeafNode(node_t *leafnode, bspbrush_t::container brushes, bspstats_t
 
     auto *leafdata = leafnode->get_leafdata();
 
-    leafdata->contents = qbsp_options.target_game->create_empty_contents();
+    leafdata->contents = contentflags_t::make(EWT_VISCONTENTS_EMPTY);
     for (auto &brush : brushes) {
-        leafdata->contents = qbsp_options.target_game->combine_contents(leafdata->contents, brush->contents);
+        leafdata->contents = contentflags_t::combine_contents(leafdata->contents, brush->contents);
     }
     for (auto &brush : brushes) {
         leafdata->original_brushes.push_back(brush->original_brush());
     }
 
-    qbsp_options.target_game->count_contents_in_stats(leafdata->contents, *stats.leafstats);
+    stats.leafstats.count_contents_in_stats(leafdata->contents);
 
     if (qbsp_options.debugleak.value() || qbsp_options.debugbspbrushes.value()) {
         leafdata->bsp_brushes = brushes;
@@ -752,7 +752,8 @@ static bool CheckSplitBrush(const bspbrush_t::ptr &brush, size_t planenum)
     }
 
     for (int i = 0; i < 2; i++) {
-        double v1 = BrushVolume(temporary_brushes[i].sides, temporary_brushes[i].sides + temporary_brushes[i].num_sides);
+        double v1 =
+            BrushVolume(temporary_brushes[i].sides, temporary_brushes[i].sides + temporary_brushes[i].num_sides);
         if (v1 < qbsp_options.microvolume.value()) {
             return false;
         }
@@ -872,19 +873,19 @@ static side_t *ChooseMidPlaneFromList(const bspbrush_t::container &brushes, cons
     // passes will be tried.
     constexpr int numpasses = 4;
     for (int pass = 0; pass < numpasses; pass++) {
-        for (auto &brush: brushes) {
+        for (auto &brush : brushes) {
             // FIXME: these conditions need to be kept in sync with SelectSplitPlane
             // ideally, should be deduplicated somehow
-            if ((pass >= 2) != brush->contents.is_any_detail(qbsp_options.target_game))
+            if ((pass >= 2) != brush->contents.is_any_detail())
                 continue;
-            for (auto &side: brush->sides) {
+            for (auto &side : brush->sides) {
                 if (side.bevel)
                     continue; // never use a bevel as a spliter
                 if (!side.w)
                     continue; // nothing visible, so it can't split
                 if (side.onnode)
                     continue; // allready a node splitter
-                if (side.get_texinfo().flags.is_hintskip)
+                if (side.get_texinfo().flags.is_hintskip())
                     continue; // skip surfaces are never chosen
                 if (side.is_visible() != (pass == 0 || pass == 2))
                     continue; // only check visible faces on pass 0/2
@@ -998,7 +999,7 @@ static side_t *SelectSplitPlane(
         for (auto &brush : brushes) {
             // FIXME: these conditions need to be kept in sync with ChooseMidPlaneFromList
             // ideally, should be deduplicated somehow
-            if ((pass >= 2) != brush->contents.is_any_detail(qbsp_options.target_game))
+            if ((pass >= 2) != brush->contents.is_any_detail())
                 continue;
             for (auto &side : brush->sides) {
                 if (side.bevel)
@@ -1009,7 +1010,7 @@ static side_t *SelectSplitPlane(
                     continue; // allready a node splitter
                 if (side.tested)
                     continue; // we allready have metrics for this plane
-                if (side.get_texinfo().flags.is_hintskip)
+                if (side.get_texinfo().flags.is_hintskip())
                     continue; // skip surfaces are never chosen
                 if (side.is_visible() != (pass == 0 || pass == 2))
                     continue; // only check visible faces on pass 0/2
@@ -1066,7 +1067,7 @@ static side_t *SelectSplitPlane(
                 value -= epsilonbrush * 1000; // avoid!
 
                 // never split a hint side except with another hint
-                if (hintsplit && !(side.get_texinfo().flags.is_hint))
+                if (hintsplit && !(side.get_texinfo().flags.is_hint()))
                     value = -9999999;
 
                 // save off the side test so we don't need
@@ -1229,8 +1230,12 @@ static void BuildTree_r(tree_t &tree, int level, node_t *node, bspbrush_t::conta
 
     // recursively process children
     tbb::task_group g;
-    g.run([&]() { BuildTree_r(tree, level + 1, nodedata->children[0], std::move(children[0]), split_type, stats, clock); });
-    g.run([&]() { BuildTree_r(tree, level + 1, nodedata->children[1], std::move(children[1]), split_type, stats, clock); });
+    g.run([&]() {
+        BuildTree_r(tree, level + 1, nodedata->children[0], std::move(children[0]), split_type, stats, clock);
+    });
+    g.run([&]() {
+        BuildTree_r(tree, level + 1, nodedata->children[1], std::move(children[1]), split_type, stats, clock);
+    });
     g.wait();
 }
 
@@ -1251,6 +1256,11 @@ void BrushBSP(tree_t &tree, mapentity_t &entity, const bspbrush_t::container &br
 {
     logging::header(__func__);
 
+    // NOTE: entity bounds may include brushes that were deleted
+    // from the brush list (e.g. clip brushes in Q1 hull 0 still need to affect the model/node bounds)
+    // so start with that.
+    tree.bounds = entity.bounds;
+
     if (brushlist.empty()) {
         /*
          * We allow an entity to be constructed with no visible brushes
@@ -1268,14 +1278,13 @@ void BrushBSP(tree_t &tree, mapentity_t &entity, const bspbrush_t::container &br
         nodedata->planenum = 0;
         nodedata->children[0] = tree.create_node();
         nodedata->children[0]->make_leaf();
-        nodedata->children[0]->get_leafdata()->contents = qbsp_options.target_game->create_empty_contents();
+        nodedata->children[0]->get_leafdata()->contents = contentflags_t::make(EWT_VISCONTENTS_EMPTY);
         nodedata->children[0]->parent = headnode;
         nodedata->children[1] = tree.create_node();
         nodedata->children[1]->make_leaf();
-        nodedata->children[1]->get_leafdata()->contents = qbsp_options.target_game->create_empty_contents();
+        nodedata->children[1]->get_leafdata()->contents = contentflags_t::make(EWT_VISCONTENTS_EMPTY);
         nodedata->children[1]->parent = headnode;
 
-        tree.bounds = headnode->bounds;
         tree.headnode = headnode;
 
         return;
@@ -1327,7 +1336,6 @@ void BrushBSP(tree_t &tree, mapentity_t &entity, const bspbrush_t::container &br
     tree.headnode = node;
 
     bspstats_t stats{};
-    stats.leafstats = qbsp_options.target_game->create_content_stats();
 
     {
         logging::percent_clock clock;
@@ -1348,12 +1356,14 @@ Returns true if b1 is allowed to bite b2
 */
 inline bool BrushGE(const bspbrush_t &b1, const bspbrush_t &b2)
 {
+    if (b1.mapbrush->sort_key() < b2.mapbrush->sort_key())
+        return false;
+
     // detail brushes never bite structural brushes
-    if ((b1.contents.is_any_detail(qbsp_options.target_game)) &&
-        !(b2.contents.is_any_detail(qbsp_options.target_game))) {
+    if ((b1.contents.is_any_detail()) && !(b2.contents.is_any_detail())) {
         return false;
     }
-    return b1.contents.is_any_solid(qbsp_options.target_game) && b2.contents.is_any_solid(qbsp_options.target_game);
+    return b1.contents.is_any_solid() && b2.contents.is_any_solid();
 }
 
 /*
@@ -1467,16 +1477,8 @@ newlist:
 
         auto &b1 = *b1_it;
 
-        if (b1->mapbrush->no_chop) {
-            continue;
-        }
-
         for (auto b2_it = next; b2_it != list.end(); b2_it++) {
             auto &b2 = *b2_it;
-
-            if (b2->mapbrush->no_chop) {
-                continue;
-            }
 
             if (BrushesDisjoint(*b1, *b2)) {
                 continue;

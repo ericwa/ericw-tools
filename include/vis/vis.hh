@@ -59,25 +59,26 @@ struct viswinding_t
 
     // heap allocated mode
 
-    struct viswinding_deleter_t {
-        void operator()(viswinding_t *ptr) {
-            free(ptr);
-        }
+    struct viswinding_deleter_t
+    {
+        void operator()(viswinding_t *ptr) { free(ptr); }
     };
 
     using unique_ptr = std::unique_ptr<viswinding_t, viswinding_deleter_t>;
 
-    static inline unique_ptr new_heap_winding(int size) {
+    static inline unique_ptr new_heap_winding(int size)
+    {
         const size_t bytes = offsetof(viswinding_t, points) + sizeof(qvec3d) * size;
 
         viswinding_t *result = static_cast<viswinding_t *>(malloc(bytes));
         result->numpoints = size;
 
-        return unique_ptr(result,viswinding_deleter_t());
+        return unique_ptr(result, viswinding_deleter_t());
     }
 
-    template <class W>
-    static inline unique_ptr copy_polylib_winding(const W &other) {
+    template<class W>
+    static inline unique_ptr copy_polylib_winding(const W &other)
+    {
         auto result = new_heap_winding(other.size());
 
         for (size_t i = 0; i < other.size(); ++i)
@@ -89,17 +90,11 @@ struct viswinding_t
 
     // getters
 
-    inline qvec3d const &at(size_t index) const {
-        return points[index];
-    }
-    inline qvec3d const &operator[](size_t index) const {
-        return points[index];
-    }
+    inline qvec3d const &at(size_t index) const { return points[index]; }
+    inline qvec3d const &operator[](size_t index) const { return points[index]; }
     inline size_t size() const { return numpoints; }
 
-    inline void push_back(const qvec3d &v) {
-        points[numpoints++] = v;
-    }
+    inline void push_back(const qvec3d &v) { points[numpoints++] = v; }
 
     // utils
 
@@ -194,7 +189,8 @@ struct visstats_t
     int64_t c_portalskip = 0;
     int64_t c_targetcheck = 0;
 
-    visstats_t operator+(const visstats_t& other) const {
+    visstats_t operator+(const visstats_t &other) const
+    {
         visstats_t result;
         result.c_portaltest = this->c_portaltest + other.c_portaltest;
         result.c_portalpass = this->c_portalpass + other.c_portalpass;
@@ -239,6 +235,11 @@ extern int leaflongs;
 
 extern fs::path portalfile, statefile, statetmpfile;
 
+namespace vis
+{
+extern std::vector<surfflags_t> extended_texinfo_flags;
+}
+
 void BasePortalVis();
 
 visstats_t PortalFlow(visportal_t *p);
@@ -247,7 +248,7 @@ void CalcAmbientSounds(mbsp_t *bsp);
 
 void CalcPHS(mbsp_t *bsp);
 
-extern time_point starttime, endtime, statetime;
+extern qtime_point starttime, endtime, statetime;
 
 void SaveVisState();
 bool LoadVisState();

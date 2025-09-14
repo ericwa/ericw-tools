@@ -58,10 +58,10 @@ size_t ExportMapTexinfo(size_t texinfonum)
 
     if (src.outputnum.has_value())
         return src.outputnum.value();
-    else if (!qbsp_options.includeskip.value() && src.flags.is_nodraw) {
+    else if (!qbsp_options.includeskip.value() && src.flags.is_nodraw()) {
         // TODO: move to game specific
         // always include LIGHT
-        if (qbsp_options.target_game->id != GAME_QUAKE_II || !(src.flags.native & Q2_SURF_LIGHT))
+        if (qbsp_options.target_game->id != GAME_QUAKE_II || !(src.flags.native_q2 & Q2_SURF_LIGHT))
             return -1;
     }
 
@@ -73,7 +73,8 @@ size_t ExportMapTexinfo(size_t texinfonum)
     // make sure we don't write any non-native flags.
     // e.g. Quake only accepts 0 or TEX_SPECIAL.
     if (!src.flags.is_valid(qbsp_options.target_game)) {
-        FError("Internal error: Texinfo {} has invalid surface flags {}", texinfonum, src.flags.native);
+        FError("Internal error: Texinfo {} has invalid surface flags native_q1: {} native_q2: {}", texinfonum,
+            static_cast<int32_t>(src.flags.native_q1), static_cast<int32_t>(src.flags.native_q2));
     }
 
     dest.flags = src.flags;
@@ -82,8 +83,8 @@ size_t ExportMapTexinfo(size_t texinfonum)
 
     const std::string &src_name = map.texinfoTextureName(texinfonum);
     if (src_name.size() > (dest.texture.size() - 1)) {
-        logging::print("WARNING: texture name '{}' exceeds maximum length {} and will be truncated\n",
-            src_name, dest.texture.size() - 1);
+        logging::print("WARNING: texture name '{}' exceeds maximum length {} and will be truncated\n", src_name,
+            dest.texture.size() - 1);
     }
     for (size_t i = 0; i < (dest.texture.size() - 1); ++i) {
         if (i < src_name.size())
@@ -164,13 +165,12 @@ static void ExportLeaf(node_t *node)
     leafdata_t *leafdata = node->get_leafdata();
     mleaf_t &dleaf = map.bsp.dleafs.emplace_back();
 
+    // save original content flags for .content.json, before remapping
+    map.exported_extended_contentflags.push_back(leafdata->contents);
+    assert(map.exported_extended_contentflags.size() == map.bsp.dleafs.size());
+
     const contentflags_t remapped =
         qbsp_options.target_game->contents_remap_for_export(leafdata->contents, gamedef_t::remap_type_t::leaf);
-
-    if (!remapped.is_valid(qbsp_options.target_game, false)) {
-        FError("Internal error: On leaf {}, tried to save invalid contents type {}", map.bsp.dleafs.size() - 1,
-            remapped.to_string(qbsp_options.target_game));
-    }
 
     dleaf.contents = qbsp_options.target_game->contents_to_native(remapped);
 
@@ -186,22 +186,28 @@ static void ExportLeaf(node_t *node)
 
     dleaf.visofs = -1; // no vis info yet
 
-    // write the marksurfaces
+    // write the marksurfaces only if it's a nonsolid leaf.
+    //
+    // the only reason a solid leaf would have marksurfaces is in Q1, we convert func_detail_fence to CONTENTS_SOLID.
+    // this leads to inconsitent rendering (winquake, FTEQW ignore the marksurfaces on solid leafs, QS renders them).
     dleaf.firstmarksurface = static_cast<int>(map.bsp.dleaffaces.size());
 
-    for (auto &face : leafdata->markfaces) {
-        if (!qbsp_options.includeskip.value() && face->get_texinfo().flags.is_nodraw) {
+    if (!(remapped.flags & EWT_VISCONTENTS_SOLID)) {
+        for (auto &face : leafdata->markfaces) {
+            if (!qbsp_options.includeskip.value() && face->get_texinfo().flags.is_nodraw()) {
 
-            // TODO: move to game specific
-            // always include LIGHT
-            if (qbsp_options.target_game->id != GAME_QUAKE_II || !(face->get_texinfo().flags.native & Q2_SURF_LIGHT))
-                continue;
-        }
+                // TODO: move to game specific
+                // always include LIGHT
+                if (qbsp_options.target_game->id != GAME_QUAKE_II ||
+                    !(face->get_texinfo().flags.native_q2 & Q2_SURF_LIGHT))
+                    continue;
+            }
 
-        /* grab final output faces */
-        for (auto &fragment : face->fragments) {
-            if (fragment.outputnumber.has_value()) {
-                map.bsp.dleaffaces.push_back(fragment.outputnumber.value());
+            /* grab final output faces */
+            for (auto &fragment : face->fragments) {
+                if (fragment.outputnumber.has_value()) {
+                    map.bsp.dleaffaces.push_back(fragment.outputnumber.value());
+                }
             }
         }
     }
@@ -249,7 +255,7 @@ static void ExportDrawNodes(node_t *node)
             // children[i] is a leaf
             // In Q2, all leaves must have their own ID even if they share solidity.
             if (qbsp_options.target_game->id != GAME_QUAKE_II &&
-                    children_i_leafdata->contents.is_any_solid(qbsp_options.target_game)) {
+                children_i_leafdata->contents.is_any_solid()) {
                 dnode->children[i] = PLANENUM_LEAF;
             } else {
                 int32_t nextLeafIndex = static_cast<int32_t>(map.bsp.dleafs.size());
@@ -329,9 +335,11 @@ void BeginBSPFile()
 
     // Leave room for leaf 0 (must be solid)
     auto &solid_leaf = map.bsp.dleafs.emplace_back();
-    solid_leaf.contents = qbsp_options.target_game->contents_to_native(qbsp_options.target_game->create_solid_contents());
+    solid_leaf.contents = qbsp_options.target_game->contents_to_native(contentflags_t::make(EWT_VISCONTENTS_SOLID));
     solid_leaf.cluster = CLUSTER_INVALID;
     Q_assert(map.bsp.dleafs.size() == 1);
+
+    map.exported_extended_contentflags.push_back(contentflags_t::make(EWT_VISCONTENTS_SOLID));
 }
 
 /*
@@ -347,15 +355,7 @@ static void WriteExtendedTexinfoFlags()
         fs::remove(file);
     }
 
-    for (auto &texinfo : map.mtexinfos) {
-        if (texinfo.flags.needs_write()) {
-            // this texinfo uses some extended flags, write them to a file
-            needwrite = true;
-            break;
-        }
-    }
-
-    if (!needwrite || qbsp_options.noextendedsurfflags.value())
+    if (qbsp_options.noextendedsurfflags.value())
         return;
 
     // sort by output texinfo number
@@ -366,94 +366,36 @@ static void WriteExtendedTexinfoFlags()
     auto texinfofile = Json::Value(Json::objectValue);
 
     for (const auto &tx : texinfos_sorted) {
-        if (!tx.outputnum.has_value() || !tx.flags.needs_write())
+        if (!tx.outputnum.has_value())
             continue;
 
-        auto t = Json::Value(Json::objectValue);
-
-        if (tx.flags.is_nodraw) {
-            t["is_nodraw"] = tx.flags.is_nodraw;
-        }
-        if (tx.flags.is_hint) {
-            t["is_hint"] = tx.flags.is_hint;
-        }
-        if (tx.flags.no_dirt) {
-            t["no_dirt"] = tx.flags.no_dirt;
-        }
-        if (tx.flags.no_shadow) {
-            t["no_shadow"] = tx.flags.no_shadow;
-        }
-        if (tx.flags.no_bounce) {
-            t["no_bounce"] = tx.flags.no_bounce;
-        }
-        if (tx.flags.no_minlight) {
-            t["no_minlight"] = tx.flags.no_minlight;
-        }
-        if (tx.flags.no_expand) {
-            t["no_expand"] = tx.flags.no_expand;
-        }
-        if (tx.flags.no_phong) {
-            t["no_phong"] = tx.flags.no_phong;
-        }
-        if (tx.flags.light_ignore) {
-            t["light_ignore"] = tx.flags.light_ignore;
-        }
-        if (tx.flags.surflight_rescale) {
-            t["surflight_rescale"] = tx.flags.surflight_rescale.value();
-        }
-        if (tx.flags.surflight_style.has_value()) {
-            t["surflight_style"] = tx.flags.surflight_style.value();
-        }
-        if (tx.flags.surflight_targetname.has_value()) {
-            t["surflight_targetname"] = tx.flags.surflight_targetname.value();
-        }
-        if (tx.flags.surflight_color.has_value()) {
-            t["surflight_color"] = to_json(tx.flags.surflight_color.value());
-        }
-        if (tx.flags.surflight_minlight_scale.has_value()) {
-            t["surflight_minlight_scale"] = tx.flags.surflight_minlight_scale.value();
-        }
-        if (tx.flags.phong_angle) {
-            t["phong_angle"] = tx.flags.phong_angle;
-        }
-        if (tx.flags.phong_angle_concave) {
-            t["phong_angle_concave"] = tx.flags.phong_angle_concave;
-        }
-        if (tx.flags.phong_group) {
-            t["phong_group"] = tx.flags.phong_group;
-        }
-        if (tx.flags.minlight) {
-            t["minlight"] = *tx.flags.minlight;
-        }
-        if (tx.flags.maxlight) {
-            t["maxlight"] = tx.flags.maxlight;
-        }
-        if (!qv::emptyExact(tx.flags.minlight_color)) {
-            t["minlight_color"] = to_json(tx.flags.minlight_color);
-        }
-        if (tx.flags.light_alpha) {
-            t["light_alpha"] = *tx.flags.light_alpha;
-        }
-        if (tx.flags.light_twosided) {
-            t["light_twosided"] = *tx.flags.light_twosided;
-        }
-        if (tx.flags.lightcolorscale != 1.0) {
-            t["lightcolorscale"] = tx.flags.lightcolorscale;
-        }
-        if (tx.flags.surflight_group) {
-            t["surflight_group"] = tx.flags.surflight_group;
-        }
-        if (tx.flags.world_units_per_luxel) {
-            t["world_units_per_luxel"] = *tx.flags.world_units_per_luxel;
-        }
-        if (tx.flags.object_channel_mask) {
-            t["object_channel_mask"] = *tx.flags.object_channel_mask;
-        }
-
+        auto t = tx.flags.to_json();
         texinfofile[std::to_string(*tx.outputnum)].swap(t);
     }
 
     std::ofstream(file, std::ios_base::out | std::ios_base::binary) << texinfofile;
+}
+
+static void WriteExtendedContentFlags()
+{
+    auto file = fs::path(qbsp_options.bsp_path).replace_extension("content.json");
+
+    if (fs::exists(file)) {
+        fs::remove(file);
+    }
+
+    if (qbsp_options.noextendedcontentflags.value())
+        return;
+
+    Q_assert(map.exported_extended_contentflags.size() == map.bsp.dleafs.size());
+
+    json jsonfile = json::array();
+
+    for (const auto &flags : map.exported_extended_contentflags) {
+        jsonfile.push_back(flags.to_json());
+    }
+
+    std::ofstream(file, std::ios_base::out | std::ios_base::binary) << jsonfile;
 }
 
 static bool Is16BitMarkfsurfaceFormat(const bspversion_t *version)
@@ -544,6 +486,7 @@ void FinishBSPFile()
     }
 
     WriteExtendedTexinfoFlags();
+    WriteExtendedContentFlags();
     WriteBSPFile();
 }
 

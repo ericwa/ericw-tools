@@ -54,6 +54,7 @@ enum light_formula_t
     LF_INVERSE2A = 5, /* Inverse square, with distance adjusted to avoid
                          exponentially bright values near the source.
                            (1/(x+128)^2), scaled by 1/(128^2) */
+    LF_QRAD3 = 6, /* qrad3-style surface lights; 1 / (max(x, 16) * max(x, 16)) */
     LF_COUNT
 };
 
@@ -77,7 +78,7 @@ public:
 
     aabb3f bounds;
 
-    settings::setting_scalar light;
+    settings::setting_light light;
     settings::setting_scalar atten;
     settings::setting_enum<light_formula_t> formula;
     settings::setting_scalar cone; // Q2
@@ -108,9 +109,11 @@ public:
     settings::setting_bool nostaticlight;
     settings::setting_int32 surflight_group;
     settings::setting_scalar surflight_minlight_scale;
+    settings::setting_scalar surflight_atten;
     settings::setting_int32 light_channel_mask;
     settings::setting_int32 shadow_channel_mask;
     settings::setting_bool nonudge;
+    settings::setting_string switchableshadow_target;
 
     light_t();
 
@@ -141,6 +144,10 @@ std::vector<std::unique_ptr<light_t>> &GetLights();
 const std::vector<entdict_t> &GetEntdicts();
 std::vector<sun_t> &GetSuns();
 std::vector<entdict_t> &GetRadLights();
+/**
+ * Returns the light entity that has "_switchableshadow_target" set to the given value, or nullptr.
+ */
+light_t *LightWithSwitchableShadowTargetValue(const std::string &target);
 
 const std::vector<std::unique_ptr<light_t>> &GetSurfaceLightTemplates();
 

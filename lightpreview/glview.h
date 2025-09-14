@@ -38,6 +38,7 @@ See file, 'COPYING', for details.
 #include <common/entdata.h>
 #include <common/bspfile.hh>
 #include <common/bspinfo.hh>
+#include <light/spatialindex.hh>
 
 enum class keys_t : uint32_t
 {
@@ -60,8 +61,9 @@ private:
     std::optional<mbsp_t> m_bsp;
     std::unordered_map<int, std::vector<uint8_t>> m_decompressedVis;
 
+    std::unique_ptr<spatialindex_t> m_spatialindex;
     uint32_t m_keysPressed;
-    std::optional<time_point> m_lastFrame;
+    std::optional<qtime_point> m_lastFrame;
     std::optional<QPoint> m_lastMouseDownPos;
     /**
      * units / second
@@ -78,10 +80,7 @@ private:
         // other: visofs
         int clusternum;
 
-        bool operator==(const face_visibility_key_t &other) const
-        {
-            return show_bmodels == other.show_bmodels && leafnum == other.leafnum && clusternum == other.clusternum;
-        }
+        auto operator<=>(const face_visibility_key_t &other) const = default;
     };
     face_visibility_key_t desiredFaceVisibility() const;
 
@@ -117,6 +116,7 @@ private:
     QOpenGLTexture::Filter m_filter = QOpenGLTexture::Linear;
     bool m_drawTranslucencyAsOpaque = false;
     bool m_showBmodels = true;
+    float m_brightness = 0.0f;
 
     QOpenGLVertexArrayObject m_vao;
     QOpenGLBuffer m_vbo;
@@ -124,6 +124,10 @@ private:
 
     QOpenGLVertexArrayObject m_leakVao;
     QOpenGLBuffer m_leakVbo;
+
+    QOpenGLVertexArrayObject m_clickVao;
+    QOpenGLBuffer m_clickVbo;
+    bool m_hasClick = false;
 
     QOpenGLVertexArrayObject m_portalVao;
     QOpenGLBuffer m_portalVbo;
@@ -134,7 +138,8 @@ private:
     QOpenGLBuffer m_frustumFacesIndexBuffer;
     QOpenGLBuffer m_frustumEdgesIndexBuffer;
 
-    struct leaf_vao_t {
+    struct leaf_vao_t
+    {
         QOpenGLVertexArrayObject vao;
         QOpenGLBuffer vbo;
         QOpenGLBuffer indexBuffer;
@@ -150,13 +155,12 @@ private:
         float opacity = 1.f;
         bool alpha_test = false;
 
-        auto as_tuple() const { return std::make_tuple(program, texname, opacity, alpha_test); }
-
-        bool operator<(const material_key &other) const { return as_tuple() < other.as_tuple(); }
+        auto operator<=>(const material_key &other) const = default;
     };
 
     std::shared_ptr<QOpenGLTexture> placeholder_texture;
     std::shared_ptr<QOpenGLTexture> lightmap_texture;
+    bool m_is_hdr_lightmap = false;
     /**
      * 1D texture, one uint8 per face.
      *
@@ -176,6 +180,7 @@ private:
     std::vector<drawcall_t> m_drawcalls;
     size_t num_leak_points = 0;
     size_t num_portal_indices = 0;
+    int m_selected_face = -1;
 
     QOpenGLShaderProgram *m_program = nullptr, *m_skybox_program = nullptr;
     QOpenGLShaderProgram *m_program_wireframe = nullptr;
@@ -193,6 +198,9 @@ private:
     int m_program_drawnormals_location = 0;
     int m_program_drawflat_location = 0;
     int m_program_style_scalars_location = 0;
+    int m_program_brightness_location = 0;
+    int m_program_lightmap_scale_location = 0;
+    int m_program_selected_face_location = 0;
 
     // uniform locations (skybox program)
     int m_skybox_program_mvp_location = 0;
@@ -206,6 +214,9 @@ private:
     int m_skybox_program_drawnormals_location = 0;
     int m_skybox_program_drawflat_location = 0;
     int m_skybox_program_style_scalars_location = 0;
+    int m_skybox_program_brightness_location = 0;
+    int m_skybox_program_lightmap_scale_location = 0;
+    int m_skybox_program_selected_face_location = 0;
 
     // uniform locations (wireframe program)
     int m_program_wireframe_mvp_location = 0;
@@ -221,14 +232,15 @@ public:
 
 private:
     void setFaceVisibilityArray(uint8_t *data);
-    static bool isVolumeInFrustum(const std::array<QVector4D, 4>& frustum, const qvec3f& mins, const qvec3f& maxs);
+    static bool isVolumeInFrustum(const std::array<QVector4D, 4> &frustum, const qvec3f &mins, const qvec3f &maxs);
     static std::vector<QVector3D> getFrustumCorners(float displayAspect);
-    static std::array<QVector4D, 4> getFrustumPlanes(const QMatrix4x4& MVP);
+    static std::array<QVector4D, 4> getFrustumPlanes(const QMatrix4x4 &MVP);
 
 public:
     void renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries_t &bspx,
         const std::vector<entdict_t> &entities, const full_atlas_t &lightmap, const settings::common_settings &settings,
         bool use_bspx_normals);
+    void setCamera(const qvec3d &origin);
     void setCamera(const qvec3d &origin, const qvec3d &fwd);
     // FIXME: distinguish render modes from render options
     void setLighmapOnly(bool lighmapOnly);
@@ -247,11 +259,27 @@ public:
     // intensity = 0 to 200
     void setLightStyleIntensity(int style_id, int intensity);
     void setMagFilter(QOpenGLTexture::Filter filter);
-    const bool &getKeepOrigin() const { return m_keepOrigin; }
+    bool getKeepOrigin() const { return m_keepOrigin; }
     void setDrawTranslucencyAsOpaque(bool drawopaque);
     void setShowBmodels(bool bmodels);
+    void setBrightness(float brightness);
 
     void takeScreenshot(QString destPath, int w, int h);
+
+private:
+    void error(const QString &context, const QString &context2, const QString &log);
+    void setupProgram(const QString &context, QOpenGLShaderProgram *dest, const char *vert, const char *frag);
+
+private:
+    struct matrices_t
+    {
+        QMatrix4x4 modelMatrix;
+        QMatrix4x4 viewMatrix;
+        QMatrix4x4 projectionMatrix;
+        QMatrix4x4 MVP;
+    };
+
+    matrices_t getMatrices() const;
 
 protected:
     void initializeGL() override;
@@ -260,7 +288,7 @@ protected:
 
 private:
     void updateFrustumVBO();
-    void updateFaceVisibility(const std::array<QVector4D, 4>& frustum);
+    void updateFaceVisibility(const std::array<QVector4D, 4> &frustum);
     bool shouldLiveUpdate() const;
     void handleLoggedMessage(const QOpenGLDebugMessage &debugMessage);
 
@@ -271,6 +299,7 @@ protected:
     void mousePressEvent(QMouseEvent *event) override;
 
 private:
+    void clickFace(QMouseEvent *event);
     void applyMouseMotion();
     void applyFlyMovement(float duration);
 

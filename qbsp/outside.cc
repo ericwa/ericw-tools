@@ -41,7 +41,7 @@ static bool LeafSealsMap(const node_t *node)
     auto *leafdata = node->get_leafdata();
     Q_assert(leafdata);
 
-    return qbsp_options.target_game->contents_seals_map(leafdata->contents);
+    return leafdata->contents.seals_map();
 }
 
 static bool LeafSealsForDetailFill(const node_t *node)
@@ -52,8 +52,7 @@ static bool LeafSealsForDetailFill(const node_t *node)
     // NOTE: detail-solid is considered sealing for the detail fill,
     // but not the regular fill (LeafSealsMap).
 
-    return qbsp_options.target_game->contents_are_any_solid(leafdata->contents) ||
-           qbsp_options.target_game->contents_are_sky(leafdata->contents);
+    return leafdata->contents.is_any_solid() || leafdata->contents.is_sky();
 }
 
 /*
@@ -349,7 +348,7 @@ static void MarkOccupiedLeafs(node_t *headnode, hull_index_t hullnum)
         mapentity_t &entity = map.entities.at(i);
 
         /* skip entities at (0 0 0) (bmodels) */
-        if (qv::epsilonEmpty(entity.origin, (float) QBSP_EQUAL_EPSILON))
+        if (qv::epsilonEmpty(entity.origin, (float)QBSP_EQUAL_EPSILON))
             continue;
 
         // skip nofill entities
@@ -412,7 +411,7 @@ void MarkBrushSidesInvisible(bspbrush_t::container &brushes)
             if (face.source) {
                 face.source->visible = false;
 
-                if (face.source->get_texinfo().flags.is_hint) {
+                if (face.source->get_texinfo().flags.is_hint()) {
                     face.source->visible = true; // hints are always visible
                 }
             }
@@ -499,12 +498,12 @@ static void OutLeafsToSolid_R(node_t *node, settings::filltype_t filltype, outle
     }
 
     // Don't fill sky, or count solids as outleafs
-    if (qbsp_options.target_game->contents_seals_map(leafdata->contents)) {
+    if (leafdata->contents.seals_map()) {
         return;
     }
 
     // Finally, we can fill it in as void.
-    leafdata->contents = qbsp_options.target_game->create_solid_contents();
+    leafdata->contents = contentflags_t::make(EWT_VISCONTENTS_SOLID);
     stats.outleafs++;
 }
 
@@ -534,8 +533,7 @@ static void FillDetailEnclosedLeafsToDetailSolid_R(node_t *node, detail_filled_l
     }
 
     // Finally, we can fill it in as detail solid.
-    leafdata->contents =
-        qbsp_options.target_game->create_detail_solid_contents(qbsp_options.target_game->create_solid_contents());
+    leafdata->contents = contentflags_t::create_detail_solid_contents(contentflags_t::make(EWT_VISCONTENTS_SOLID));
     stats.filledleafs++;
 }
 

@@ -57,12 +57,12 @@ constexpr double DEGREES_EPSILON = 0.001;
 constexpr double DEFAULT_ON_EPSILON = 0.1;
 
 /*
-* The quality of the bsp output is highly sensitive to these epsilon values.
-* Notes:
-* - some calculations are sensitive to errors and need the various
-*   epsilons to be such that QBSP_EQUAL_EPSILON < CONTINUOUS_EPSILON.
-*     ( TODO: re-check if CONTINUOUS_EPSILON is still directly related )
-*/
+ * The quality of the bsp output is highly sensitive to these epsilon values.
+ * Notes:
+ * - some calculations are sensitive to errors and need the various
+ *   epsilons to be such that QBSP_EQUAL_EPSILON < CONTINUOUS_EPSILON.
+ *     ( TODO: re-check if CONTINUOUS_EPSILON is still directly related )
+ */
 constexpr double ANGLEEPSILON = NORMAL_EPSILON;
 constexpr double ZERO_EPSILON = DIST_EPSILON;
 constexpr double QBSP_EQUAL_EPSILON = DIST_EPSILON;

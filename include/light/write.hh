@@ -28,33 +28,6 @@
 struct mbsp_t;
 struct bspdata_t;
 
-constexpr int32_t LIT_VERSION = 1;
-
-struct litheader_t
-{
-    struct v1_t
-    {
-        std::array<char, 4> ident = {'Q', 'L', 'I', 'T'};
-        int version;
-
-        // serialize for streams
-        void stream_write(std::ostream &s) const;
-        void stream_read(std::istream &s);
-    };
-    struct v2_t
-    {
-        int numsurfs;
-        int lmsamples;
-
-        // serialize for streams
-        void stream_write(std::ostream &s) const;
-        void stream_read(std::istream &s);
-    };
-
-    v1_t v1;
-    v2_t v2;
-};
-
 constexpr size_t MAXLIGHTMAPSSUP = 16;
 constexpr uint16_t INVALID_LIGHTSTYLE = 0xffffu;
 
@@ -67,7 +40,9 @@ struct facesup_t
     twosided<uint16_t> extent;
 };
 
-void WriteLitFile(const mbsp_t *bsp, const std::vector<facesup_t> &facesup, const fs::path &filename, int version, const std::vector<uint8_t> &lit_filebase, const std::vector<uint8_t> &lux_filebase);
+void WriteLitFile(const mbsp_t *bsp, const std::vector<facesup_t> &facesup, const fs::path &filename, int version,
+    const std::vector<uint8_t> &lit_filebase, const std::vector<uint8_t> &lux_filebase,
+    const std::vector<uint8_t> &hdr_filebase);
 void WriteLuxFile(const mbsp_t *bsp, const fs::path &filename, int version, const std::vector<uint8_t> &lux_filebase);
 
 void SaveLightmapSurfaces(bspdata_t *bspdata, const fs::path &source);

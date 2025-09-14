@@ -65,7 +65,6 @@ const std::set<const mface_t *> &ShadowCastingSolidFacesSet()
     return shadow_casting_solid_faces;
 }
 
-
 /**
  * Returns 1.0 unless a custom alpha value is set.
  * The priority is: "_light_alpha" (read from extended_texinfo_flags), then "alpha", then Q2 surface flags
@@ -369,11 +368,15 @@ static void Embree_FilterFuncN(const struct RTCFilterFunctionNArguments *args)
 
             const int style = hit_triinfo.switchshadstyle;
 
-            AddDynamicOccluderToRay(rsi, rayIndex, style);
+            // only treat it as a switchable shadow on models that are part of a different style-group.
+            // i.e. the switchable shadow caster should still self-shadow, when the shadow is "off"
+            if (!source_modelinfo || source_modelinfo->switchshadstyle.value() != style) {
+                AddDynamicOccluderToRay(rsi, rayIndex, style);
 
-            // reject hit
-            valid[i] = INVALID;
-            continue;
+                // reject hit
+                valid[i] = INVALID;
+                continue;
+            }
         }
 
         float alpha = hit_triinfo.alpha;
@@ -665,16 +668,11 @@ void Embree_TraceInit(const mbsp_t *bsp)
     logging::funcprint("Embree version: {}.{}.{}\n", ver_maj, ver_min, ver_pat);
 
     scene = rtcNewScene(device);
-#ifdef HAVE_EMBREE4
     // necessary for RTCOccludedArguments::filter and RTCIntersectArguments::filter
     // to work, which we use (see: ray_source_info::setup_intersection_arguments() and
     // ray_source_info::setup_occluded_arguments())
     rtcSetSceneFlags(scene, RTC_SCENE_FLAG_FILTER_FUNCTION_IN_ARGUMENTS);
-#else
-    // we're using RTCIntersectContext::filter so it's required that we set
-    // RTC_SCENE_FLAG_CONTEXT_FILTER_FUNCTION
-    rtcSetSceneFlags(scene, RTC_SCENE_FLAG_CONTEXT_FILTER_FUNCTION);
-#endif
+
     rtcSetSceneBuildQuality(scene, RTC_BUILD_QUALITY_HIGH);
     skygeom = CreateGeometry(bsp, device, scene, skyfaces);
     solidgeom = CreateGeometry(bsp, device, scene, solidfaces);
@@ -700,7 +698,7 @@ void Embree_TraceInit(const mbsp_t *bsp)
 
 static void AddGlassToRay(ray_source_info *ctx, unsigned rayIndex, float opacity, const qvec3f &glasscolor)
 {
-    raystream_embree_base_t *rs = ctx->raystream;
+    raystream_embree_common_t *rs = ctx->raystream;
 
     if (rs == nullptr) {
         // FIXME: remove this.. once all ray casts use raystreams
@@ -722,7 +720,7 @@ static void AddGlassToRay(ray_source_info *ctx, unsigned rayIndex, float opacity
 
 static void AddDynamicOccluderToRay(ray_source_info *ctx, unsigned rayIndex, int style)
 {
-    raystream_embree_base_t *rs = ctx->raystream;
+    raystream_embree_common_t *rs = ctx->raystream;
 
     if (rs != nullptr) {
         ray_io &ray = rs->getRay(rayIndex);
@@ -730,25 +728,14 @@ static void AddDynamicOccluderToRay(ray_source_info *ctx, unsigned rayIndex, int
     }
 }
 
-ray_source_info::ray_source_info(raystream_embree_base_t *raystream_, const modelinfo_t *self_, int shadowmask_) :
-    raystream(raystream_),
-    self(self_),
-    shadowmask(shadowmask_)
+ray_source_info::ray_source_info(raystream_embree_common_t *raystream_, const modelinfo_t *self_, int shadowmask_)
+    : raystream(raystream_),
+      self(self_),
+      shadowmask(shadowmask_)
 {
-#ifdef HAVE_EMBREE4
     rtcInitRayQueryContext(this);
-#else
-    rtcInitIntersectContext(this);
-    flags = RTC_INTERSECT_CONTEXT_FLAG_COHERENT;
-
-    if (shadowmask != CHANNEL_MASK_DEFAULT) {
-        // non-default shadow mask means we have to use the slow path
-        filter = PerRay_FilterFuncN;
-    }
-#endif
 }
 
-#ifdef HAVE_EMBREE4
 RTCIntersectArguments ray_source_info::setup_intersection_arguments()
 {
     RTCIntersectArguments result;
@@ -757,8 +744,7 @@ RTCIntersectArguments ray_source_info::setup_intersection_arguments()
     if (shadowmask != CHANNEL_MASK_DEFAULT) {
         // non-default shadow mask means we have to use the slow path
         result.filter = PerRay_FilterFuncN;
-        result.flags = static_cast<RTCRayQueryFlags>(result.flags |
-                RTC_RAY_QUERY_FLAG_INVOKE_ARGUMENT_FILTER);
+        result.flags = static_cast<RTCRayQueryFlags>(result.flags | RTC_RAY_QUERY_FLAG_INVOKE_ARGUMENT_FILTER);
     }
 
     result.context = this;
@@ -774,12 +760,10 @@ RTCOccludedArguments ray_source_info::setup_occluded_arguments()
     if (shadowmask != CHANNEL_MASK_DEFAULT) {
         // non-default shadow mask means we have to use the slow path
         result.filter = PerRay_FilterFuncN;
-        result.flags = static_cast<RTCRayQueryFlags>(result.flags |
-                                                     RTC_RAY_QUERY_FLAG_INVOKE_ARGUMENT_FILTER);
+        result.flags = static_cast<RTCRayQueryFlags>(result.flags | RTC_RAY_QUERY_FLAG_INVOKE_ARGUMENT_FILTER);
     }
 
     result.context = this;
 
     return result;
 }
-#endif

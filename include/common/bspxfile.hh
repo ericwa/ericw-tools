@@ -80,7 +80,8 @@ struct bspxbrushes_permodel
     void stream_read(std::istream &s);
 };
 
-struct bspxbrushes {
+struct bspxbrushes
+{
     std::vector<bspxbrushes_permodel> models;
 
     // serialize for streams

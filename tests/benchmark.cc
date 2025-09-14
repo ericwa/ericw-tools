@@ -1,5 +1,5 @@
 #include <nanobench.h>
-#include <doctest/doctest.h>
+#include <gtest/gtest.h>
 #include <vis/vis.hh>
 #include <common/qvec.hh>
 #include <common/polylib.hh>
@@ -7,7 +7,7 @@
 #include <array>
 #include <vector>
 
-TEST_CASE("winding" * doctest::test_suite("benchmark") * doctest::skip())
+TEST(benchmark, winding)
 {
     ankerl::nanobench::Bench bench;
 
@@ -52,27 +52,27 @@ static void test_polylib(bool check_results)
     ankerl::nanobench::doNotOptimizeAway(back);
 
     if (check_results) {
-        REQUIRE(front);
-        REQUIRE(back);
+        ASSERT_TRUE(front);
+        ASSERT_TRUE(back);
 
-        CHECK(front->size() == 4);
-        CHECK(back->size() == 4);
+        EXPECT_EQ(front->size(), 4);
+        EXPECT_EQ(back->size(), 4);
 
         // check front polygon
-        CHECK(front->at(0) == qvec3d{0, 64, 16});
-        CHECK(front->at(1) == qvec3d{64, 64, 16});
-        CHECK(front->at(2) == qvec3d{64, -64, 16});
-        CHECK(front->at(3) == qvec3d{0, -64, 16});
+        EXPECT_EQ(front->at(0), qvec3d(0, 64, 16));
+        EXPECT_EQ(front->at(1), qvec3d(64, 64, 16));
+        EXPECT_EQ(front->at(2), qvec3d(64, -64, 16));
+        EXPECT_EQ(front->at(3), qvec3d(0, -64, 16));
 
         // check back polygon
-        CHECK(back->at(0) == qvec3d{-64, 64, 16});
-        CHECK(back->at(1) == qvec3d{0, 64, 16});
-        CHECK(back->at(2) == qvec3d{0, -64, 16});
-        CHECK(back->at(3) == qvec3d{-64, -64, 16});
+        EXPECT_EQ(back->at(0), qvec3d(-64, 64, 16));
+        EXPECT_EQ(back->at(1), qvec3d(0, 64, 16));
+        EXPECT_EQ(back->at(2), qvec3d(0, -64, 16));
+        EXPECT_EQ(back->at(3), qvec3d(-64, -64, 16));
     }
 }
 
-TEST_CASE("SplitFace" * doctest::test_suite("benchmark"))
+TEST(benchmark, SplitFace)
 {
     ankerl::nanobench::Bench().run("create and split a face (polylib)", [&]() { test_polylib(false); });
 
@@ -80,12 +80,12 @@ TEST_CASE("SplitFace" * doctest::test_suite("benchmark"))
     test_polylib(true);
 }
 
-TEST_CASE("vis windings")
+TEST(benchmark, visWindings)
 {
     ankerl::nanobench::Bench b;
     b.run("create pstack_t", [&]() {
         pstack_t stack;
-        for (int i=0; i<3; ++i)
+        for (int i = 0; i < 3; ++i)
             stack.windings_used[i] = false;
 
         ankerl::nanobench::doNotOptimizeAway(stack);
@@ -93,7 +93,7 @@ TEST_CASE("vis windings")
 
     b.run("create pstack_t + 1x AllocStackWinding", [&]() {
         pstack_t stack;
-        for (int i=0; i<3; ++i)
+        for (int i = 0; i < 3; ++i)
             stack.windings_used[i] = false;
 
         auto *w1 = AllocStackWinding(stack);
@@ -106,7 +106,7 @@ TEST_CASE("vis windings")
 
     b.run("create pstack_t + 2x AllocStackWinding", [&]() {
         pstack_t stack;
-        for (int i=0; i<3; ++i)
+        for (int i = 0; i < 3; ++i)
             stack.windings_used[i] = false;
 
         auto *w1 = AllocStackWinding(stack);
@@ -124,7 +124,7 @@ TEST_CASE("vis windings")
     b.run("setup + ClipStackWinding", [&]() {
         visstats_t stats;
         pstack_t stack;
-        for (int i=0; i<3; ++i)
+        for (int i = 0; i < 3; ++i)
             stack.windings_used[i] = false;
 
         auto *w1 = AllocStackWinding(stack);
@@ -143,23 +143,17 @@ TEST_CASE("vis windings")
     });
 }
 
-TEST_CASE("vector math")
+TEST(benchmark, vectorMath)
 {
     ankerl::nanobench::Bench b;
     ankerl::nanobench::Rng rng;
 
-    qvec3d vec0 {rng.uniform01(), rng.uniform01(), rng.uniform01()};
-    qvec3d vec1 {rng.uniform01(), rng.uniform01(), rng.uniform01()};
+    qvec3d vec0{rng.uniform01(), rng.uniform01(), rng.uniform01()};
+    qvec3d vec1{rng.uniform01(), rng.uniform01(), rng.uniform01()};
 
-    b.run("dot product", [&]() {
-        vec0[0] = qv::dot(vec0, vec1);
-    });
-    b.run("add", [&]() {
-        vec0 = vec0 + vec1;
-    });
-    b.run("subtract", [&]() {
-        vec0 = vec0 - vec1;
-    });
+    b.run("dot product", [&]() { vec0[0] = qv::dot(vec0, vec1); });
+    b.run("add", [&]() { vec0 = vec0 + vec1; });
+    b.run("subtract", [&]() { vec0 = vec0 - vec1; });
 
     b.doNotOptimizeAway(vec0);
     b.doNotOptimizeAway(vec1);

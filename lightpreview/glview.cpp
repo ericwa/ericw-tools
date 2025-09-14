@@ -34,6 +34,7 @@ See file, 'COPYING', for details.
 #include <QOpenGLDebugLogger>
 #include <QStandardPaths>
 #include <QDateTime>
+#include <QMessageBox>
 
 #include <common/decompile.hh>
 #include <common/bspfile.hh>
@@ -52,6 +53,7 @@ static int GetMipLevelsForDimensions(int w, int h)
 
 GLView::GLView(QWidget *parent)
     : QOpenGLWidget(parent),
+      m_spatialindex(std::make_unique<spatialindex_t>()),
       m_keysPressed(0),
       m_moveSpeed(1000),
       m_displayAspect(1),
@@ -88,6 +90,9 @@ GLView::~GLView()
 
     m_leakVao.destroy();
     m_leakVbo.destroy();
+
+    m_clickVao.destroy();
+    m_clickVbo.destroy();
 
     m_portalVbo.destroy();
     m_portalIndexBuffer.destroy();
@@ -180,6 +185,7 @@ in vec2 lightmap_uv;
 in vec3 normal;
 flat in vec3 flat_color;
 flat in uint styles;
+flat in int is_selected;
 
 out vec4 color;
 
@@ -192,6 +198,8 @@ uniform bool fullbright;
 uniform bool drawnormals;
 uniform bool drawflat;
 uniform float style_scalars[256];
+uniform float brightness;
+uniform float lightmap_scale; // extra scale factor for remapping 0-1 SDR lightmaps to 0-2
 
 void main() {
     if (drawnormals) {
@@ -221,8 +229,15 @@ void main() {
             }
         }
 
-        // 2.0 for overbright
-        color = vec4(texcolor * lmcolor * 2.0, opacity);
+        // if we're using SDR lightmaps (0-255 components mapped to 0..1 by OpenGL,
+        // lightmap_scale == 2.0 to remap 0..1 to 0..2).
+        //
+        // HDR lightmaps are used as-is with lightmap_scale == 1.
+        color = vec4(texcolor * lmcolor * lightmap_scale, opacity) * pow(2.0, brightness);
+    }
+
+    if (is_selected != 0) {
+        color.rgb = mix(color.rgb, vec3(1.0, 0.0, 0.0), 0.1);
     }
 }
 )";
@@ -243,9 +258,11 @@ out vec2 lightmap_uv;
 out vec3 normal;
 flat out vec3 flat_color;
 flat out uint styles;
+flat out int is_selected;
 
 uniform mat4 MVP;
 uniform usamplerBuffer face_visibility_sampler;
+uniform int selected_face;
 
 bool is_culled() {
     int byte_index = face_index;
@@ -268,6 +285,7 @@ void main() {
     normal = vertex_normal;
     flat_color = vertex_flat_color;
     styles = vertex_styles;
+    is_selected = (face_index == selected_face ? 1 : 0);
 }
 )";
 
@@ -279,6 +297,7 @@ in vec2 lightmap_uv;
 in vec3 normal;
 flat in vec3 flat_color;
 flat in uint styles;
+flat in int is_selected;
 
 out vec4 color;
 
@@ -289,6 +308,8 @@ uniform bool fullbright;
 uniform bool drawnormals;
 uniform bool drawflat;
 uniform float style_scalars[256];
+uniform float brightness;
+uniform float lightmap_scale; // extra scale factor for remapping 0-1 SDR lightmaps to 0-2
 
 uniform vec3 eye_origin;
 
@@ -313,8 +334,8 @@ void main() {
                 lmcolor += texture(lightmap_sampler, vec3(lightmap_uv, float(style))).rgb * style_scalars[style];
             }
 
-            // 2.0 for overbright
-            color = vec4(lmcolor * 2.0, 1.0);
+            // see lightmap_scale documentation above
+            color = vec4(lmcolor * lightmap_scale, 1.0);
         }
         else
         {
@@ -322,6 +343,11 @@ void main() {
             vec3 dir = normalize(fragment_world_pos - eye_origin);
             color = vec4(texture(texture_sampler, dir).rgb, 1.0);
         }
+        color = color * pow(2.0, brightness);
+    }
+
+    if (is_selected != 0) {
+        color.rgb = mix(color.rgb, vec3(1.0, 0.0, 0.0), 0.1);
     }
 }
 )";
@@ -342,10 +368,12 @@ out vec2 lightmap_uv;
 out vec3 normal;
 flat out vec3 flat_color;
 flat out uint styles;
+flat out int is_selected;
 
 uniform mat4 MVP;
 uniform vec3 eye_origin;
 uniform usamplerBuffer face_visibility_sampler;
+uniform int selected_face;
 
 bool is_culled() {
     int byte_index = face_index;
@@ -368,6 +396,7 @@ void main() {
     normal = vertex_normal;
     flat_color = vertex_flat_color;
     styles = vertex_styles;
+    is_selected = (face_index == selected_face ? 1 : 0);
 }
 )";
 
@@ -381,8 +410,7 @@ GLView::face_visibility_key_t GLView::desiredFaceVisibility() const
         const auto &world = bsp.dmodels.at(0);
         const auto &origin = m_keepCullOrigin ? m_cullOrigin : m_cameraOrigin;
 
-        auto *leaf =
-            BSP_FindLeafAtPoint(&bsp, &world, qvec3d{origin.x(), origin.y(), origin.z()});
+        auto *leaf = BSP_FindLeafAtPoint(&bsp, &world, qvec3d{origin.x(), origin.y(), origin.z()});
 
         int leafnum = leaf - bsp.dleafs.data();
 
@@ -400,15 +428,13 @@ GLView::face_visibility_key_t GLView::desiredFaceVisibility() const
     return result;
 }
 
-bool GLView::isVolumeInFrustum(const std::array<QVector4D, 4>& frustum, const qvec3f& mins, const qvec3f& maxs) {
+bool GLView::isVolumeInFrustum(const std::array<QVector4D, 4> &frustum, const qvec3f &mins, const qvec3f &maxs)
+{
     for (auto &plane : frustum) {
         // Select the p-vertex (positive vertex) - the vertex of the bounding
         // box most aligned with the plane normal
         const auto p = qvec3f(
-            plane.x() > 0 ? maxs[0] : mins[0],
-            plane.y() > 0 ? maxs[1] : mins[1],
-            plane.z() > 0 ? maxs[2] : mins[2]
-        );
+            plane.x() > 0 ? maxs[0] : mins[0], plane.y() > 0 ? maxs[1] : mins[1], plane.z() > 0 ? maxs[2] : mins[2]);
 
         // Check if the p-vertex is outside the plane
         if (plane.x() * p[0] + plane.y() * p[1] + plane.z() * p[2] + plane.w() < 0) {
@@ -419,7 +445,7 @@ bool GLView::isVolumeInFrustum(const std::array<QVector4D, 4>& frustum, const qv
     return true;
 }
 
-void GLView::updateFaceVisibility(const std::array<QVector4D, 4>& frustum)
+void GLView::updateFaceVisibility(const std::array<QVector4D, 4> &frustum)
 {
     if (!m_bsp)
         return;
@@ -456,6 +482,17 @@ void GLView::updateFaceVisibility(const std::array<QVector4D, 4>& frustum)
 
             // visit all world leafs: if they're visible, mark the appropriate faces
             BSP_VisitAllLeafs(bsp, bsp.dmodels[0], [&](const mleaf_t &leaf) {
+                auto contents = bsp.loadversion->game->create_contents_from_native(leaf.contents);
+                if (contents.flags & EWT_VISCONTENTS_SOLID) {
+                    // Solid leafs can never mark faces for rendering; see r_bsp.c:R_RecursiveWorldNode() in winquake.
+                    // However, some engines allow it (QS).
+                    //
+                    // This affects func_detail_fence, which can generate solid faces with marksurfaces,
+                    // causing HOMs in some situations on vised maps, which we'll hopefully fix in qbsp.
+                    //
+                    // Match winquake/FTEQW's rendering.
+                    return;
+                }
                 if (Pvs_LeafVisible(&bsp, pvs, &leaf) && isVolumeInFrustum(frustum, leaf.mins, leaf.maxs)) {
                     for (int ms = 0; ms < leaf.nummarksurfaces; ++ms) {
                         int fnum = bsp.dleaffaces[leaf.firstmarksurface + ms];
@@ -507,38 +544,52 @@ void GLView::handleLoggedMessage(const QOpenGLDebugMessage &debugMessage)
 #endif
 }
 
+void GLView::error(const QString &context, const QString &context2, const QString &log)
+{
+    QMessageBox errorMessage(QMessageBox::Critical, tr("GLSL Error"),
+        tr("%1: %2:\n\n%3").arg(context).arg(context2).arg(log), QMessageBox::Ok, this);
+
+    errorMessage.exec();
+}
+
+void GLView::setupProgram(const QString &context, QOpenGLShaderProgram *dest, const char *vert, const char *frag)
+{
+    if (!dest->addShaderFromSourceCode(QOpenGLShader::Vertex, vert)) {
+        error(context, "vertex shader", dest->log());
+    }
+    if (!dest->addShaderFromSourceCode(QOpenGLShader::Fragment, frag)) {
+        error(context, "fragment shader", dest->log());
+    }
+    if (!dest->link()) {
+        error(context, "link", dest->log());
+    }
+}
+
 void GLView::initializeGL()
 {
     initializeOpenGLFunctions();
 
+#if _DEBUG
     QOpenGLDebugLogger *logger = new QOpenGLDebugLogger(this);
 
     logger->initialize(); // initializes in the current context, i.e. ctx
 
     connect(logger, &QOpenGLDebugLogger::messageLogged, this, &GLView::handleLoggedMessage);
     logger->startLogging(QOpenGLDebugLogger::SynchronousLogging);
-
+#endif
     // set up shader
 
     m_program = new QOpenGLShaderProgram();
-    m_program->addShaderFromSourceCode(QOpenGLShader::Vertex, s_vertShader);
-    m_program->addShaderFromSourceCode(QOpenGLShader::Fragment, s_fragShader);
-    assert(m_program->link());
+    setupProgram("m_program", m_program, s_vertShader, s_fragShader);
 
     m_skybox_program = new QOpenGLShaderProgram();
-    m_skybox_program->addShaderFromSourceCode(QOpenGLShader::Vertex, s_skyboxVertShader);
-    m_skybox_program->addShaderFromSourceCode(QOpenGLShader::Fragment, s_skyboxFragShader);
-    assert(m_skybox_program->link());
+    setupProgram("m_skybox_program", m_skybox_program, s_skyboxVertShader, s_skyboxFragShader);
 
     m_program_simple = new QOpenGLShaderProgram();
-    m_program_simple->addShaderFromSourceCode(QOpenGLShader::Vertex, s_vertShader_Simple);
-    m_program_simple->addShaderFromSourceCode(QOpenGLShader::Fragment, s_fragShader_Simple);
-    assert(m_program_simple->link());
+    setupProgram("m_program_simple", m_program_simple, s_vertShader_Simple, s_fragShader_Simple);
 
     m_program_wireframe = new QOpenGLShaderProgram();
-    m_program_wireframe->addShaderFromSourceCode(QOpenGLShader::Vertex, s_vertShader_Wireframe);
-    m_program_wireframe->addShaderFromSourceCode(QOpenGLShader::Fragment, s_fragShader_Wireframe);
-    assert(m_program_wireframe->link());
+    setupProgram("m_program_wireframe", m_program_wireframe, s_vertShader_Wireframe, s_fragShader_Wireframe);
 
     m_program->bind();
     m_program_mvp_location = m_program->uniformLocation("MVP");
@@ -552,6 +603,9 @@ void GLView::initializeGL()
     m_program_drawnormals_location = m_program->uniformLocation("drawnormals");
     m_program_drawflat_location = m_program->uniformLocation("drawflat");
     m_program_style_scalars_location = m_program->uniformLocation("style_scalars");
+    m_program_brightness_location = m_program->uniformLocation("brightness");
+    m_program_lightmap_scale_location = m_program->uniformLocation("lightmap_scale");
+    m_program_selected_face_location = m_program->uniformLocation("selected_face");
     m_program->release();
 
     m_skybox_program->bind();
@@ -566,6 +620,9 @@ void GLView::initializeGL()
     m_skybox_program_drawnormals_location = m_skybox_program->uniformLocation("drawnormals");
     m_skybox_program_drawflat_location = m_skybox_program->uniformLocation("drawflat");
     m_skybox_program_style_scalars_location = m_skybox_program->uniformLocation("style_scalars");
+    m_skybox_program_brightness_location = m_skybox_program->uniformLocation("brightness");
+    m_skybox_program_lightmap_scale_location = m_skybox_program->uniformLocation("lightmap_scale");
+    m_skybox_program_selected_face_location = m_skybox_program->uniformLocation("selected_face");
     m_skybox_program->release();
 
     m_program_wireframe->bind();
@@ -581,6 +638,7 @@ void GLView::initializeGL()
 
     m_vao.create();
     m_leakVao.create();
+    m_clickVao.create();
     m_portalVao.create();
     for (auto &hullVao : m_hullVaos) {
         hullVao.vao.create();
@@ -592,7 +650,7 @@ void GLView::initializeGL()
     glFrontFace(GL_CW);
 }
 
-std::array<QVector4D, 4> GLView::getFrustumPlanes(const QMatrix4x4& MVP)
+std::array<QVector4D, 4> GLView::getFrustumPlanes(const QMatrix4x4 &MVP)
 {
     return {
         // left
@@ -604,6 +662,19 @@ std::array<QVector4D, 4> GLView::getFrustumPlanes(const QMatrix4x4& MVP)
         // bottom
         (MVP.row(3) + MVP.row(1)).normalized(),
     };
+}
+
+GLView::matrices_t GLView::getMatrices() const
+{
+    QMatrix4x4 modelMatrix;
+    QMatrix4x4 viewMatrix;
+    QMatrix4x4 projectionMatrix;
+    projectionMatrix.perspective(90, m_displayAspect, 1.0f, 1'000'000.0f);
+    viewMatrix.lookAt(m_cameraOrigin, m_cameraOrigin + m_cameraFwd, QVector3D(0, 0, 1));
+
+    QMatrix4x4 MVP = projectionMatrix * viewMatrix * modelMatrix;
+
+    return {modelMatrix, viewMatrix, projectionMatrix, MVP};
 }
 
 void GLView::paintGL()
@@ -623,16 +694,11 @@ void GLView::paintGL()
     applyMouseMotion();
     applyFlyMovement(duration_seconds);
 
-    QMatrix4x4 modelMatrix;
-    QMatrix4x4 viewMatrix;
-    QMatrix4x4 projectionMatrix;
-    projectionMatrix.perspective(90, m_displayAspect, 1.0f, 1'000'000.0f);
-    viewMatrix.lookAt(m_cameraOrigin, m_cameraOrigin + m_cameraFwd, QVector3D(0, 0, 1));
+    const auto [modelMatrix, viewMatrix, projectionMatrix, MVP] = getMatrices();
 
-    QMatrix4x4 MVP = projectionMatrix * viewMatrix * modelMatrix;
-
-    const auto frustum = m_keepCullOrigin && m_keepCullFrustum ?
-        getFrustumPlanes(projectionMatrix * m_cullViewMatrix * modelMatrix) : getFrustumPlanes(MVP);
+    const auto frustum = m_keepCullOrigin && m_keepCullFrustum
+                             ? getFrustumPlanes(projectionMatrix * m_cullViewMatrix * modelMatrix)
+                             : getFrustumPlanes(MVP);
 
     // update vis culling texture every frame
     updateFaceVisibility(frustum);
@@ -654,6 +720,9 @@ void GLView::paintGL()
     m_program->setUniformValue(m_program_fullbright_location, m_fullbright);
     m_program->setUniformValue(m_program_drawnormals_location, m_drawNormals);
     m_program->setUniformValue(m_program_drawflat_location, m_drawFlat);
+    m_program->setUniformValue(m_program_brightness_location, m_brightness);
+    m_program->setUniformValue(m_program_lightmap_scale_location, m_is_hdr_lightmap ? 1.0f : 2.0f);
+    m_program->setUniformValue(m_program_selected_face_location, m_selected_face);
 
     m_skybox_program->bind();
     m_skybox_program->setUniformValue(m_skybox_program_mvp_location, MVP);
@@ -666,6 +735,9 @@ void GLView::paintGL()
     m_skybox_program->setUniformValue(m_skybox_program_fullbright_location, m_fullbright);
     m_skybox_program->setUniformValue(m_skybox_program_drawnormals_location, m_drawNormals);
     m_skybox_program->setUniformValue(m_skybox_program_drawflat_location, m_drawFlat);
+    m_skybox_program->setUniformValue(m_skybox_program_brightness_location, m_brightness);
+    m_skybox_program->setUniformValue(m_skybox_program_lightmap_scale_location, m_is_hdr_lightmap ? 1.0f : 2.0f);
+    m_skybox_program->setUniformValue(m_skybox_program_selected_face_location, m_selected_face);
 
     // resolves whether to render a particular drawcall as opaque
     auto draw_as_opaque = [&](const drawcall_t &draw) -> bool {
@@ -822,6 +894,19 @@ void GLView::paintGL()
         m_program_simple->release();
     }
 
+    // render mouse clicks
+    if (m_hasClick && false) {
+        m_program_simple->bind();
+        m_program_simple->setUniformValue(m_program_simple_color_location, QVector4D{1.0, 1.0, 1.0, 1.0});
+        m_program_simple->setUniformValue(m_program_simple_mvp_location, MVP);
+
+        QOpenGLVertexArrayObject::Binder vaoBinder(&m_clickVao);
+
+        glDrawArrays(GL_LINE_STRIP, 0, 2);
+
+        m_program_simple->release();
+    }
+
     if (m_drawLeak && num_leak_points) {
         m_program_simple->bind();
         m_program_simple->setUniformValue(m_program_simple_mvp_location, MVP);
@@ -880,7 +965,7 @@ void GLView::paintGL()
 
             m_program_simple->setUniformValue(m_program_simple_color_location, 1.0f, 1.f, 1.f, 0.2f);
             glDrawElements(GL_LINE_LOOP, vaodata.num_indices, GL_UNSIGNED_INT, 0);
-            
+
             glDisable(GL_PRIMITIVE_RESTART);
 
             m_program_simple->release();
@@ -896,11 +981,19 @@ void GLView::paintGL()
     }
 }
 
+void GLView::setCamera(const qvec3d &origin)
+{
+    m_cameraOrigin = {(float)origin[0], (float)origin[1], (float)origin[2]};
+    update();
+    emit cameraMoved();
+}
+
 void GLView::setCamera(const qvec3d &origin, const qvec3d &fwd)
 {
     m_cameraOrigin = {(float)origin[0], (float)origin[1], (float)origin[2]};
     m_cameraFwd = {(float)fwd[0], (float)fwd[1], (float)fwd[2]};
     update();
+    emit cameraMoved();
 }
 
 void GLView::setLighmapOnly(bool lighmapOnly)
@@ -1033,6 +1126,12 @@ void GLView::setShowBmodels(bool bmodels)
     update();
 }
 
+void GLView::setBrightness(float brightness)
+{
+    m_brightness = brightness;
+    update();
+}
+
 void GLView::takeScreenshot(QString destPath, int w, int h)
 {
     // update aspect ratio
@@ -1084,7 +1183,8 @@ void GLView::setFaceVisibilityArray(uint8_t *data)
     face_visibility_texture->release();
 }
 
-std::vector<QVector3D> GLView::getFrustumCorners(float displayAspect) {
+std::vector<QVector3D> GLView::getFrustumCorners(float displayAspect)
+{
     QMatrix4x4 projectionMatrix;
     projectionMatrix.perspective(90, displayAspect, 1.0f, 8192.0f);
 
@@ -1092,14 +1192,14 @@ std::vector<QVector3D> GLView::getFrustumCorners(float displayAspect) {
 
     const std::vector ndcCorners = {
         QVector4D(-1.0f, -1.0f, -1.0f, 1.0f), // 0: near bottom left
-        QVector4D( 1.0f, -1.0f, -1.0f, 1.0f), // 1: near bottom right
-        QVector4D (1.0f,  1.0f, -1.0f, 1.0f), // 2: near top right
-        QVector4D(-1.0f,  1.0f, -1.0f, 1.0f), // 3: near top left
+        QVector4D(1.0f, -1.0f, -1.0f, 1.0f), // 1: near bottom right
+        QVector4D(1.0f, 1.0f, -1.0f, 1.0f), // 2: near top right
+        QVector4D(-1.0f, 1.0f, -1.0f, 1.0f), // 3: near top left
 
-        QVector4D(-1.0f, -1.0f,  1.0f, 1.0f), // far bottom left
-        QVector4D( 1.0f, -1.0f,  1.0f, 1.0f), // far bottom right
-        QVector4D( 1.0f,  1.0f,  1.0f, 1.0f), // far top left
-        QVector4D(-1.0f,  1.0f,  1.0f, 1.0f)  // far top right
+        QVector4D(-1.0f, -1.0f, 1.0f, 1.0f), // far bottom left
+        QVector4D(1.0f, -1.0f, 1.0f, 1.0f), // far bottom right
+        QVector4D(1.0f, 1.0f, 1.0f, 1.0f), // far top left
+        QVector4D(-1.0f, 1.0f, 1.0f, 1.0f) // far top right
     };
 
     std::vector<QVector3D> corners(8);
@@ -1140,6 +1240,8 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
     makeCurrent();
 
     // clear old data
+    m_spatialindex->clear();
+
     placeholder_texture.reset();
     lightmap_texture.reset();
     face_visibility_texture.reset();
@@ -1180,21 +1282,39 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
 
     // upload lightmap atlases
     {
-        // FIXME: empty map access if there are no lightmaps
-        const auto &lm_tex = lightmap.style_to_lightmap_atlas.begin()->second;
+        m_is_hdr_lightmap = false;
+        for (auto &[style_index, style_atlas] : lightmap.style_to_lightmap_atlas) {
+            if (!style_atlas.e5brg9_samples.empty()) {
+                m_is_hdr_lightmap = true;
+                break;
+            }
+        }
 
         lightmap_texture = std::make_shared<QOpenGLTexture>(QOpenGLTexture::Target2DArray);
-        lightmap_texture->setSize(lm_tex.width, lm_tex.height);
+        if (lightmap.style_to_lightmap_atlas.empty()) {
+            lightmap_texture->setSize(1, 1);
+        } else {
+            const auto &lm_tex = lightmap.style_to_lightmap_atlas.begin()->second;
+            lightmap_texture->setSize(lm_tex.width, lm_tex.height);
+        }
         lightmap_texture->setLayers(highest_depth + 1);
-        lightmap_texture->setFormat(QOpenGLTexture::TextureFormat::RGBA8_UNorm);
+        if (m_is_hdr_lightmap)
+            lightmap_texture->setFormat(QOpenGLTexture::TextureFormat::RGB9E5);
+        else
+            lightmap_texture->setFormat(QOpenGLTexture::TextureFormat::RGBA8_UNorm);
         lightmap_texture->setAutoMipMapGenerationEnabled(false);
         lightmap_texture->setMagnificationFilter(QOpenGLTexture::Linear);
         lightmap_texture->setMinificationFilter(QOpenGLTexture::Linear);
         lightmap_texture->allocateStorage();
 
-        for (auto &style : lightmap.style_to_lightmap_atlas) {
-            lightmap_texture->setData(0, style.first, QOpenGLTexture::RGBA, QOpenGLTexture::UInt8,
-                reinterpret_cast<const void *>(style.second.pixels.data()));
+        for (auto &[style_index, style_atlas] : lightmap.style_to_lightmap_atlas) {
+            if (m_is_hdr_lightmap) {
+                lightmap_texture->setData(0, style_index, QOpenGLTexture::RGB, QOpenGLTexture::UInt32_RGB9_E5,
+                    reinterpret_cast<const void *>(style_atlas.e5brg9_samples.data()));
+            } else {
+                lightmap_texture->setData(0, style_index, QOpenGLTexture::RGBA, QOpenGLTexture::UInt8,
+                    reinterpret_cast<const void *>(style_atlas.rgba8_samples.data()));
+            }
         }
     }
 
@@ -1283,22 +1403,22 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
 
             if (bsp.loadversion->game->id == GAME_QUAKE_II) {
 
-                if (texinfo->flags.native & Q2_SURF_NODRAW) {
+                if (texinfo->flags.is_nodraw()) {
                     continue;
                 }
 
-                if (texinfo->flags.native & Q2_SURF_SKY) {
+                if (texinfo->flags.native_q2 & Q2_SURF_SKY) {
                     program = m_skybox_program;
                     needs_skybox = true;
                 } else {
-                    if (texinfo->flags.native & Q2_SURF_TRANS33) {
+                    if (texinfo->flags.native_q2 & Q2_SURF_TRANS33) {
                         opacity = 0.33f;
                     }
-                    if (texinfo->flags.native & Q2_SURF_TRANS66) {
+                    if (texinfo->flags.native_q2 & Q2_SURF_TRANS66) {
                         opacity = 0.66f;
                     }
 
-                    if (texinfo->flags.native & Q2_SURF_ALPHATEST) {
+                    if (texinfo->flags.native_q2 & Q2_SURF_ALPHATEST) {
                         alpha_test = true;
                     }
                 }
@@ -1432,17 +1552,17 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
         std::shared_ptr<QOpenGLTexture> qtexture;
 
         if (!texture) {
-            logging::print("warning, couldn't locate {}", k.texname);
+            logging::print("warning, couldn't locate {}\n", k.texname);
             qtexture = placeholder_texture;
         }
 
         if (!texture->width || !texture->height) {
-            logging::print("warning, empty texture {}", k.texname);
+            logging::print("warning, empty texture {}\n", k.texname);
             qtexture = placeholder_texture;
         }
 
         if (texture->pixels.empty()) {
-            logging::print("warning, empty texture pixels {}", k.texname);
+            logging::print("warning, empty texture pixels {}\n", k.texname);
             qtexture = placeholder_texture;
         }
 
@@ -1531,6 +1651,17 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
         m_drawcalls.push_back(std::move(dc));
     }
 
+    // populate spatial index
+    for (const auto &[k, faces] : faces_by_material_key) {
+        for (const face_payload &facePayload : faces) {
+            int face_num = Face_GetNum(&bsp, facePayload.face);
+
+            // FIXME: face offset
+            m_spatialindex->add_poly(Face_Winding(&bsp, facePayload.face), std::make_any<int>(face_num));
+        }
+    }
+    m_spatialindex->commit();
+
     {
         QOpenGLVertexArrayObject::Binder vaoBinder(&m_vao);
 
@@ -1614,28 +1745,21 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
         // |    |              |    |
         // |    |              |    |
         // 0----1              4----5
-        GLuint faceIndices[] = {
-            // Left face
+        GLuint faceIndices[] = {// Left face
             0, 4, 7, 0, 7, 3,
             // Right face
             1, 2, 6, 1, 6, 5,
             // Top face
             2, 3, 7, 2, 7, 6,
             // Bottom face
-            0, 1, 5, 0, 5, 4
-        };
+            0, 1, 5, 0, 5, 4};
 
-        GLuint edgeIndices[] = {
-            // Front face
+        GLuint edgeIndices[] = {// Front face
             0, 1, 1, 2, 2, 3, 3, 0, (GLuint)-1,
             // Back face
             4, 5, 5, 6, 6, 7, 7, 4, (GLuint)-1,
             // Connecting edges
-            0, 4, (GLuint)-1,
-            1, 5, (GLuint)-1,
-            2, 6, (GLuint)-1,
-            3, 7, (GLuint)-1
-        };
+            0, 4, (GLuint)-1, 1, 5, (GLuint)-1, 2, 6, (GLuint)-1, 3, 7, (GLuint)-1};
 
         m_frustumFacesIndexBuffer.create();
         m_frustumFacesIndexBuffer.bind();
@@ -1730,7 +1854,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
     // load decompiled hulls
     // TODO: support decompiling bmodels other than the world
 
-    for (int hullnum = 0; ; ++hullnum) {
+    for (int hullnum = 0;; ++hullnum) {
         if (hullnum >= 1) {
             // check if hullnum 1 or higher is valid for this bsp (hull0 is always present); it's slightly involved
             if (bsp.loadversion->game->id == GAME_QUAKE_II) {
@@ -1755,7 +1879,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
         std::vector<simple_vertex_t> points;
 
         for (const auto &leaf : leaf_visuals) {
-            if (leaf.contents.is_empty(bsp.loadversion->game))
+            if (leaf.contents.is_empty())
                 continue;
 
             for (const auto &winding : leaf.windings) {
@@ -1778,7 +1902,8 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
 
         vao.num_indices = indices.size();
 
-        logging::print("set up leaf vao for {} with {} indices vao indices {}", hullnum, vao.num_indices, indices.size());
+        logging::print(
+            "set up leaf vao for {} with {} indices vao indices {}", hullnum, vao.num_indices, indices.size());
 
         // upload vertex buffer
         vao.vbo.create();
@@ -1811,6 +1936,74 @@ void GLView::resizeGL(int width, int height)
 {
     m_displayAspect = static_cast<float>(width) / static_cast<float>(height);
     updateFrustumVBO();
+}
+
+void GLView::clickFace(QMouseEvent *event)
+{
+    if (m_spatialindex->get_state() != state_t::tracing)
+        return;
+
+    // convert to click x, y to NDC
+
+    float x_01 = event->position().x() / width(); // 0 = left, 1 = right
+    float y_01 = event->position().y() / height(); // 0 = top, 1 = bottom
+
+    float x_ndc = mix(-1.0f, 1.0f, x_01); // -1 = left, 1 = right
+    float y_ndc = mix(1.0f, -1.0f, y_01); // -1 = bottom, 1 = top
+    float z_ndc = -1.0f; // near plane
+
+    const auto [modelMatrix, viewMatrix, projectionMatrix, MVP] = getMatrices();
+
+    QMatrix4x4 MVP_Inverse = MVP.inverted();
+
+    QVector4D ws = MVP_Inverse * QVector4D(x_ndc, y_ndc, z_ndc, 1.0f /* ??? */);
+    QVector4D ws2 = MVP_Inverse * QVector4D(x_ndc, y_ndc, 1.0f /* far plane */, 1.0f /* ??? */);
+
+    qDebug() << "ws: " << ws;
+    qDebug() << "ws2: " << ws2;
+
+    QVector3D ws_a = ws.toVector3DAffine();
+    QVector3D ws2_a = ws2.toVector3DAffine();
+
+    qDebug() << "ws_a: " << ws_a;
+    qDebug() << "ws2_a: " << ws2_a;
+
+    // ray direction
+    QVector3D ray_dir = (ws2_a - ws_a).normalized();
+
+    // trace a ray
+    auto hit = m_spatialindex->trace_ray(qvec3f(ws_a[0], ws_a[1], ws_a[2]), qvec3f(ray_dir[0], ray_dir[1], ray_dir[2]));
+
+    if (hit.hit) {
+        m_selected_face = *std::any_cast<int>(hit.hitpayload);
+    } else {
+        m_selected_face = -1;
+        m_hasClick = false;
+        return;
+    }
+
+    // upload line segment
+
+    makeCurrent();
+
+    {
+        // record that it's safe to draw
+        m_hasClick = true;
+
+        QOpenGLVertexArrayObject::Binder vaoBinder(&m_clickVao);
+        std::array<QVector3D, 2> points{ws_a, QVector3D(hit.hitpos[0], hit.hitpos[1], hit.hitpos[2])};
+
+        // upload vertex buffer
+        m_clickVbo.create();
+        m_clickVbo.bind();
+        m_clickVbo.allocate(points.data(), points.size() * sizeof(points[0]));
+
+        // positions
+        glEnableVertexAttribArray(0 /* attrib */);
+        glVertexAttribPointer(0 /* attrib */, 3, GL_FLOAT, GL_FALSE, sizeof(QVector3D), (void *)0);
+    }
+
+    doneCurrent();
 }
 
 void GLView::applyMouseMotion()
@@ -1887,6 +2080,10 @@ void GLView::wheelEvent(QWheelEvent *event)
 
 void GLView::mousePressEvent(QMouseEvent *event)
 {
+    if (event->button() & Qt::LeftButton) {
+        clickFace(event);
+    }
+
     update();
 }
 

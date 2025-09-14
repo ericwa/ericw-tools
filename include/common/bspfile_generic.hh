@@ -40,7 +40,7 @@ struct dmodelh2_t
 {
     qvec3f mins;
     qvec3f maxs;
-    qvec3f origin;
+    qvec3f origin; /* unused */
     std::array<int32_t, MAX_MAP_HULLS_H2> headnode; /* hexen2 only uses 6 */
     int32_t visleafs; /* not including the solid leaf 0 */
     int32_t firstface;
@@ -216,7 +216,7 @@ struct dplane_t : qplane3f
 struct bsp2_dnode_t
 {
     int32_t planenum;
-    std::array<int32_t, 2> children; /* negative numbers are -(leafs+1), not nodes */
+    twosided<int32_t> children; /* negative numbers are -(leafs+1), not nodes */
     qvec3f mins; /* for sphere culling */
     qvec3f maxs;
     uint32_t firstface;
@@ -254,7 +254,8 @@ struct mface_t
 
     /* lighting info */
     std::array<uint8_t, MAXLIGHTMAPS> styles;
-    int32_t lightofs; /* start of [numstyles*surfsize] samples */
+    // start of [numstyles*surfsize] samples. byte offset into bsp.dlightdata.
+    int32_t lightofs;
 
     // serialize for streams
     void stream_write(std::ostream &s) const;
@@ -270,7 +271,7 @@ struct mface_t
 struct bsp2_dclipnode_t
 {
     int32_t planenum;
-    std::array<int32_t, 2> children; /* negative numbers are contents */
+    twosided<int32_t> children; /* negative numbers are contents */
 
     // serialize for streams
     void stream_write(std::ostream &s) const;
@@ -315,36 +316,41 @@ struct mleaf_t
     uint32_t numleafbrushes;
 
     // comparison operator for tests
-    bool operator==(const mleaf_t &other) const;
+    auto operator<=>(const mleaf_t &other) const = default;
 };
 
+// index of darea_t in dareas *is* the "area number" (unlike for dareaportals).
+// 0 is reserved
 struct darea_t
 {
-    int32_t numareaportals;
-    int32_t firstareaportal;
+    int32_t numareaportals; // number of entries in dareaportals (number of outgoing graph edges)
+    int32_t firstareaportal; // index into dareaportals of our first outgoing graph edge, *not* the "area portal number"
 
     // serialize for streams
     void stream_write(std::ostream &s) const;
     void stream_read(std::istream &s);
 
     // comparison operator for tests
-    bool operator==(const darea_t &other) const;
+    auto operator<=>(const darea_t &other) const = default;
 };
 
 // each area has a list of portals that lead into other areas
 // when portals are closed, other areas may not be visible or
 // hearable even if the vis info says that it should be
+//
+// a dareaportal_t is a directed edge in the area graph.
 struct dareaportal_t
 {
-    int32_t portalnum;
-    int32_t otherarea;
+    int32_t portalnum; // our "area portal number". corresponds to the "style" key on the func_areaportal entity.
+                       // multiple dareaportal_t entries (should be always 2) will have the same portalnum
+    int32_t otherarea; // area number (index in dareas array) of the other area.
 
     // serialize for streams
     void stream_write(std::ostream &s) const;
     void stream_read(std::istream &s);
 
     // comparison operator for tests
-    bool operator==(const dareaportal_t &other) const;
+    auto operator<=>(const dareaportal_t &other) const = default;
 };
 
 struct dbrush_t
@@ -399,6 +405,8 @@ struct mbsp_t
     std::vector<dareaportal_t> dareaportals;
     std::vector<dbrush_t> dbrushes;
     std::vector<q2_dbrushside_qbism_t> dbrushsides;
+
+    int lightsamples() const;
 };
 
 extern const bspversion_t bspver_generic;

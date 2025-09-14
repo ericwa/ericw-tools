@@ -99,6 +99,9 @@ void init_palette(const gamedef_t *game)
 static void convert_paletted_to_32_bit(
     const std::vector<uint8_t> &pixels, std::vector<qvec4b> &output, const std::vector<qvec3b> &pal)
 {
+    if (pal.size() != 256) {
+        FError("palette size {} != 256", pal.size());
+    }
     output.resize(pixels.size());
 
     for (size_t i = 0; i < pixels.size(); i++) {
@@ -125,8 +128,7 @@ struct q2_miptex_t
     auto stream_data() { return std::tie(name, width, height, offsets, animname, flags, contents, value); }
 };
 
-std::optional<texture> load_wal(
-    const std::string_view &name, const fs::data &file, bool meta_only, const gamedef_t *game)
+std::optional<texture> load_wal(std::string_view name, const fs::data &file, bool meta_only, const gamedef_t *game)
 {
     imemstream stream(file->data(), file->size(), std::ios_base::in | std::ios_base::binary);
     stream >> endianness<std::endian::little>;
@@ -146,7 +148,7 @@ std::optional<texture> load_wal(
     tex.meta.width = tex.width = mt.width;
     tex.meta.height = tex.height = mt.height;
     tex.meta.contents_native = mt.contents;
-    tex.meta.flags = {mt.flags};
+    tex.meta.flags = {.native_q2 = static_cast<q2_surf_flags_t>(mt.flags)};
     tex.meta.value = mt.value;
     tex.meta.animation = mt.animname.data();
 
@@ -166,8 +168,7 @@ Quake/Half Life MIP
 ============================================================================
 */
 
-std::optional<texture> load_mip(
-    const std::string_view &name, const fs::data &file, bool meta_only, const gamedef_t *game)
+std::optional<texture> load_mip(std::string_view name, const fs::data &file, bool meta_only, const gamedef_t *game)
 {
     imemstream stream(file->data(), file->size());
     stream >> endianness<std::endian::little>;
@@ -255,8 +256,7 @@ std::optional<texture> load_mip(
     return tex;
 }
 
-std::optional<texture> load_stb(
-    const std::string_view &name, const fs::data &file, bool meta_only, const gamedef_t *game)
+std::optional<texture> load_stb(std::string_view name, const fs::data &file, bool meta_only, const gamedef_t *game)
 {
     int x, y, channels_in_file;
     stbi_uc *rgba_data = stbi_load_from_memory(file->data(), file->size(), &x, &y, &channels_in_file, 4);
@@ -294,7 +294,7 @@ std::optional<texture> load_stb(
 // texture cache
 std::unordered_map<std::string, texture, case_insensitive_hash, case_insensitive_equal> textures;
 
-const texture *find(const std::string_view &str)
+const texture *find(std::string_view str)
 {
     auto it = textures.find(str.data());
 
@@ -307,6 +307,7 @@ const texture *find(const std::string_view &str)
 
 void clear()
 {
+    palette.clear();
     textures.clear();
 }
 
@@ -326,15 +327,10 @@ qvec3b calculate_average(const std::vector<qvec4b> &pixels)
     return avg /= n;
 }
 
-std::tuple<std::optional<img::texture>, fs::resolve_result, fs::data> load_texture(const std::string_view &name,
+std::tuple<std::optional<img::texture>, fs::resolve_result, fs::data> load_texture(std::string_view name,
     bool meta_only, const gamedef_t *game, const settings::common_settings &options, bool no_prefix, bool mip_only)
 {
-    fs::path prefix{};
-
-    if (!no_prefix && game->id == GAME_QUAKE_II) {
-        prefix = "textures";
-    }
-
+    fs::path prefix{"textures"};
     std::vector<extension_info_t> exts;
 
     if (mip_only) {
@@ -344,7 +340,14 @@ std::tuple<std::optional<img::texture>, fs::resolve_result, fs::data> load_textu
     }
 
     for (auto &ext : exts) {
-        fs::path p = (no_prefix ? fs::path(name) : (prefix / name)) += ext.suffix;
+        fs::path p;
+        if (no_prefix || ext.id == ext::MIP) {
+            // never add "textures/" prefix when attemmpting to load from a .wad file
+            p = fs::path(name);
+        } else {
+            p = (prefix / name);
+        }
+        p += ext.suffix;
 
         if (auto pos = fs::where(p, options.filepriority.value() == settings::search_priority_t::LOOSE)) {
             if (auto data = fs::load(pos)) {
@@ -358,7 +361,7 @@ std::tuple<std::optional<img::texture>, fs::resolve_result, fs::data> load_textu
     return {std::nullopt, {}, {}};
 }
 
-std::optional<texture_meta> load_wal_meta(const std::string_view &name, const fs::data &file, const gamedef_t *game)
+std::optional<texture_meta> load_wal_meta(std::string_view name, const fs::data &file, const gamedef_t *game)
 {
     if (auto tex = load_wal(name, file, true, game)) {
         return tex->meta;
@@ -368,8 +371,7 @@ std::optional<texture_meta> load_wal_meta(const std::string_view &name, const fs
 }
 
 // see .wal_json section in qbsp.rst for format documentation
-std::optional<texture_meta> load_wal_json_meta(
-    const std::string_view &name, const fs::data &file, const gamedef_t *game)
+std::optional<texture_meta> load_wal_json_meta(std::string_view name, const fs::data &file, const gamedef_t *game)
 {
     try {
         auto json = parse_json(file->data(), file->data() + file->size());
@@ -418,22 +420,25 @@ std::optional<texture_meta> load_wal_json_meta(
             }
         }
 
-        if (json.isMember("flags")) {
+        // this only makes sense for q2
+        if (json.isMember("flags") && game->id == GAME_QUAKE_II) {
             auto &flags = json["flags"];
 
+            int32_t intflags = 0;
             if (flags.isInt()) {
-                meta.flags.native = flags.as<int32_t>();
+                intflags = flags.as<int32_t>();
             } else if (flags.isString()) {
-                meta.flags.native = game->surfflags_from_string(flags.as<std::string>());
+                intflags = game->surfflags_from_string(flags.as<std::string>());
             } else if (flags.isArray()) {
                 for (auto &flag : flags) {
                     if (flag.isInt()) {
-                        meta.flags.native |= flag.as<int32_t>();
+                        intflags |= flag.as<int32_t>();
                     } else if (flag.isString()) {
-                        meta.flags.native |= game->surfflags_from_string(flag.as<std::string>());
+                        intflags |= game->surfflags_from_string(flag.as<std::string>());
                     }
                 }
             }
+            meta.flags.native_q2 = static_cast<q2_surf_flags_t>(intflags);
         }
 
         if (json.isMember("animation") && json["animation"].isString()) {
@@ -456,7 +461,7 @@ std::optional<texture_meta> load_wal_json_meta(
 }
 
 std::tuple<std::optional<img::texture_meta>, fs::resolve_result, fs::data> load_texture_meta(
-    const std::string_view &name, const gamedef_t *game, const settings::common_settings &options)
+    std::string_view name, const gamedef_t *game, const settings::common_settings &options)
 {
     fs::path prefix;
 
@@ -531,8 +536,7 @@ static qvec3b increase_saturation(const qvec3b &color)
 }
 
 // Load the specified texture from the BSP
-static void AddTextureName(
-    const std::string_view &textureName, const mbsp_t *bsp, const settings::common_settings &options)
+static void AddTextureName(std::string_view textureName, const mbsp_t *bsp, const settings::common_settings &options)
 {
     if (img::find(textureName)) {
         return;

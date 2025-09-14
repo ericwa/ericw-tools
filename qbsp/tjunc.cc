@@ -144,32 +144,30 @@ static void FindEdgeVerts_BruteForce(
  * so it shouldn't interact with solid.
  */
 
-static bool Welds(const contentflags_t &a, const contentflags_t &b)
+static bool Welds(contentflags_t a, contentflags_t b)
 {
     // FIXME: no clipping same type?
 
     // all types weld with themselves
-    if (a.types_equal(b, qbsp_options.target_game))
+    if (a.types_equal(b))
         return true;
 
     // detail wall only welds with detail wall
-    if (qbsp_options.target_game->contents_are_detail_wall(a)
-        || qbsp_options.target_game->contents_are_detail_wall(b))
+    if (a.is_detail_wall() || b.is_detail_wall())
         return false;
 
     // no need to weld translucent to opaque
     // (because they could have void behind them due to visblocking.
     // e.g. opaque water meeting solid)
-    if (!qbsp_options.target_game->contents_are_opaque(a, qbsp_options.transwater.value())
-        && qbsp_options.target_game->contents_are_opaque(b, qbsp_options.transwater.value()))
+    if (!a.is_opaque(qbsp_options.target_game, qbsp_options.transwater.value()) &&
+        b.is_opaque(qbsp_options.target_game, qbsp_options.transwater.value()))
         return false;
-    if (!qbsp_options.target_game->contents_are_opaque(b, qbsp_options.transwater.value())
-        && qbsp_options.target_game->contents_are_opaque(a, qbsp_options.transwater.value()))
+    if (!b.is_opaque(qbsp_options.target_game, qbsp_options.transwater.value()) &&
+        a.is_opaque(qbsp_options.target_game, qbsp_options.transwater.value()))
         return false;
 
     // never weld with backfaces
-    if (qbsp_options.target_game->contents_are_empty(a)
-        || qbsp_options.target_game->contents_are_empty(b))
+    if (a.is_empty() || b.is_empty())
         return false;
 
     // otherwise, weld
@@ -276,7 +274,7 @@ static float AngleOfTriangle(const qvec3d &a, const qvec3d &b, const qvec3d &c)
 {
     double num = (b[0] - a[0]) * (c[0] - a[0]) + (b[1] - a[1]) * (c[1] - a[1]) + (b[2] - a[2]) * (c[2] - a[2]);
     double den = sqrt(pow((b[0] - a[0]), 2) + pow((b[1] - a[1]), 2) + pow((b[2] - a[2]), 2)) *
-                sqrt(pow((c[0] - a[0]), 2) + pow((c[1] - a[1]), 2) + pow((c[2] - a[2]), 2));
+                 sqrt(pow((c[0] - a[0]), 2) + pow((c[1] - a[1]), 2) + pow((c[2] - a[2]), 2));
 
     return acos(num / den) * (180.0 / 3.141592653589793238463);
 }
@@ -440,7 +438,7 @@ static std::list<std::vector<size_t>> compress_triangles_into_fans(
         // just add the rest directly.
         if (fan.size() == 1) {
             for (auto &tri : triangles) {
-                tris_compiled.emplace_back(std::vector<size_t>{vertices[tri[0]], vertices[tri[1]], vertices[tri[2]]});
+                tris_compiled.push_back(std::vector<size_t>{vertices[tri[0]], vertices[tri[1]], vertices[tri[2]]});
             }
 
             triangles.clear();
@@ -454,7 +452,7 @@ static std::list<std::vector<size_t>> compress_triangles_into_fans(
         {
             size_t seed, vert_count;
 
-            bool operator()(const size_t &a, const size_t &b) const
+            bool operator()(size_t a, size_t b) const
             {
                 size_t ka = a < seed ? vert_count + a : a;
                 size_t kb = b < seed ? vert_count + b : b;
@@ -564,7 +562,7 @@ static std::vector<qvectri> minimum_weight_triangulation(
 
         qvectri tri{edge[0], edge[1], c.value()};
         std::sort(tri.begin(), tri.end());
-        triangles.emplace_back(tri);
+        triangles.push_back(tri);
 
         edge_queue.emplace(edge[0], c.value());
         edge_queue.emplace(c.value(), edge[1]);
@@ -710,7 +708,7 @@ static std::list<std::vector<size_t>> RetopologizeFace(const face_t *f, const st
                     break;
                 }
 
-                tri.emplace_back(input[x]);
+                tri.push_back(input[x]);
                 x = (x + 1) % input.size();
                 first = false;
             }
@@ -766,7 +764,7 @@ static void FixFaceEdges(node_t *headnode, face_t *f, tjunc_stats_t &stats)
 {
     // we were asked not to bother fixing any of the faces.
     if (qbsp_options.tjunc.value() == settings::tjunclevel_t::NONE) {
-        f->fragments.emplace_back(face_fragment_t{f->original_vertices});
+        f->fragments.push_back(face_fragment_t{f->original_vertices});
         return;
     }
 
@@ -778,7 +776,7 @@ static void FixFaceEdges(node_t *headnode, face_t *f, tjunc_stats_t &stats)
         return;
     } else if (superface.size() == 3) {
         // no need to adjust this either
-        f->fragments.emplace_back(face_fragment_t{f->original_vertices});
+        f->fragments.push_back(face_fragment_t{f->original_vertices});
         return;
     }
 
@@ -854,7 +852,7 @@ static void FixFaceEdges(node_t *headnode, face_t *f, tjunc_stats_t &stats)
     // the other techniques all failed, or we asked to not
     // try them. just move the superface in directly.
     if (!faces.size()) {
-        faces.emplace_back(std::move(superface));
+        faces.push_back(std::move(superface));
     }
 
     Q_assert(faces.size());
@@ -872,7 +870,7 @@ static void FixFaceEdges(node_t *headnode, face_t *f, tjunc_stats_t &stats)
     f->fragments.reserve(faces.size());
 
     for (auto &face : faces) {
-        f->fragments.emplace_back(face_fragment_t{std::move(face)});
+        f->fragments.push_back(face_fragment_t{std::move(face)});
     }
 
     for (auto &frag : f->fragments) {

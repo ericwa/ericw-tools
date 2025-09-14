@@ -40,14 +40,6 @@ Options
 
    Don't perform face merging.
 
-.. option:: -nomergeacrossliquids
-
-   Don't merge faces above and below a liquid.
-
-   This is for maps targetting ezQuake (Q1) and Paintball2 (Q2) water caustics,
-   where the effect is applied per-face and breaks if a face is partially above
-   and partially below water.
-
 .. option:: -noedgereuse
 
    Don't reuse edges (may be useful for debugging software rendering).
@@ -173,11 +165,12 @@ Options
 
 .. option:: -q2bsp
 
-   Target Quake II's BSP format.
+   Target Quake II and the vanilla Q2BSP format, automatically switching to Qbism format
+   if necessary (unless :option:`-noallowupgrade` is specified.)
 
 .. option:: -qbism
 
-   Target Qbism's extended Quake II BSP format.
+   Target Quake II and use Qbism's extended Quake II BSP format.
 
 .. option:: -q2rtx
 
@@ -522,7 +515,9 @@ Options
 
 .. option:: -maxedges n
 
-   The max number of edges/vertices on a single face before it is split into another face.
+   The max number of edges/vertices on a single face before it is split into another face. 0 means unlimited.
+
+   Default is 0 for Q2, and 64 for Q1.
 
 .. option:: -worldextent n
 
@@ -763,8 +758,18 @@ extra information needed by vis to compute the potentially visible set
 (PVS) for the map/bsp. So you will also need a vis util capable of
 processing the PRT2 file format.
 
-Detail Variants
----------------
+Compiler-internal bmodels
+-------------------------
+
+.. classname:: func_group
+
+   Bmodel that has no effect; qbsp moves the brushes back into the worldspawn entity.
+
+   The usefulness comes from the ability to set :ref:`model-entity-keys` on the brushes inside the func_group.
+
+.. classname:: func_detail
+
+   Solid detail. Can't be seen inside, splits world faces. Doesn't seal map.
 
 .. classname:: func_detail_illusionary
 
@@ -794,6 +799,9 @@ Detail Variants
 
    Intersecting func_detail_fence brushes don't clip each other.
 
+
+.. _model-entity-keys:
+
 Model Entity Keys
 -----------------
 
@@ -802,11 +810,54 @@ Model Entity Keys
    Generates an LMSHIFT bspx lump for use by a light util. Note that
    both scaled and unscaled lighting will normally be used.
 
+   .. todo:: This is broken since 2.0.0-alpha1
+
 .. bmodel-key:: "_mirrorinside" "n"
 
    Set to 1 to save mirrored inside faces for bmodels, so when the
    player view is inside the bmodel, they will still see the faces.
-   (e.g. for func_water, or func_illusionary)
+   (e.g. for func_water, func_illusionary, :classname:`func_detail_illusionary`, :classname:`func_detail_fence`, etc.)
+
+.. bmodel-key:: "_chop_order" "n"
+
+   Override the order of brushes in the map file, which affects which face "wins" in the CSG phase when there are
+   multiple overlapping coplanar brushes. Provided since most .map editors don't directly expose the brush order.
+
+   All brushes are initially 0; setting this to 1 would make a brush appear after anything in the map file, and so
+   clip away coplanar faces from other brushes.
+
+   For example, you could make a :classname:`func_group` with "_chop_order" "1", and apply it to a light fixture
+   which is coplanar with a floor or ceiling, to ensure the light fixture is visible in-game, without going to the
+   trouble of cutting a hole in the floor/ceiling for it.
+
+.. bmodel-key:: "_hulls" "n"
+
+   Bitmap ("Flags" type in FGD) that selects for which hulls collision data
+   will be generated. eg. a decimal value of 11 (0b1011) would generate hull 0, hull 1,
+   and hull 3.
+   Faces are computed using data from hull 0, not generating this hull will
+   prevent a bmodel from being rendered, acting as a CLIP brush only active for
+   the specified hulls.
+
+   Defaults to 0 which will generate clipnodes for all hulls.
+
+.. bmodel-key:: "_chop" "n"
+
+   Set to 0 to prevent these brushes from being chopped; this is an alias for setting :bmodel-key:`_chop_order` to 1.
+
+   .. deprecated:: 2.0.0
+      Prefer the more flexible :bmodel-key:`_chop_order` instead.
+
+.. bmodel-key:: "_noclipfaces" "n"
+
+   Set to 1 to suppress the usual qbsp behaviour where two touching brushes of the same content type will have the
+   touching portion clipped away.
+
+   This is useful for things that can be seen inside, such as :classname:`func_detail_illusionary`,
+   :classname:`func_detail_fence`, liquids, bmodels, etc.
+
+   Behaviour is unspecified for coplanar faces; in 0.18 it caused z-fighting, and in 2.0.0-alpha it doesn't currently.
+
 
 Other Special-Purpose Entities
 ------------------------------
