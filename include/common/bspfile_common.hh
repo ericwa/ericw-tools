@@ -31,12 +31,12 @@
 #include <span>
 #include <mutex>
 
+#include <json/json.h>
+
 #include <common/bitflags.hh>
 #include <common/fs.hh>
 #include <common/qvec.hh>
 #include <common/aabb.hh>
-
-#include <nlohmann/json.hpp>
 
 namespace settings
 {
@@ -247,8 +247,8 @@ struct contentflags_t
 
     std::string to_string() const;
 
-    nlohmann::json to_json() const;
-    static contentflags_t from_json(const nlohmann::json &json);
+    Json::Value to_json() const;
+    static contentflags_t from_json(const Json::Value &json);
 
     // returns the bit index (starting from 0) of the strongest visible content type
     // set, or -1 if no visible content bits are set (i.e. EWT_VISCONTENTS_EMPTY)
@@ -403,8 +403,8 @@ public:
 public:
     // to/from json
 
-    nlohmann::json to_json() const;
-    static surfflags_t from_json(const nlohmann::json &json);
+    Json::Value to_json() const;
+    static surfflags_t from_json(const Json::Value &json);
 
 private:
     void set_native_q1_bits(q1_surf_flags_t bits);

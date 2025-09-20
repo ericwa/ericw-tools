@@ -46,7 +46,8 @@ if (embree_FOUND)
 endif(embree_FOUND)
 
 add_library(liblight STATIC ${LIGHT_SOURCES})
-target_link_libraries(liblight PRIVATE common ${CMAKE_THREAD_LIBS_INIT} fmt::fmt nlohmann_json::nlohmann_json)
+
+target_link_libraries(liblight PRIVATE common ${CMAKE_THREAD_LIBS_INIT} fmt::fmt jsoncpp_static)
 
 add_executable(light main.cc)
 target_link_libraries(light PRIVATE common liblight)
