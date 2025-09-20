@@ -7,3 +7,6 @@
 [submodule "3rdparty/pareto"]
 	path = 3rdparty/pareto
 	url = https://github.com/alandefreitas/pareto.git
+[submodule "3rdparty/jsoncpp"]
+	path = 3rdparty/jsoncpp
+	url = https://github.com/open-source-parsers/jsoncpp

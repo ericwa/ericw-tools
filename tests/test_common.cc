@@ -1,3 +1,5 @@
+#include "common/json.hh"
+
 #include <gtest/gtest.h>
 
 #include <filesystem>
@@ -56,7 +58,8 @@ TEST(common, q1Contents)
 
     {
         SCOPED_TRACE("detail_solid plus water");
-        auto combined = contentflags_t::combine_contents(detail_solid, game_q1->create_contents_from_native(CONTENTS_WATER));
+        auto combined =
+            contentflags_t::combine_contents(detail_solid, game_q1->create_contents_from_native(CONTENTS_WATER));
 
         EXPECT_TRUE(combined.is_any_solid());
         EXPECT_TRUE(combined.is_detail_solid());
@@ -66,7 +69,8 @@ TEST(common, q1Contents)
 
     {
         SCOPED_TRACE("detail_solid plus sky");
-        auto combined = contentflags_t::combine_contents(detail_solid, game_q1->create_contents_from_native(CONTENTS_SKY));
+        auto combined =
+            contentflags_t::combine_contents(detail_solid, game_q1->create_contents_from_native(CONTENTS_SKY));
 
         EXPECT_FALSE(combined.is_detail_solid());
         EXPECT_TRUE(combined.is_sky());
@@ -337,9 +341,9 @@ TEST(common, q2ContentsRoundtrip)
 TEST(common, jsonContentsEmpty)
 {
     contentflags_t contents{};
-    EXPECT_EQ(nlohmann::json::array(), contents.to_json());
+    EXPECT_EQ(Json::Value(Json::arrayValue), contents.to_json());
 
-    contentflags_t roundtrip = contentflags_t::from_json(nlohmann::json::array());
+    contentflags_t roundtrip = contentflags_t::from_json(Json::Value(Json::arrayValue));
     EXPECT_EQ(roundtrip, contents);
 }
 
@@ -347,7 +351,7 @@ TEST(common, jsonContentsDetailSolid)
 {
     contentflags_t contents = contentflags_t::make(EWT_VISCONTENTS_SOLID | EWT_CFLAG_DETAIL | EWT_CFLAG_Q2_UNUSED_31);
 
-    auto expected_json = nlohmann::json::array({"SOLID", "DETAIL", "Q2_UNUSED_31"});
+    auto expected_json = json_array({"SOLID", "DETAIL", "Q2_UNUSED_31"});
     EXPECT_EQ(expected_json, contents.to_json());
 
     contentflags_t roundtrip = contentflags_t::from_json(expected_json);
@@ -358,8 +362,9 @@ TEST(common, q2PortalCanSeeThrough)
 {
     auto *game_q2 = bspver_q2.game;
 
-    EXPECT_TRUE(contentflags_t::portal_can_see_through(contentflags_t::make(EWT_VISCONTENTS_DETAIL_WALL | EWT_CFLAG_DETAIL),
-        contentflags_t::make(EWT_INVISCONTENTS_PLAYERCLIP)));
+    EXPECT_TRUE(
+        contentflags_t::portal_can_see_through(contentflags_t::make(EWT_VISCONTENTS_DETAIL_WALL | EWT_CFLAG_DETAIL),
+            contentflags_t::make(EWT_INVISCONTENTS_PLAYERCLIP)));
 }
 
 TEST(imglib, png)
@@ -436,9 +441,9 @@ TEST(string, strncasecmp)
 TEST(surfflags, jsonEmpty)
 {
     surfflags_t flags;
-    EXPECT_EQ(nlohmann::json::object(), flags.to_json());
+    EXPECT_EQ(Json::Value(Json::objectValue), flags.to_json());
 
-    surfflags_t roundtrip = surfflags_t::from_json(nlohmann::json::object());
+    surfflags_t roundtrip = surfflags_t::from_json(Json::Value(Json::objectValue));
     EXPECT_EQ(roundtrip, flags);
 }
 
@@ -447,7 +452,7 @@ TEST(surfflags, jsonAllQ2)
     surfflags_t flags;
     flags.native_q2 = static_cast<q2_surf_flags_t>(Q2_SURF_ALL);
 
-    nlohmann::json json = flags.to_json();
+    Json::Value json = flags.to_json();
     surfflags_t roundtrip = surfflags_t::from_json(json);
 
     EXPECT_EQ(roundtrip.native_q2, Q2_SURF_ALL);
@@ -459,7 +464,7 @@ TEST(surfflags, jsonAllQ1)
     surfflags_t flags;
     flags.native_q1 = TEX_SPECIAL;
 
-    nlohmann::json json = flags.to_json();
+    Json::Value json = flags.to_json();
     surfflags_t roundtrip = surfflags_t::from_json(json);
 
     EXPECT_EQ(roundtrip.native_q1, TEX_SPECIAL);
@@ -496,7 +501,7 @@ TEST(surfflags, jsonAllExtended)
         .world_units_per_luxel = std::optional<float>{15.0f},
         .object_channel_mask = std::optional<int32_t>{323}};
 
-    nlohmann::json json = flags.to_json();
+    Json::Value json = flags.to_json();
     surfflags_t roundtrip = surfflags_t::from_json(json);
 
     EXPECT_EQ(roundtrip, flags);
@@ -506,7 +511,7 @@ TEST(surfflags, jsonAllFalse)
 {
     surfflags_t flags{};
 
-    nlohmann::json json = flags.to_json();
+    Json::Value json = flags.to_json();
     surfflags_t roundtrip = surfflags_t::from_json(json);
 
     EXPECT_EQ(roundtrip, flags);
