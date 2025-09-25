@@ -400,6 +400,77 @@ void main() {
 }
 )";
 
+// lightgrid
+
+struct lightgridvertex_t
+{
+    qvec3f vertex_position;
+
+    qvec3b vertex_color0;
+    qvec3b vertex_color1;
+    qvec3b vertex_color2;
+    qvec3b vertex_color3;
+
+    uint8_t style0;
+    uint8_t style1;
+    uint8_t style2;
+    uint8_t style3;
+};
+
+static const char *s_fragShader_Lightgrid = R"(
+#version 330 core
+
+// in
+in vec3 color;
+
+// out
+out vec4 color_out;
+
+void main() {
+    color_out = vec4(color, 1.0);
+}
+)";
+
+static const char *s_vertShader_Lightgrid = R"(
+#version 330 core
+
+// in - uniforms
+uniform mat4 MVP;
+uniform float style_scalars[256];
+
+// in - attributes
+layout (location = 0) in vec3 vertex_position;
+
+layout (location = 1) in vec3 vertex_color0;
+layout (location = 2) in vec3 vertex_color1;
+layout (location = 3) in vec3 vertex_color2;
+layout (location = 4) in vec3 vertex_color3;
+
+layout (location = 5) in int style0;
+layout (location = 6) in int style1;
+layout (location = 7) in int style2;
+layout (location = 8) in int style3;
+
+// out
+out vec3 color;
+
+void main() {
+    gl_Position = MVP * vec4(vertex_position, 1.0);
+
+    vec3 result = vec3(0.0, 0.0, 0.0);
+
+    // always blend all 4 colors. If we don't have data for e.g. style3,
+    // setup code can set vertex_color3 to (0,0,0) and style3 to 0.
+
+    result = result + (vertex_color0 * style_scalars[style0]);
+    result = result + (vertex_color1 * style_scalars[style1]);
+    result = result + (vertex_color2 * style_scalars[style2]);
+    result = result + (vertex_color3 * style_scalars[style3]);
+
+    color = result;
+}
+)";
+
 GLView::face_visibility_key_t GLView::desiredFaceVisibility() const
 {
     face_visibility_key_t result;
@@ -591,6 +662,9 @@ void GLView::initializeGL()
     m_program_wireframe = new QOpenGLShaderProgram();
     setupProgram("m_program_wireframe", m_program_wireframe, s_vertShader_Wireframe, s_fragShader_Wireframe);
 
+    m_program_lightgrid = new QOpenGLShaderProgram();
+    setupProgram("m_program_lightgrid", m_program_lightgrid, s_vertShader_Lightgrid, s_fragShader_Lightgrid);
+
     m_program->bind();
     m_program_mvp_location = m_program->uniformLocation("MVP");
     m_program_texture_sampler_location = m_program->uniformLocation("texture_sampler");
@@ -635,6 +709,11 @@ void GLView::initializeGL()
     m_program_simple_mvp_location = m_program_simple->uniformLocation("MVP");
     m_program_simple_color_location = m_program_simple->uniformLocation("drawcolor");
     m_program_simple->release();
+
+    m_program_lightgrid->bind();
+    m_program_lightgrid_mvp_location = m_program_lightgrid->uniformLocation("MVP");
+    m_program_lightgrid_style_scalars_location = m_program_lightgrid->uniformLocation("style_scalars");
+    m_program_lightgrid->release();
 
     m_vao.create();
     m_leakVao.create();
@@ -972,6 +1051,21 @@ void GLView::paintGL()
         }
     }
 
+    if (m_drawLightgrid) {
+        // paint lightgrid
+        m_program_lightgrid->bind();
+        m_program_lightgrid->setUniformValue(m_program_lightgrid_mvp_location, MVP);
+
+        QOpenGLVertexArrayObject::Binder vaoBinder(&m_lightgridVao);
+
+        if (m_lightgridIndexBuffer.size() != -1) {
+            glDrawElements(GL_TRIANGLES, m_lightgridIndexBuffer.size() / sizeof(GLuint), GL_UNSIGNED_INT,
+                reinterpret_cast<void *>(0));
+        }
+
+        m_program_lightgrid->release();
+    }
+
     if (shouldLiveUpdate()) {
         update(); // schedule the next frame
     } else {
@@ -1038,6 +1132,12 @@ void GLView::setVisCulling(bool viscull)
     update();
 }
 
+void GLView::setDrawLightgrid(bool drawlightgrid)
+{
+    m_drawLightgrid = drawlightgrid;
+    update();
+}
+
 void GLView::setKeepCullFrustum(bool keepcullfrustum)
 {
     m_keepCullFrustum = keepcullfrustum;
@@ -1094,6 +1194,10 @@ void GLView::setLightStyleIntensity(int style_id, int intensity)
     m_program->bind();
     m_program->setUniformValue(m_program_style_scalars_location + style_id, intensity / 100.f);
     m_program->release();
+
+    m_program_lightgrid->bind();
+    m_program_lightgrid->setUniformValue(m_program_lightgrid_style_scalars_location + style_id, intensity / 100.f);
+    m_program_lightgrid->release();
     doneCurrent();
 
     update();
@@ -1715,6 +1819,12 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
     }
     m_program->release();
 
+    m_program_lightgrid->bind();
+    for (int i = 0; i < 256; i++) {
+        m_program_lightgrid->setUniformValue(m_program_lightgrid_style_scalars_location + i, 1.f);
+    }
+    m_program_lightgrid->release();
+
     // load leak file
     fs::path leakFile = fs::path(file.toStdString()).replace_extension(".pts");
 
@@ -1914,6 +2024,173 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
         glEnableVertexAttribArray(0 /* attrib */);
         glVertexAttribPointer(
             0 /* attrib */, 3, GL_FLOAT, GL_FALSE, sizeof(simple_vertex_t), (void *)offsetof(simple_vertex_t, pos));
+    }
+
+    // load lightgrid
+    {
+        std::vector<GLuint> indices;
+        std::vector<lightgridvertex_t> lightgrid_verts;
+
+        if (auto octree = BSPX_LightgridOctree(bspx)) {
+            for (const auto &leaf : octree->leafs) {
+                // step through leaf samples
+                for (int z = 0; z < leaf.size[2]; ++z) {
+                    for (int y = 0; y < leaf.size[1]; ++y) {
+                        for (int x = 0; x < leaf.size[0]; ++x) {
+                            const auto &sample = leaf.at(x, y, z);
+
+                            if (sample.occluded)
+                                continue;
+
+                            const qvec3f world_pos = leaf.world_pos(octree->header, x, y, z);
+
+                            // add cube
+                            auto windings = polylib::winding3f_t::aabb_windings(
+                                aabb3f(world_pos + qvec3f(-1), world_pos + qvec3f(1)));
+                            for (int side = 0; side < 6; ++side) {
+                                const auto &winding = windings[side];
+
+                                // push the 4 verts
+                                int first_vert_idx = lightgrid_verts.size();
+
+                                for (int i = 0; i < 4; ++i) {
+                                    lightgridvertex_t v{};
+                                    v.vertex_position = winding[i];
+
+                                    v.vertex_color0 = sample.samples_by_style[0].color;
+                                    v.vertex_color1 = sample.samples_by_style[1].color;
+                                    v.vertex_color2 = sample.samples_by_style[2].color;
+                                    v.vertex_color3 = sample.samples_by_style[3].color;
+
+                                    v.style0 = sample.samples_by_style[0].style;
+                                    v.style1 = sample.samples_by_style[1].style;
+                                    v.style2 = sample.samples_by_style[2].style;
+                                    v.style3 = sample.samples_by_style[3].style;
+
+                                    lightgrid_verts.push_back(v);
+                                }
+
+                                // push the 6 indices to make a quad
+                                indices.push_back(first_vert_idx);
+                                indices.push_back(first_vert_idx + 1);
+                                indices.push_back(first_vert_idx + 2);
+
+                                indices.push_back(first_vert_idx);
+                                indices.push_back(first_vert_idx + 2);
+                                indices.push_back(first_vert_idx + 3);
+                            }
+                        }
+                    }
+                }
+            }
+        } else if (auto lightgrids = BSPX_Lightgrids(bspx)) {
+            for (const auto &lightgrid : lightgrids->subgrids) {
+                for (const auto &leaf : lightgrid.leafs) {
+                    // step through leaf samples
+                    for (int z = 0; z < leaf.size[2]; ++z) {
+                        for (int y = 0; y < leaf.size[1]; ++y) {
+                            for (int x = 0; x < leaf.size[0]; ++x) {
+                                const auto &sample = leaf.at(x, y, z);
+
+                                if (sample.occluded)
+                                    continue;
+
+                                const qvec3f world_pos = leaf.world_pos(lightgrid.header, x, y, z);
+
+                                // add cube
+                                auto windings = polylib::winding3f_t::aabb_windings(
+                                    aabb3f(world_pos + qvec3f(-1), world_pos + qvec3f(1)));
+
+                                for (int side = 0; side < 6; ++side) {
+                                    const auto &winding = windings[side];
+
+                                    // push the 4 verts
+                                    int first_vert_idx = lightgrid_verts.size();
+
+                                    for (int i = 0; i < 4; ++i) {
+                                        lightgridvertex_t v;
+                                        v.vertex_position = winding[i];
+
+                                        v.vertex_color0 = sample.samples_by_style[0].colors[side];
+                                        v.vertex_color1 = sample.samples_by_style[1].colors[side];
+                                        v.vertex_color2 = sample.samples_by_style[2].colors[side];
+                                        v.vertex_color3 = sample.samples_by_style[3].colors[side];
+
+                                        v.style0 = sample.samples_by_style[0].style;
+                                        v.style1 = sample.samples_by_style[1].style;
+                                        v.style2 = sample.samples_by_style[2].style;
+                                        v.style3 = sample.samples_by_style[3].style;
+
+                                        lightgrid_verts.push_back(v);
+                                    }
+
+                                    // push the 6 indices to make a quad
+                                    indices.push_back(first_vert_idx);
+                                    indices.push_back(first_vert_idx + 1);
+                                    indices.push_back(first_vert_idx + 2);
+
+                                    indices.push_back(first_vert_idx);
+                                    indices.push_back(first_vert_idx + 2);
+                                    indices.push_back(first_vert_idx + 3);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        QOpenGLVertexArrayObject::Binder vaoBinder(&m_lightgridVao);
+
+        // upload index buffer
+        m_lightgridIndexBuffer.create();
+        m_lightgridIndexBuffer.bind();
+        m_lightgridIndexBuffer.allocate(indices.data(), indices.size() * sizeof(indices[0]));
+
+        // upload vertex buffer
+        m_lightgridVbo.create();
+        m_lightgridVbo.bind();
+        m_lightgridVbo.allocate(lightgrid_verts.data(), lightgrid_verts.size() * sizeof(lightgrid_verts[0]));
+
+        // vertex attributes
+        glEnableVertexAttribArray(0 /* attrib */);
+        glVertexAttribPointer(0 /* attrib */, 3, GL_FLOAT, GL_FALSE, sizeof(lightgridvertex_t),
+            (void *)offsetof(lightgridvertex_t, vertex_position));
+
+        // colors
+        glEnableVertexAttribArray(1 /* attrib */);
+        glVertexAttribPointer(1 /* attrib */, 3, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(lightgridvertex_t),
+            (void *)offsetof(lightgridvertex_t, vertex_color0));
+
+        glEnableVertexAttribArray(2 /* attrib */);
+        glVertexAttribPointer(2 /* attrib */, 3, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(lightgridvertex_t),
+            (void *)offsetof(lightgridvertex_t, vertex_color1));
+
+        glEnableVertexAttribArray(3 /* attrib */);
+        glVertexAttribPointer(3 /* attrib */, 3, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(lightgridvertex_t),
+            (void *)offsetof(lightgridvertex_t, vertex_color2));
+
+        glEnableVertexAttribArray(4 /* attrib */);
+        glVertexAttribPointer(4 /* attrib */, 3, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(lightgridvertex_t),
+            (void *)offsetof(lightgridvertex_t, vertex_color3));
+
+        // styles
+
+        glEnableVertexAttribArray(5 /* attrib */);
+        glVertexAttribIPointer(5 /* attrib */, 1, GL_UNSIGNED_BYTE, sizeof(lightgridvertex_t),
+            (void *)offsetof(lightgridvertex_t, style0));
+
+        glEnableVertexAttribArray(6 /* attrib */);
+        glVertexAttribIPointer(6 /* attrib */, 1, GL_UNSIGNED_BYTE, sizeof(lightgridvertex_t),
+            (void *)offsetof(lightgridvertex_t, style1));
+
+        glEnableVertexAttribArray(7 /* attrib */);
+        glVertexAttribIPointer(7 /* attrib */, 1, GL_UNSIGNED_BYTE, sizeof(lightgridvertex_t),
+            (void *)offsetof(lightgridvertex_t, style2));
+
+        glEnableVertexAttribArray(8 /* attrib */);
+        glVertexAttribIPointer(8 /* attrib */, 1, GL_UNSIGNED_BYTE, sizeof(lightgridvertex_t),
+            (void *)offsetof(lightgridvertex_t, style3));
     }
 
     doneCurrent();

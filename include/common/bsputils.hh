@@ -127,6 +127,8 @@ void BSP_VisitAllLeafs(const mbsp_t &bsp, const dmodelh2_t &model, const std::fu
 
 bspx_decoupled_lm_perface BSPX_DecoupledLM(const bspxentries_t &entries, int face_num);
 std::optional<bspxfacenormals> BSPX_FaceNormals(const mbsp_t &bsp, const bspxentries_t &entries);
+std::optional<lightgrid_octree_t> BSPX_LightgridOctree(const bspxentries_t &entries);
+std::optional<lightgrids_t> BSPX_Lightgrids(const bspxentries_t &entries);
 
 /* ======================================================================== */
 

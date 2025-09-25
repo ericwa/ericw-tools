@@ -809,6 +809,43 @@ std::optional<bspxfacenormals> BSPX_FaceNormals(const mbsp_t &bsp, const bspxent
     return result;
 }
 
+std::optional<lightgrid_octree_t> BSPX_LightgridOctree(const bspxentries_t &entries)
+{
+    auto it = entries.find("LIGHTGRID_OCTREE");
+    if (it == entries.end()) {
+        return std::nullopt;
+    }
+
+    auto stream = imemstream(it->second.data(), it->second.size());
+    stream >> endianness<std::endian::little>;
+
+    lightgrid_octree_t result;
+    stream >= result;
+
+    if (stream.tellg() != it->second.size()) {
+        logging::print("WARNING: bad LIGHTGRID_OCTREE lump\n");
+        return std::nullopt;
+    }
+
+    return result;
+}
+
+std::optional<lightgrids_t> BSPX_Lightgrids(const bspxentries_t &entries)
+{
+    auto it = entries.find("LIGHTGRIDS");
+    if (it == entries.end()) {
+        return std::nullopt;
+    }
+
+    auto stream = imemstream(it->second.data(), it->second.size());
+    stream >> endianness<std::endian::little>;
+
+    lightgrids_t result;
+    stream >= result;
+
+    return result;
+}
+
 qvec2d WorldToTexCoord(const qvec3d &world, const mtexinfo_t *tex)
 {
     /*

@@ -1259,7 +1259,7 @@ public:
 
     static std::array<winding_base_t, 6> aabb_windings(const aabb3d &bbox)
     {
-        float_type worldextent = 0;
+        double worldextent = 0;
         for (int i = 0; i < 3; ++i) {
             worldextent = std::max(worldextent, std::abs(bbox.maxs()[i]));
             worldextent = std::max(worldextent, std::abs(bbox.mins()[i]));
