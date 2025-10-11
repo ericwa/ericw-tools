@@ -64,5 +64,5 @@ void PrintBSPFileSizes(const bspdata_t *bspdata);
 bool ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version);
 
 std::string get_contents_display(contents_t bits);
-nlohmann::json get_contents_json(contents_t bits);
-contents_int_t set_contents_json(const nlohmann::json &json);
+Json::Value get_contents_json(contents_t bits);
+contents_int_t set_contents_json(const Json::Value &json);

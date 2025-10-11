@@ -314,12 +314,12 @@ std::string contentflags_t::to_string() const
     return s;
 }
 
-nlohmann::json contentflags_t::to_json() const
+Json::Value contentflags_t::to_json() const
 {
     return get_contents_json(flags);
 }
 
-contentflags_t contentflags_t::from_json(const nlohmann::json &json)
+contentflags_t contentflags_t::from_json(const Json::Value &json)
 {
     return contentflags_t::make(set_contents_json(json));
 }
@@ -386,9 +386,9 @@ void surfflags_t::set_native_q2_bits(q2_surf_flags_t bits)
     native_q2 = static_cast<q2_surf_flags_t>(native_q2 | bits);
 }
 
-nlohmann::json surfflags_t::to_json() const
+Json::Value surfflags_t::to_json() const
 {
-    nlohmann::json t = nlohmann::json::object();
+    Json::Value t = Json::Value(Json::objectValue);
 
     // native q2 flags
     if (native_q2 & Q2_SURF_LIGHT) {
@@ -462,7 +462,7 @@ nlohmann::json surfflags_t::to_json() const
         t["surflight_targetname"] = *surflight_targetname;
     }
     if (surflight_color) {
-        t["surflight_color"] = *surflight_color;
+        t["surflight_color"] = ::to_json(*surflight_color);
     }
     if (surflight_minlight_scale) {
         t["surflight_minlight_scale"] = *surflight_minlight_scale;
@@ -483,7 +483,7 @@ nlohmann::json surfflags_t::to_json() const
         t["minlight"] = *minlight;
     }
     if (!qv::emptyExact(minlight_color)) {
-        t["minlight_color"] = minlight_color;
+        t["minlight_color"] = ::to_json(minlight_color);
     }
     if (light_alpha) {
         t["light_alpha"] = *light_alpha;
@@ -510,134 +510,134 @@ nlohmann::json surfflags_t::to_json() const
     return t;
 }
 
-surfflags_t surfflags_t::from_json(const nlohmann::json &val)
+surfflags_t surfflags_t::from_json(const Json::Value &val)
 {
     surfflags_t flags;
 
     // native q2 flags
-    if (val.contains("is_light") && val.at("is_light").get<bool>()) {
+    if (val.isMember("is_light") && val["is_light"].asBool()) {
         flags.set_native_q2_bits(Q2_SURF_LIGHT);
     }
-    if (val.contains("is_slick") && val.at("is_slick").get<bool>()) {
+    if (val.isMember("is_slick") && val["is_slick"].asBool()) {
         flags.set_native_q2_bits(Q2_SURF_SLICK);
     }
-    if (val.contains("is_sky") && val.at("is_sky").get<bool>()) {
+    if (val.isMember("is_sky") && val["is_sky"].asBool()) {
         flags.set_native_q2_bits(Q2_SURF_SKY);
     }
-    if (val.contains("is_warp") && val.at("is_warp").get<bool>()) {
+    if (val.isMember("is_warp") && val["is_warp"].asBool()) {
         flags.set_native_q2_bits(Q2_SURF_WARP);
     }
-    if (val.contains("is_trans33") && val.at("is_trans33").get<bool>()) {
+    if (val.isMember("is_trans33") && val["is_trans33"].asBool()) {
         flags.set_native_q2_bits(Q2_SURF_TRANS33);
     }
-    if (val.contains("is_trans66") && val.at("is_trans66").get<bool>()) {
+    if (val.isMember("is_trans66") && val["is_trans66"].asBool()) {
         flags.set_native_q2_bits(Q2_SURF_TRANS66);
     }
-    if (val.contains("is_flowing") && val.at("is_flowing").get<bool>()) {
+    if (val.isMember("is_flowing") && val["is_flowing"].asBool()) {
         flags.set_native_q2_bits(Q2_SURF_FLOWING);
     }
-    if (val.contains("is_nodraw") && val.at("is_nodraw").get<bool>()) {
+    if (val.isMember("is_nodraw") && val["is_nodraw"].asBool()) {
         flags.set_native_q2_bits(Q2_SURF_NODRAW);
     }
-    if (val.contains("is_hint") && val.at("is_hint").get<bool>()) {
+    if (val.isMember("is_hint") && val["is_hint"].asBool()) {
         flags.set_native_q2_bits(Q2_SURF_HINT);
     }
-    if (val.contains("is_skip") && val.at("is_skip").get<bool>()) {
+    if (val.isMember("is_skip") && val["is_skip"].asBool()) {
         flags.set_native_q2_bits(Q2_SURF_SKIP);
     }
-    if (val.contains("is_alphatest") && val.at("is_alphatest").get<bool>()) {
+    if (val.isMember("is_alphatest") && val["is_alphatest"].asBool()) {
         flags.set_native_q2_bits(Q2_SURF_ALPHATEST);
     }
 
     // native q1 flags
-    if (val.contains("is_special") && val.at("is_special").get<bool>()) {
+    if (val.isMember("is_special") && val["is_special"].asBool()) {
         flags.set_native_q1_bits(TEX_SPECIAL);
     }
 
     // extended flags
-    if (val.contains("is_nodraw")) {
-        flags.set_nodraw(val.at("is_nodraw").get<bool>());
+    if (val.isMember("is_nodraw")) {
+        flags.set_nodraw(val["is_nodraw"].asBool());
     }
-    if (val.contains("is_hint")) {
-        flags.set_hint(val.at("is_hint").get<bool>());
+    if (val.isMember("is_hint")) {
+        flags.set_hint(val["is_hint"].asBool());
     }
-    if (val.contains("is_hintskip")) {
-        flags.set_hintskip(val.at("is_hintskip").get<bool>());
+    if (val.isMember("is_hintskip")) {
+        flags.set_hintskip(val["is_hintskip"].asBool());
     }
-    if (val.contains("no_dirt")) {
-        flags.no_dirt = val.at("no_dirt").get<bool>();
+    if (val.isMember("no_dirt")) {
+        flags.no_dirt = val["no_dirt"].asBool();
     }
-    if (val.contains("no_shadow")) {
-        flags.no_shadow = val.at("no_shadow").get<bool>();
+    if (val.isMember("no_shadow")) {
+        flags.no_shadow = val["no_shadow"].asBool();
     }
-    if (val.contains("no_bounce")) {
-        flags.no_bounce = val.at("no_bounce").get<bool>();
+    if (val.isMember("no_bounce")) {
+        flags.no_bounce = val["no_bounce"].asBool();
     }
-    if (val.contains("no_minlight")) {
-        flags.no_minlight = val.at("no_minlight").get<bool>();
+    if (val.isMember("no_minlight")) {
+        flags.no_minlight = val["no_minlight"].asBool();
     }
-    if (val.contains("no_expand")) {
-        flags.no_expand = val.at("no_expand").get<bool>();
+    if (val.isMember("no_expand")) {
+        flags.no_expand = val["no_expand"].asBool();
     }
-    if (val.contains("light_ignore")) {
-        flags.light_ignore = val.at("light_ignore").get<bool>();
+    if (val.isMember("light_ignore")) {
+        flags.light_ignore = val["light_ignore"].asBool();
     }
-    if (val.contains("noambient")) {
-        flags.noambient = val.at("noambient").get<bool>();
+    if (val.isMember("noambient")) {
+        flags.noambient = val["noambient"].asBool();
     }
-    if (val.contains("surflight_rescale")) {
-        flags.surflight_rescale = val.at("surflight_rescale").get<bool>();
+    if (val.isMember("surflight_rescale")) {
+        flags.surflight_rescale = val["surflight_rescale"].asBool();
     }
-    if (val.contains("surflight_style")) {
-        flags.surflight_style = val.at("surflight_style").get<int32_t>();
+    if (val.isMember("surflight_style")) {
+        flags.surflight_style = val["surflight_style"].asInt();
     }
-    if (val.contains("surflight_targetname")) {
-        flags.surflight_targetname = val.at("surflight_targetname").get<std::string>();
+    if (val.isMember("surflight_targetname")) {
+        flags.surflight_targetname = val["surflight_targetname"].asString();
     }
-    if (val.contains("surflight_color")) {
-        flags.surflight_color = val.at("surflight_color").get<qvec3b>();
+    if (val.isMember("surflight_color")) {
+        flags.surflight_color = to_qvec3b(val["surflight_color"]);
     }
-    if (val.contains("surflight_minlight_scale")) {
-        flags.surflight_minlight_scale = val.at("surflight_minlight_scale").get<float>();
+    if (val.isMember("surflight_minlight_scale")) {
+        flags.surflight_minlight_scale = val["surflight_minlight_scale"].asFloat();
     }
-    if (val.contains("surflight_atten")) {
-        flags.surflight_atten = val.at("surflight_atten").get<float>();
+    if (val.isMember("surflight_atten")) {
+        flags.surflight_atten = val["surflight_atten"].asFloat();
     }
-    if (val.contains("phong_angle")) {
-        flags.phong_angle = val.at("phong_angle").get<float>();
+    if (val.isMember("phong_angle")) {
+        flags.phong_angle = val["phong_angle"].asFloat();
     }
-    if (val.contains("phong_angle_concave")) {
-        flags.phong_angle_concave = val.at("phong_angle_concave").get<float>();
+    if (val.isMember("phong_angle_concave")) {
+        flags.phong_angle_concave = val["phong_angle_concave"].asFloat();
     }
-    if (val.contains("phong_group")) {
-        flags.phong_group = val.at("phong_group").get<int>();
+    if (val.isMember("phong_group")) {
+        flags.phong_group = val["phong_group"].asInt();
     }
-    if (val.contains("minlight")) {
-        flags.minlight = val.at("minlight").get<float>();
+    if (val.isMember("minlight")) {
+        flags.minlight = val["minlight"].asFloat();
     }
-    if (val.contains("maxlight")) {
-        flags.maxlight = val.at("maxlight").get<float>();
+    if (val.isMember("maxlight")) {
+        flags.maxlight = val["maxlight"].asFloat();
     }
-    if (val.contains("minlight_color")) {
-        flags.minlight_color = val.at("minlight_color").get<qvec3b>();
+    if (val.isMember("minlight_color")) {
+        flags.minlight_color = to_qvec3b(val["minlight_color"]);
     }
-    if (val.contains("light_alpha")) {
-        flags.light_alpha = val.at("light_alpha").get<float>();
+    if (val.isMember("light_alpha")) {
+        flags.light_alpha = val["light_alpha"].asFloat();
     }
-    if (val.contains("light_twosided")) {
-        flags.light_twosided = val.at("light_twosided").get<bool>();
+    if (val.isMember("light_twosided")) {
+        flags.light_twosided = val["light_twosided"].asBool();
     }
-    if (val.contains("lightcolorscale")) {
-        flags.lightcolorscale = val.at("lightcolorscale").get<float>();
+    if (val.isMember("lightcolorscale")) {
+        flags.lightcolorscale = val["lightcolorscale"].asFloat();
     }
-    if (val.contains("surflight_group")) {
-        flags.surflight_group = val.at("surflight_group").get<int32_t>();
+    if (val.isMember("surflight_group")) {
+        flags.surflight_group = val["surflight_group"].asInt();
     }
-    if (val.contains("world_units_per_luxel")) {
-        flags.world_units_per_luxel = val.at("world_units_per_luxel").get<float>();
+    if (val.isMember("world_units_per_luxel")) {
+        flags.world_units_per_luxel = val["world_units_per_luxel"].asFloat();
     }
-    if (val.contains("object_channel_mask")) {
-        flags.object_channel_mask = val.at("object_channel_mask").get<int32_t>();
+    if (val.isMember("object_channel_mask")) {
+        flags.object_channel_mask = val["object_channel_mask"].asInt();
     }
 
     return flags;
@@ -660,12 +660,13 @@ std::vector<surfflags_t> LoadExtendedTexinfoFlags(const fs::path &sourcefilename
 
     logging::print("Loading extended texinfo flags from {}...\n", filename);
 
-    json j;
+    Json::Value j;
 
     texinfofile >> j;
 
-    for (auto it = j.begin(); it != j.end(); ++it) {
-        size_t index = std::stoull(it.key());
+    Json::Value::Members keys = j.getMemberNames();
+    for (const std::string &key : keys) {
+        size_t index = std::stoull(key);
 
         if (index >= bsp->texinfo.size()) {
             logging::print("WARNING: Extended texinfo flags in {} does not match bsp, ignoring\n", filename);
@@ -673,7 +674,7 @@ std::vector<surfflags_t> LoadExtendedTexinfoFlags(const fs::path &sourcefilename
             return result;
         }
 
-        auto &val = it.value();
+        const Json::Value &val = j[key];
         result[index] = surfflags_t::from_json(val);
     }
 
@@ -700,15 +701,15 @@ std::vector<contentflags_t> LoadExtendedContentFlags(const fs::path &sourcefilen
 
     logging::print("Loading extended content flags from {}...\n", filename);
 
-    json j;
+    Json::Value j;
     texinfofile >> j;
 
-    if (!j.is_array() || j.size() != bsp->dleafs.size()) {
+    if (!j.isArray() || j.size() != bsp->dleafs.size()) {
         logging::print("ERROR: malformed extended content flags file\n");
         return result;
     }
 
-    for (size_t i = 0; i < bsp->dleafs.size(); ++i) {
+    for (Json::Value::ArrayIndex i = 0; i < bsp->dleafs.size(); ++i) {
         const auto &elem = j[i];
 
         result[i] = contentflags_t::from_json(elem);

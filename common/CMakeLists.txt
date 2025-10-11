@@ -56,7 +56,7 @@ add_library(common STATIC
     ../include/common/mapfile.hh
 )
 
-target_link_libraries(common ${CMAKE_THREAD_LIBS_INIT} TBB::tbb TBB::tbbmalloc fmt::fmt nlohmann_json::nlohmann_json pareto)
+target_link_libraries(common ${CMAKE_THREAD_LIBS_INIT} TBB::tbb TBB::tbbmalloc fmt::fmt jsoncpp_static pareto)
 
 target_precompile_headers(common INTERFACE
         <filesystem>

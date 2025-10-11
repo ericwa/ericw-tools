@@ -15,11 +15,15 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 set(INSTALL_GTEST FALSE CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
-FetchContent_Declare(
-        json
-        URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz
-        EXCLUDE_FROM_ALL
-        DOWNLOAD_EXTRACT_TIMESTAMP FALSE
-)
-
-FetchContent_MakeAvailable(json)
+set(JSONCPP_WITH_TESTS OFF)
+set(JSONCPP_WITH_POST_BUILD_UNITTEST OFF)
+set(JSONCPP_WITH_WARNING_AS_ERROR OFF)
+set(JSONCPP_WITH_STRICT_ISO OFF)
+set(JSONCPP_WITH_PKGCONFIG_SUPPORT OFF)
+set(JSONCPP_WITH_CMAKE_PACKAGE OFF)
+set(JSONCPP_WITH_EXAMPLE OFF)
+set(JSONCPP_STATIC_WINDOWS_RUNTIME OFF)
+set(BUILD_SHARED_LIBS OFF)
+set(BUILD_STATIC_LIBS ON)
+set(BUILD_OBJECT_LIBS OFF)
+add_subdirectory(jsoncpp EXCLUDE_FROM_ALL)
