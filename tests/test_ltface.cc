@@ -678,6 +678,20 @@ TEST(ltfaceQ2, lightChannelMask)
             EXPECT_LE(delta[2], 2);
         });
     }
+
+    {
+        SCOPED_TRACE("ensure delay 4 works with _light_channel_mask 16");
+
+        auto *face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {1672, 1248, 996});
+        ASSERT_TRUE(face);
+
+        CheckFaceLuxels(bsp, *face, [](qvec3b sample) {
+            qvec3i delta = qv::abs(qvec3i(sample) - qvec3i{0, 254, 246});
+            EXPECT_LE(delta[0], 2);
+            EXPECT_LE(delta[1], 2);
+            EXPECT_LE(delta[2], 2);
+        });
+    }
 }
 
 TEST(ltfaceQ2, lightChannelMaskDirtInteraction)
