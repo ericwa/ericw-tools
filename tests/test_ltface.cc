@@ -152,49 +152,6 @@ testresults_t QbspVisLight_HL(
     return QbspVisLight_Common(name, {"-hlbsp"}, extra_light_args, run_vis);
 }
 
-TEST(lightgridsample, styleEquality)
-{
-    lightgrid_sample_t a{.used = true, .style = 4, .color = {}};
-    lightgrid_sample_t b = a;
-    EXPECT_EQ(a, b);
-
-    b.style = 6;
-    EXPECT_NE(a, b);
-}
-
-TEST(lightgridsample, colorEquality)
-{
-    lightgrid_sample_t a{.used = true, .style = 4, .color = {1, 2, 3}};
-    lightgrid_sample_t b = a;
-    EXPECT_EQ(a, b);
-
-    b.color = {6, 5, 4};
-    EXPECT_NE(a, b);
-}
-
-TEST(lightgridsample, nanColors)
-{
-    lightgrid_sample_t a{.used = true, .style = 4, .color = {std::numeric_limits<double>::quiet_NaN(), 1.0, 1.0}};
-    lightgrid_sample_t b = a;
-    EXPECT_EQ(a, b);
-
-    b.color = {0, 0, 0};
-    EXPECT_NE(a, b);
-}
-
-TEST(lightgridsample, unusedEqualityDoesntConsiderOtherAttributes)
-{
-    lightgrid_sample_t a, b;
-    EXPECT_FALSE(a.used);
-    EXPECT_EQ(a, b);
-
-    b.style = 5;
-    EXPECT_EQ(a, b);
-
-    b.color = {1, 0, 0};
-    EXPECT_EQ(a, b);
-}
-
 TEST(worldunitsperluxel, lightgrid)
 {
     auto [bsp, bspx] = QbspVisLight_Q2("q2_lightmap_custom_scale.map", {"-lightgrid"});

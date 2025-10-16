@@ -385,8 +385,9 @@ light_settings::light_settings()
           "generates a lightgrid and writes it to a bspx lump (LIGHTGRID_OCTREE)"},
       lightgrid_dist{this, "lightgrid_dist", 32.f, 32.f, 32.f, &experimental_group,
           "distance between lightgrid sample points, in world units. controls lightgrid size."},
-      lightgrid_format{this, "lightgrid_format", lightgrid_format_t::OCTREE, {{"octree", lightgrid_format_t::OCTREE}},
-          &experimental_group, "lightgrid BSPX lump to use"},
+      lightgrid_format{this, "lightgrid_format", lightgrid_format_t::OCTREE,
+          {{"octree", lightgrid_format_t::OCTREE}, {"lightgrids", lightgrid_format_t::LIGHTGRIDS}}, &experimental_group,
+          "lightgrid BSPX lump to use"},
 
       dirtdebug{this, {"dirtdebug", "debugdirt"},
           [&](const std::string &, parser_base_t &, source) {
