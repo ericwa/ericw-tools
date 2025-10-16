@@ -846,6 +846,12 @@ std::optional<lightgrids_t> BSPX_Lightgrids(const bspxentries_t &entries)
     return result;
 }
 
+std::optional<bspx_lightgrid_samples_t> Lightgrid_SampleAtPoint(
+    const lightgrid_octree_t &lightgrid, const qvec3f &world_point)
+{
+    return {};
+}
+
 qvec2d WorldToTexCoord(const qvec3d &world, const mtexinfo_t *tex)
 {
     /*

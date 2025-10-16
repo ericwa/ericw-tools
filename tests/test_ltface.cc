@@ -231,6 +231,36 @@ TEST(worldunitsperluxel, lightgrid)
         EXPECT_EQ(sky_face_info.lmwidth, 0);
         EXPECT_EQ(sky_face_info.lmheight, 0);
     }
+
+    {
+        SCOPED_TRACE("LIGHTGRID_OCTREE lump generated");
+
+        auto it = bspx.find("LIGHTGRID_OCTREE");
+        ASSERT_TRUE(it != bspx.end());
+
+        const std::vector<uint8_t> orig_bytes = it->second;
+
+        auto parsed = BSPX_LightgridOctree(bspx);
+        ASSERT_TRUE(parsed.has_value());
+
+        {
+            SCOPED_TRACE("try round-tripping it back to bytes");
+            std::ostringstream ostream(std::ios_base::out | std::ios_base::binary);
+            ostream << endianness<std::endian::little>;
+            ostream <= parsed.value();
+
+            std::vector<uint8_t> new_bytes = StringToVector(ostream.str());
+            EXPECT_EQ(orig_bytes, new_bytes);
+        }
+
+        {
+            SCOPED_TRACE("check some sample points");
+
+            auto samp_optional = Lightgrid_SampleAtPoint(*parsed, {144, -336, 96});
+            // not implemented
+            // EXPECT_TRUE(samp_optional.has_value());
+        }
+    }
 }
 
 TEST(ltfaceQ2, emissiveCubeArtifacts)
