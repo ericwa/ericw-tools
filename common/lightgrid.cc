@@ -3,7 +3,20 @@
 std::optional<bspx_lightgrid_samples_t> Lightgrid_SampleAtPoint(
     const lightgrid_octree_t &lightgrid, const qvec3f &world_point)
 {
-    return {};
+    // convert world_point to grid space
+
+    qvec3f local_point_f = (world_point - lightgrid.header.grid_mins) / lightgrid.header.grid_dist;
+
+    qvec3i local_point_i = {Q_rint(local_point_f[0]), Q_rint(local_point_f[1]), Q_rint(local_point_f[2])};
+
+    // check if in bounds
+    for (int axis = 0; axis < 3; ++axis) {
+        if (local_point_i[axis] < 0 || local_point_i[axis] >= lightgrid.header.grid_size[axis]) {
+            return {};
+        }
+    }
+
+    return lightgrid::octree_lookup_r(lightgrid, lightgrid.header.root_node, local_point_i);
 }
 
 namespace lightgrid
@@ -41,4 +54,30 @@ std::tuple<qvec3i, qvec3i> get_octant(int i, qvec3i mins, qvec3i size, qvec3i di
     }
     return {child_mins, child_size};
 }
+
+int get_grid_index(const qvec3i &grid_size, int x, int y, int z)
+{
+    return (grid_size[0] * grid_size[1] * z) + (grid_size[0] * y) + x;
+}
+
+bspx_lightgrid_samples_t octree_lookup_r(const lightgrid_octree_t &octree, uint32_t node_index, qvec3i test_point)
+{
+    if (node_index & lightgrid::FLAG_OCCLUDED) {
+        bspx_lightgrid_samples_t result;
+        result.occluded = true;
+        return result;
+    }
+    if (node_index & lightgrid::FLAG_LEAF) {
+        uint32_t leaf_index = node_index & ~lightgrid::FLAG_LEAF;
+        const lightgrid_leaf_t &leaf = octree.leafs[leaf_index];
+
+        qvec3i pos_local = test_point - leaf.mins;
+
+        return leaf.at(pos_local[0], pos_local[1], pos_local[2]);
+    }
+    auto &node = octree.nodes[node_index];
+    int i = child_index(node.division_point, test_point); // [0..7]
+    return octree_lookup_r(octree, node.children[i], test_point);
+}
+
 } // namespace lightgrid

@@ -5,7 +5,6 @@
 
 #include <optional>
 
-// caller must give an exact coordinate on the lightgrid, so mostly useful for unit tests
 std::optional<bspx_lightgrid_samples_t> Lightgrid_SampleAtPoint(
     const lightgrid_octree_t &lightgrid, const qvec3f &world_point);
 
@@ -26,4 +25,8 @@ int child_index(qvec3i division_point, qvec3i test_point);
  * returns octant index `i`'s mins and size
  */
 std::tuple<qvec3i, qvec3i> get_octant(int i, qvec3i mins, qvec3i size, qvec3i division_point);
+
+int get_grid_index(const qvec3i &grid_size, int x, int y, int z);
+
+bspx_lightgrid_samples_t octree_lookup_r(const lightgrid_octree_t &octree, uint32_t node_index, qvec3i test_point);
 } // namespace lightgrid

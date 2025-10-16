@@ -258,8 +258,13 @@ TEST(worldunitsperluxel, lightgrid)
             SCOPED_TRACE("check some sample points");
 
             auto samp_optional = Lightgrid_SampleAtPoint(*parsed, {144, -336, 96});
-            // not implemented
-            // EXPECT_TRUE(samp_optional.has_value());
+            ASSERT_TRUE(samp_optional.has_value());
+
+            ASSERT_FALSE(samp_optional->occluded);
+            ASSERT_EQ(1, samp_optional->used_samples);
+
+            EXPECT_EQ(1, samp_optional->samples_by_style[0].style);
+            EXPECT_EQ(qvec3b(107, 149, 133), samp_optional->samples_by_style[0].color);
         }
     }
 }
