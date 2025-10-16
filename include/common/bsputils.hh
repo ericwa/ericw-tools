@@ -130,10 +130,6 @@ std::optional<bspxfacenormals> BSPX_FaceNormals(const mbsp_t &bsp, const bspxent
 std::optional<lightgrid_octree_t> BSPX_LightgridOctree(const bspxentries_t &entries);
 std::optional<lightgrids_t> BSPX_Lightgrids(const bspxentries_t &entries);
 
-// caller must give an exact coordinate on the lightgrid, so mostly useful for unit tests
-std::optional<bspx_lightgrid_samples_t> Lightgrid_SampleAtPoint(
-    const lightgrid_octree_t &lightgrid, const qvec3f &world_point);
-
 /* ======================================================================== */
 
 qvec2d WorldToTexCoord(const qvec3d &world, const mtexinfo_t *tex);

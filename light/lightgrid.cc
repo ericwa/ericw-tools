@@ -31,6 +31,7 @@
 #include <light/entities.hh>
 #include <light/ltface.hh>
 
+#include <common/lightgrid.hh>
 #include <common/prtfile.hh>
 #include <common/parallel.hh>
 #include <common/qvec.hh>
@@ -76,16 +77,8 @@ struct lightgrid_raw_data
 
 static std::vector<uint8_t> MakeOctreeLump(const mbsp_t &bsp, const lightgrid_raw_data &data)
 {
-    /**
-     * returns the octant index in [0..7]
-     */
-    auto child_index = [](qvec3i division_point, qvec3i test_point) -> int {
-        int sign[3];
-        for (int i = 0; i < 3; ++i)
-            sign[i] = (test_point[i] >= division_point[i]);
-
-        return (4 * sign[0]) + (2 * sign[1]) + (sign[2]);
-    };
+    using lightgrid::child_index;
+    using lightgrid::get_octant;
 
     Q_assert(child_index({1, 1, 1}, {2, 2, 2}) == 7);
     Q_assert(child_index({1, 1, 1}, {1, 1, 0}) == 6);
@@ -95,33 +88,6 @@ static std::vector<uint8_t> MakeOctreeLump(const mbsp_t &bsp, const lightgrid_ra
     Q_assert(child_index({1, 1, 1}, {0, 1, 0}) == 2);
     Q_assert(child_index({1, 1, 1}, {0, 0, 1}) == 1);
     Q_assert(child_index({1, 1, 1}, {0, 0, 0}) == 0);
-
-    /**
-     * returns octant index `i`'s mins and size
-     */
-    auto get_octant = [](int i, qvec3i mins, qvec3i size, qvec3i division_point) -> std::tuple<qvec3i, qvec3i> {
-        qvec3i child_mins;
-        qvec3i child_size;
-        for (int axis = 0; axis < 3; ++axis) {
-            int bit;
-            if (axis == 0) {
-                bit = 4;
-            } else if (axis == 1) {
-                bit = 2;
-            } else {
-                bit = 1;
-            }
-
-            if (i & bit) {
-                child_mins[axis] = division_point[axis];
-                child_size[axis] = mins[axis] + size[axis] - division_point[axis];
-            } else {
-                child_mins[axis] = mins[axis];
-                child_size[axis] = division_point[axis] - mins[axis];
-            }
-        }
-        return {child_mins, child_size};
-    };
 
     Q_assert(get_octant(0, {0, 0, 0}, {2, 2, 2}, {1, 1, 1}) == (std::tuple<qvec3i, qvec3i>{{0, 0, 0}, {1, 1, 1}}));
     Q_assert(get_octant(7, {0, 0, 0}, {2, 2, 2}, {1, 1, 1}) == (std::tuple<qvec3i, qvec3i>{{1, 1, 1}, {1, 1, 1}}));
@@ -151,12 +117,6 @@ static std::vector<uint8_t> MakeOctreeLump(const mbsp_t &bsp, const lightgrid_ra
     constexpr int MAX_DEPTH = 5;
     // if any axis is fewer than this many grid points, don't bother subdividing further, just create a leaf
     constexpr int MIN_NODE_DIMENSION = 4;
-
-    // if set, it's an index in the leafs array
-    [[maybe_unused]] constexpr uint32_t FLAG_LEAF = 1 << 31;
-    [[maybe_unused]] constexpr uint32_t FLAG_OCCLUDED = 1 << 30;
-    [[maybe_unused]] constexpr uint32_t FLAGS = (FLAG_LEAF | FLAG_OCCLUDED);
-    // if neither flags are set, it's a node index
 
     struct octree_node
     {
@@ -191,7 +151,7 @@ static std::vector<uint8_t> MakeOctreeLump(const mbsp_t &bsp, const lightgrid_ra
         auto [occluded_count, unoccluded_count] = count_occluded_unoccluded(mins, size);
         if (!unoccluded_count) {
             occluded_cells += size[0] * size[1] * size[2];
-            return FLAG_OCCLUDED;
+            return lightgrid::FLAG_OCCLUDED;
         }
 
         // decide whether we are creating a regular leaf or a node?
@@ -210,7 +170,7 @@ static std::vector<uint8_t> MakeOctreeLump(const mbsp_t &bsp, const lightgrid_ra
             // make a leaf
             const uint32_t leafnum = static_cast<uint32_t>(octree_leafs.size());
             octree_leafs.push_back({.mins = mins, .size = size});
-            return FLAG_LEAF | leafnum;
+            return lightgrid::FLAG_LEAF | leafnum;
         }
 
         // make a node
@@ -271,10 +231,10 @@ static std::vector<uint8_t> MakeOctreeLump(const mbsp_t &bsp, const lightgrid_ra
     // lookup function
     std::function<std::tuple<lightgrid_samples_t, bool>(uint32_t, qvec3i)> octree_lookup_r;
     octree_lookup_r = [&](uint32_t node_index, qvec3i test_point) -> std::tuple<lightgrid_samples_t, bool> {
-        if (node_index & FLAG_OCCLUDED) {
+        if (node_index & lightgrid::FLAG_OCCLUDED) {
             return {lightgrid_samples_t{}, true};
         }
-        if (node_index & FLAG_LEAF) {
+        if (node_index & lightgrid::FLAG_LEAF) {
             // in actuality, we'd pull the data from a 3D grid stored in the leaf.
             int i = data.get_grid_index(test_point[0], test_point[1], test_point[2]);
             return {data.grid_result[i], data.occlusion[i]};
