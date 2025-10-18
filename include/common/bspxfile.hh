@@ -149,7 +149,7 @@ struct bspx_decoupled_lm_perface
     void stream_read(std::istream &s);
 };
 
-// LIGHTGRID_OCTREE BSPX lump
+// structs shared between LIGHTGRID_OCTREE and LIGHTGRIDS
 
 // helper container for different types of sample, shared by LIGHTGRID_OCTREE and LIGHTGRIDS.
 // essentially an optional vector of 0..4 elements.
@@ -214,7 +214,7 @@ struct lightgrid_header_t
     void stream_read(std::istream &s);
 };
 
-// a node in a LIGHTGRID_OCTREE lump
+// a node in a lightgrid lump
 struct lightgrid_node_t
 {
     qvec3i division_point;
@@ -226,6 +226,8 @@ struct lightgrid_node_t
     void stream_write(std::ostream &s) const;
     void stream_read(std::istream &s);
 };
+
+// LIGHTGRID_OCTREE BSPX lump
 
 struct bspx_lightgrid_sample_t
 {
