@@ -1737,6 +1737,11 @@ static void LightFace_LocalMin(
             continue;
         }
 
+        // check lighting channels
+        if (!(entity->light_channel_mask.value() & lightsurf->object_channel_mask)) {
+            return;
+        }
+
         raystream_occlusion_t &rs = occlusion_stream;
         rs.clearPushedRays();
 
@@ -1760,7 +1765,7 @@ static void LightFace_LocalMin(
         }
 
         // local minlight just needs occlusion, not closest hit
-        rs.tracePushedRaysOcclusion(modelinfo, CHANNEL_MASK_DEFAULT);
+        rs.tracePushedRaysOcclusion(modelinfo, entity->shadow_channel_mask.value());
 #if 0
         total_light_rays += rs.numPushedRays();
 #endif
