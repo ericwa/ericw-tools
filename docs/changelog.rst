@@ -174,6 +174,137 @@ Other notes:
 - VS runtime for the Windows builds: https://aka.ms/vs/17/release/vc_redist.x64.exe
 - Documentation is now at: https://ericw-tools.readthedocs.io
 
+2.0.0-alpha5
+============
+
+This is the fifth alpha release of our 2.0.0 "dev builds".
+
+The old stable v0.18.2-rc1 release still has more optimized output for Q1 and faster/less memory use for qbsp/light, but we're working on regressions and welcome feedback as we work towards a stable 2.0.0 build.
+
+Fixes since alpha4:
+
+- qbsp: fix for Q2 animated textures
+- qbsp: fix leaks through detail in LibreQuake e3m4.map
+- light: fix entire lightmap turning black in some cases when using _surface lights
+- light: fix excessive bouncing with lit water, or :bmodel-key:`_shadow` -1
+- lightpreview: don't crash when vis is run more than once
+
+Enhancements since alpha4:
+
+- vis: more performance (gmsp3v2.bsp vis, 32 threads: 18.2s -> 10.6s) (@rrika)
+
+Additions since alpha4:
+
+- qbsp: add :option:`qbsp -missing_textures_as_zero_size` flag to allow writing 0x0 textures
+- lightpreview: bind arrow keys / pageup / pagedown in addition to WASDQE (@maikmerten)
+- lightpreview: add support for fence textures (#402) (@dsvensson)
+- lightpreview: frustum culling and cull freeze (#398) (@dsvensson)
+
+Other notes:
+
+- VS runtime for the Windows builds: https://aka.ms/vs/17/release/vc_redist.x64.exe
+- Documentation is now at: https://ericw-tools.readthedocs.io
+
+2.0.0-alpha4
+============
+
+This is the fourth alpha release of our 2.0.0 "dev builds".
+
+The old stable v0.18.2-rc1 release still has more optimized output for Q1 and faster/less memory use for qbsp/light, but we're working on regressions (this alpha fixes `vis` performance) and welcome feedback as we work towards a stable 2.0.0 build.
+
+Fixes since alpha3:
+
+- qbsp: fix :option:`qbsp -notex` (88885068212f608e4c635d5775656962b908af31)
+- qbsp: fix :classname:`func_detail_illusionary` and ``misc_external_map`` with :option:`qbsp -wrbrushes` (#371, #372)
+
+Enhancements since alpha3:
+
+- vis: major performance fixes (gmsp3v2.bsp vis went from 153s to 18.5s with 32 threads)
+- light: some performance fixes for large maps using point lights (``light.exe -visapprox none ad_sepulcher.bsp`` went from 45.5s to 22.7s) (22ad2f4141723b492f5fd10ce529d6b9e8e67b3a)
+
+Additions since alpha3:
+
+- qbsp: allow empty brushes in .map files (#391)
+- light: compiling with embree 4 is now supported in addition to 3
+- bsputil: add :option:`bsputil --replace-textures` for updating textures in a Q1 bsp
+- lightpreview: add support for Q1 visdata
+- lightpreview: add checkbox for skipping running light
+- lightpreview: fix large .bsp's not rendering (de0f66c16e66de8c27fb49090190441927ef3001)
+
+Other notes:
+
+- VS runtime for the Windows builds: https://aka.ms/vs/17/release/vc_redist.x64.exe
+- Documentation is now at: https://ericw-tools.readthedocs.io
+
+2.0.0-alpha3
+============
+
+This is the third alpha release of our 2.0.0 "dev builds".
+
+Quake mappers will probably want to stick to the previous v0.18.2-rc1 release, as we're still working on regressions in compile time and output quality.
+
+Fixes since alpha2:
+
+- lightpreview: don't crash on Q1 maps with missing textures
+- light: fix broken sunlight in Q1 maps (#376)
+- qbsp: Q2: fix corruption if texture name exceeds 31 chars (8362ffa3851d4c4df91b74aef2a20dddfccfab95)
+
+Additions since alpha2:
+
+- lightpreview: add ``.lit`` file loading
+- initial :doc:`maputil` util planned to be for manipulating .map files with lua scripting
+- initial multiple bounce support in ``light`` with :worldspawn-key:`_bounce`
+
+Other notes:
+
+- VS runtime for the Windows builds: https://aka.ms/vs/17/release/vc_redist.x64.exe
+- Documentation is now at: https://ericw-tools.readthedocs.io
+
+2.0.0-alpha2
+============
+
+This is the second alpha release of our "dev builds", focusing on Quake 2 support.
+
+Quake mappers will probably want to stick to the previous v0.18.2-rc1 release.
+
+Fixes since alpha1:
+
+- fix blown out lightmaps with bounce and lightstyles (2e0e23622bddb533830168dd8e77cb49fe6395a9)
+- fix lightstyles being deleted if the map leaks (9d7f83a46af034d256bcb966323847e319dc67be)
+- fix surface lights not illuminating the back faces of lit water (b71a4ebaf172d8570ae42c2d15a14e3991fb919e)
+
+Additions since alpha1:
+
+- :bmodel-key:`_light_twosided` bmodel key for enabling two-sided surfaces to receive light from either direction, mostly for Q2 opaque lit water. We might enable this implicitly on Q2 warp surfaces in the future, as we currently do on Q1 lit (opaque) water.  (b893e67309dc9556fa581e9a0a1d69b68782e40c)
+- ``_tex_saturation_boost 1`` worldspawn key (light) for boosting texture saturation in bounce calculations, to emulate vanilla Q2 tools (44dadd87b29899920afb23bf5472338f330a6ea1)
+
+Other notes:
+
+- VS runtime for the Windows builds: https://aka.ms/vs/17/release/vc_redist.x64.exe
+- Documentation is now at: https://ericw-tools.readthedocs.io
+
+2.0.0-alpha1
+============
+
+This is the first alpha release of our "dev builds", featuring Quake 2 support, including some features for the remaster (:option:`light -lightgrid`, :option:`light -world_units_per_luxel`, :option:`light -wrnormals`).
+
+Quake mappers will probably want to stick to the previous v0.18.2-rc1 release.
+
+To get started for Q2, pass :option:`qbsp -q2bsp` to qbsp.
+
+Some known issues which we hope to address before a final 2.0.0 release:
+
+- performance regressions from the previous release
+- Quake maps are compiling with elevated stats (faces, clipnodes, etc.) compared to the previous release
+- :doc:`lightpreview` gui tool is heavily WIP and only packaged in the Windows build for now
+- Bounce lighting differs substantially from the previous stable release
+- Improved documentation of new features / changelog
+
+Other notes:
+
+- VS runtime for the Windows builds: https://aka.ms/vs/17/release/vc_redist.x64.exe
+- Documentation is now at: https://ericw-tools.readthedocs.io
+
 Upcoming
 ========
 
