@@ -35,6 +35,7 @@
 #include <common/fs.hh>
 #include <common/settings.hh>
 #include <common/ostream.hh>
+#include <common/mapfile.hh>
 
 #include <map>
 #include <set>
@@ -145,6 +146,11 @@ bsputil_settings::bsputil_settings()
               return this->load_setting<settings::setting_int32>(name, parser, src, 0);
           },
           nullptr, "Decompile specific hull"},
+      reorder_entities{this, "resort-entities",
+          [&](const std::string &name, parser_base_t &parser, settings::source src) {
+              return this->load_setting(name, src);
+          },
+          nullptr, "Re-sort BSP entities in a deterministic way, for diffing"},
       extract_bspx_lump{this, "extract-bspx-lump",
           [&](const std::string &name, parser_base_t &parser, settings::source src) {
               auto lump = std::make_shared<settings::setting_string>(nullptr, name, "");
@@ -1452,6 +1458,34 @@ int bsputil_main(int _argc, const char **_argv)
             mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);
             CheckBSPFile(&bsp);
             CheckBSPFacesPlanar(&bsp);
+        } else if (operation->primary_name() == "resort-entities") {
+            mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);
+
+            mapfile::map_file_t map = mapfile::parse(bsp.dentdata, parser_source_location{});
+
+            // sort each entity pair
+            for (auto &ent : map.entities) {
+                std::sort(ent.epairs.begin(), ent.epairs.end(), [](const keyvalue_t &a, const keyvalue_t &b) {
+                    if (a.first == b.first) {
+                        return a.second < b.second;
+                    }
+
+                    return a.first < b.first;
+                });
+            }
+            
+            // sort pairs by length
+            std::sort(map.entities.begin(), map.entities.end(), [](const mapfile::map_entity_t &a, const mapfile::map_entity_t &b) {
+                return a.epairs.get_pairs().size() < b.epairs.get_pairs().size();
+            });
+
+            std::stringstream s;
+            map.write(s);
+
+            bsp.dentdata = s.str();
+            
+            ConvertBSPFormat(&bspdata, bspdata.loadversion);
+            WriteBSPFile(source.replace_filename(source.filename().generic_string() + "_sorted"), &bspdata);
         } else if (operation->primary_name() == "modelinfo") {
             mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);
             PrintModelInfo(&bsp);

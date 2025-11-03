@@ -29,7 +29,6 @@ class GLView;
 class QFileSystemWatcher;
 class QLineEdit;
 class QCheckBox;
-class QStringList;
 class QTextEdit;
 class StatsPanel;
 class FacePanel;
@@ -120,7 +119,7 @@ private:
     void loadFile(const QString &file);
     void loadFileInternal(const QString &file, bool is_reload);
     void displayCameraPositionInfo();
-    void updateCameraStoppedMovingInfo();
+    void updateCameraFaceInfo();
 
 private:
     GLView *glView = nullptr;

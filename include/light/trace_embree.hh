@@ -26,13 +26,8 @@
 #include <vector>
 #include <set>
 
-#ifdef HAVE_EMBREE4
 #include <embree4/rtcore.h>
 #include <embree4/rtcore_ray.h>
-#else
-#include <embree3/rtcore.h>
-#include <embree3/rtcore_ray.h>
-#endif
 
 struct mbsp_t;
 class modelinfo_t;
@@ -141,22 +136,15 @@ protected:
 
 extern RTCScene scene;
 
-struct ray_source_info : public
-#ifdef HAVE_EMBREE4
-                         RTCRayQueryContext
-#else
-                         RTCIntersectContext
-#endif
+struct ray_source_info : public RTCRayQueryContext
 {
     raystream_embree_common_t *raystream; // may be null if this ray is not from a ray stream
     const modelinfo_t *self;
     int shadowmask;
 
     ray_source_info(raystream_embree_common_t *raystream_, const modelinfo_t *self_, int shadowmask_);
-#ifdef HAVE_EMBREE4
     RTCIntersectArguments setup_intersection_arguments();
     RTCOccludedArguments setup_occluded_arguments();
-#endif
 };
 
 struct triinfo
@@ -233,13 +221,9 @@ public:
 
         ray_source_info ctx2(this, self, shadowmask);
 
-#ifdef HAVE_EMBREE4
         RTCIntersectArguments embree4_args = ctx2.setup_intersection_arguments();
         for (auto &ray : _rays)
             rtcIntersect1(scene, &ray.ray, &embree4_args);
-#else
-        rtcIntersect1M(scene, &ctx2, &_rays.data()->ray, _rays.size(), sizeof(_rays[0]));
-#endif
     }
 
     inline const qvec3f &getPushedRayDir(size_t j) const { return *((qvec3f *)&_rays[j].ray.ray.dir_x); }
@@ -297,13 +281,9 @@ public:
             return;
 
         ray_source_info ctx2(this, self, shadowmask);
-#ifdef HAVE_EMBREE4
         RTCOccludedArguments embree4_args = ctx2.setup_occluded_arguments();
         for (auto &ray : _rays)
             rtcOccluded1(scene, &ray.ray.ray, &embree4_args);
-#else
-        rtcOccluded1M(scene, &ctx2, &_rays.data()->ray.ray, _rays.size(), sizeof(_rays[0]));
-#endif
     }
 
     inline bool getPushedRayOccluded(size_t j) const { return (_rays[j].ray.ray.tfar < 0.0f); }

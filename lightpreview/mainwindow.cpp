@@ -429,7 +429,7 @@ void MainWindow::createPropertiesSidebar()
         [this](bool checked) { glView->setDrawTranslucencyAsOpaque(checked); });
     connect(m_littransucency, &QAbstractButton::toggled, this, [this](bool checked) { glView->setLitTranslucency(checked); });
     connect(glView, &GLView::cameraMoved, this, &MainWindow::displayCameraPositionInfo);
-    connect(glView, &GLView::stoppedMoving, this, &MainWindow::updateCameraStoppedMovingInfo);
+    connect(glView, &GLView::selectedFaceChanged, this, &MainWindow::updateCameraFaceInfo);
     connect(show_bmodels, &QAbstractButton::toggled, this, [this](bool checked) { glView->setShowBmodels(checked); });
     connect(brightnessSlider, &QAbstractSlider::valueChanged, this, [this, brightnessLabel](int value) {
         float brightness = value / 10.0f;
@@ -1007,12 +1007,14 @@ int MainWindow::compileMap(const QString &file, bool is_reload)
     m_litdata = {};
 
     try {
-        auto lit_variant = LoadLitFile(lit_path);
+        if (const auto *bsp = std::get_if<mbsp_t>(&m_bspdata.bsp)) {
+            auto lit_variant = LoadLitFile(lit_path, *bsp);
 
-        if (auto *lit1_ptr = std::get_if<lit1_t>(&lit_variant)) {
-            m_litdata = std::move(lit1_ptr->rgbdata);
-        } else if (auto *lit_hdr_ptr = std::get_if<lit_hdr>(&lit_variant)) {
-            m_hdr_litdata = std::move(lit_hdr_ptr->samples);
+            if (auto *lit1_ptr = std::get_if<lit1_t>(&lit_variant)) {
+                m_litdata = std::move(lit1_ptr->rgbdata);
+            } else if (auto *lit_hdr_ptr = std::get_if<lit_hdr>(&lit_variant)) {
+                m_hdr_litdata = std::move(lit_hdr_ptr->samples);
+            }
         }
     } catch (const std::runtime_error &error) {
         logging::print("error loading lit: {}", error.what());
@@ -1140,10 +1142,7 @@ void MainWindow::displayCameraPositionInfo()
     m_cameraStatus->setText(QString::fromStdString(cpp_str));
 }
 
-void MainWindow::updateCameraStoppedMovingInfo()
+void MainWindow::updateCameraFaceInfo()
 {
-    const qvec3f point = glView->cameraPosition();
-    const qvec3f forward = glView->cameraForward();
-
-    face_panel->updateWithBSP(&std::get<mbsp_t>(m_bspdata.bsp), m_entities, m_bspdata.bspx.entries, point, forward);
+    face_panel->updateWithBSP(&std::get<mbsp_t>(m_bspdata.bsp), m_entities, m_bspdata.bspx.entries, glView->getSelectedFace());
 }

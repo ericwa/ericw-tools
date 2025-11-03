@@ -53,15 +53,15 @@ void FacePanel::addStat(const QString &str, int value)
     addStat(str, locale.toString(value));
 }
 
-void FacePanel::updateWithBSP(const mbsp_t *bsp, const std::vector<entdict_t> &ents, const bspxentries_t &entries, const qvec3f &cameraPos, const qvec3f &cameraForward)
+void FacePanel::updateWithBSP(const mbsp_t *bsp, const std::vector<entdict_t> &ents, const bspxentries_t &entries, int face_id)
 {
-    if (bsp == nullptr) {
+    if (bsp == nullptr || face_id == -1) {
         m_lastFace = nullptr;
+        m_table->setRowCount(0);
         return;
     }
 
-    float bestLen = std::numeric_limits<float>::infinity();
-    const mface_t *bestFace = nullptr;
+    const mface_t *bestFace = &bsp->dfaces[face_id];
     const dmodelh2_t *bestModel = nullptr;
 
     for (size_t m = 0; m < bsp->dmodels.size(); m++) {
@@ -78,24 +78,14 @@ void FacePanel::updateWithBSP(const mbsp_t *bsp, const std::vector<entdict_t> &e
         for (size_t i = bsp->dmodels[m].firstface; i < bsp->dmodels[m].firstface + bsp->dmodels[m].numfaces; i++) {
 
             qvec3f centroid = Face_Centroid(bsp, &bsp->dfaces[i]) + offset;
-
-            qvec3f sub = cameraPos - centroid;
-            auto plane = Face_Plane(bsp, &bsp->dfaces[i]);
-
-            if (qv::dot(sub, plane.normal) < 0) {
-                continue;
-            }
-
-            float len = qv::normalizeInPlace(sub);
-            if (len < bestLen) {
-                bestFace = &bsp->dfaces[i];
-                bestLen = len;
+            if (&bsp->dfaces[i] == bestFace) {
                 bestModel = &bsp->dmodels[m];
+                break;
             }
         }
     }
 
-    if (!bestFace || bestFace == m_lastFace) {
+    if (!bestFace || !bestModel || bestFace == m_lastFace) {
         return;
     }
     
@@ -111,4 +101,25 @@ void FacePanel::updateWithBSP(const mbsp_t *bsp, const std::vector<entdict_t> &e
     addStat(QStringLiteral("lightofs"), bestFace->lightofs);
     addStat(QStringLiteral("flags"), QString::fromStdString(fmt::format("{}", static_cast<int32_t>(bsp->texinfo[bestFace->texinfo].flags.native_q2))));
     addStat(QStringLiteral("translucence"), QString::fromStdString(fmt::format("{}", bsp->texinfo[bestFace->texinfo].translucence)));
+
+    std::string leaves, clusters;
+
+    for (auto &leaf : bsp->dleafs)
+    {
+        for (size_t f = leaf.firstmarksurface; f < leaf.firstmarksurface + leaf.nummarksurfaces; f++)
+        {
+            if (bsp->dleaffaces[f] == (bestFace - bsp->dfaces.data()))
+            {
+                if (!leaves.empty())
+                    leaves += ", ";
+                if (!clusters.empty())
+                    clusters += ",";
+
+                leaves += fmt::format("{}", (intptr_t) (&leaf - bsp->dleafs.data()));
+                clusters += fmt::format("{}", leaf.cluster);
+            }
+        }
+    }
+    addStat(QStringLiteral("leaves"), QString::fromStdString(leaves));
+    addStat(QStringLiteral("clusters"), QString::fromStdString(clusters));
 }

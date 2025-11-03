@@ -59,6 +59,15 @@ const mleaf_t *BSP_GetLeaf(const mbsp_t *bsp, int leafnum)
     return &bsp->dleafs[leafnum];
 }
 
+int BSP_GetLeafNum(const mbsp_t *bsp, const mleaf_t *leaf)
+{
+    ptrdiff_t index = leaf - bsp->dleafs.data();
+    if (index < 0 || index >= bsp->dleafs.size()) {
+        Error("Leaf {} out of bounds", index);
+    }
+    return static_cast<int>(index);
+}
+
 const mleaf_t *BSP_GetLeafFromNodeNum(const mbsp_t *bsp, int nodenum)
 {
     const int leafnum = (-1 - nodenum);
@@ -254,41 +263,42 @@ const dmodelh2_t *BSP_DModelForModelString(const mbsp_t *bsp, const std::string 
     return nullptr;
 }
 
-static bool Light_PointInSolid_r(const mbsp_t *bsp, const int nodenum, const qvec3d &point)
+static bool Light_PointInSolid_r(
+    const mbsp_t *bsp, const std::vector<contentflags_t> &extended_flags, const int nodenum, const qvec3d &point)
 {
     if (nodenum < 0) {
         const mleaf_t *leaf = BSP_GetLeafFromNodeNum(bsp, nodenum);
+        int leafnum = BSP_GetLeafNum(bsp, leaf);
 
-        // mxd
-        if (bsp->loadversion->game->id == GAME_QUAKE_II ||
-            bsp->loadversion->game->id == GAME_SIN) {
-            return leaf->contents & Q2_CONTENTS_SOLID;
-        }
+        auto contentflags = extended_flags[leafnum];
 
-        return (leaf->contents == CONTENTS_SOLID || leaf->contents == CONTENTS_SKY);
+        // these are solids for this test (luxels can't be put inside)
+        return !!(contentflags.flags & (EWT_VISCONTENTS_SOLID | EWT_VISCONTENTS_DETAIL_WALL | EWT_VISCONTENTS_SKY));
     }
 
     const bsp2_dnode_t *node = &bsp->dnodes[nodenum];
     const double dist = bsp->dplanes[node->planenum].distance_to_fast(point);
 
     if (dist > 0.1)
-        return Light_PointInSolid_r(bsp, node->children[0], point);
+        return Light_PointInSolid_r(bsp, extended_flags, node->children[0], point);
     if (dist < -0.1)
-        return Light_PointInSolid_r(bsp, node->children[1], point);
+        return Light_PointInSolid_r(bsp, extended_flags, node->children[1], point);
 
     // too close to the plane, check both sides
-    return Light_PointInSolid_r(bsp, node->children[0], point) || Light_PointInSolid_r(bsp, node->children[1], point);
+    return Light_PointInSolid_r(bsp, extended_flags, node->children[0], point) ||
+           Light_PointInSolid_r(bsp, extended_flags, node->children[1], point);
 }
 
 // Tests hull 0 of the given model
-bool Light_PointInSolid(const mbsp_t *bsp, const dmodelh2_t *model, const qvec3d &point)
+bool Light_PointInSolid(
+    const mbsp_t *bsp, const dmodelh2_t *model, const std::vector<contentflags_t> &extended_flags, const qvec3d &point)
 {
-    return Light_PointInSolid_r(bsp, model->headnode[0], point);
+    return Light_PointInSolid_r(bsp, extended_flags, model->headnode[0], point);
 }
 
-bool Light_PointInWorld(const mbsp_t *bsp, const qvec3d &point)
+bool Light_PointInWorld(const mbsp_t *bsp, const std::vector<contentflags_t> &extended_flags, const qvec3d &point)
 {
-    return Light_PointInSolid(bsp, &bsp->dmodels[0], point);
+    return Light_PointInSolid(bsp, &bsp->dmodels[0], extended_flags, point);
 }
 
 static std::vector<qplane3d> Face_AllocInwardFacingEdgePlanes(const mbsp_t *bsp, const mface_t *face)
@@ -1123,10 +1133,7 @@ qvec3b LM_Sample(const mbsp_t *bsp, const mface_t *face, const lit_variant_t *li
 
     const uint8_t *data = bsp->dlightdata.data();
 
-    if (lit) {
-        if (!std::holds_alternative<lit1_t>(*lit))
-            throw std::runtime_error("not implemented");
-
+    if (lit && std::holds_alternative<lit1_t>(*lit)) {
         const uint8_t *lit_data = std::get_if<lit1_t>(lit)->rgbdata.data();
 
         return qvec3f{lit_data[(3 * byte_offset_of_face) + (pixel * 3) + 0],
@@ -1135,9 +1142,11 @@ qvec3b LM_Sample(const mbsp_t *bsp, const mface_t *face, const lit_variant_t *li
     } else if (bsp->loadversion->game->has_rgb_lightmap) {
         return qvec3f{data[byte_offset_of_face + (pixel * 3) + 0], data[byte_offset_of_face + (pixel * 3) + 1],
             data[byte_offset_of_face + (pixel * 3) + 2]};
-    } else {
+    } else if (!lit || std::holds_alternative<lit_none>(*lit)) {
         return qvec3f{
             data[byte_offset_of_face + pixel], data[byte_offset_of_face + pixel], data[byte_offset_of_face + pixel]};
+    } else {
+        throw std::runtime_error("not implemented");
     }
 }
 
@@ -1175,7 +1184,10 @@ qvec3f LM_Sample_HDR(const mbsp_t *bsp, const mface_t *face, const faceextents_t
     if (!packed_samples)
         throw std::runtime_error("LM_Sample_HDR requires either an HDR .lit file or BSPX lump");
 
-    return HDR_UnpackE5BRG9(packed_samples[byte_offset_of_face + pixel]);
+    int sample_offset_of_face =
+        bsp->loadversion->game->has_rgb_lightmap ? byte_offset_of_face / 3 : byte_offset_of_face;
+
+    return HDR_UnpackE5BRG9(packed_samples[sample_offset_of_face + pixel]);
 }
 
 static void AddLeafs(const mbsp_t *bsp, int nodenum, std::map<int, std::vector<int>> &cluster_to_leafnums)

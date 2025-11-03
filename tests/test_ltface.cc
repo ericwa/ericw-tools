@@ -86,13 +86,6 @@ static testresults_t QbspVisLight_Common(const std::filesystem::path &name, std:
         light_args.push_back(bsp_path.string());
 
         light_main(light_args);
-
-        // ensure a .lit is never created in q2
-        if (is_q2) {
-            auto lit_check_path = bsp_path;
-            lit_check_path.replace_extension(".lit");
-            EXPECT_FALSE(fs::exists(lit_check_path));
-        }
     }
 
     // serialize obj
@@ -119,7 +112,7 @@ testresults_lit_t QbspVisLight_Q1(
     auto lit_path = fs::path(test_quake_maps_dir) / name.filename();
     lit_path.replace_extension(".lit");
 
-    auto lit_variant = LoadLitFile(lit_path);
+    auto lit_variant = LoadLitFile(lit_path, res.bsp);
 
     return testresults_lit_t{.bsp = std::move(res.bsp), .bspx = std::move(res.bspx), .lit = std::move(lit_variant)};
 }
@@ -127,7 +120,29 @@ testresults_lit_t QbspVisLight_Q1(
 testresults_t QbspVisLight_Q2(
     const std::filesystem::path &name, std::vector<std::string> extra_light_args, runvis_t run_vis)
 {
-    return QbspVisLight_Common(name, {"-q2bsp"}, extra_light_args, run_vis);
+    testresults_t result = QbspVisLight_Common(name, {"-q2bsp"}, extra_light_args, run_vis);
+
+    // ensure a .lit isn't created in q2 by default
+    fs::path lit_check_path = result.bsp.file;
+    lit_check_path.replace_extension(".lit");
+    EXPECT_FALSE(fs::exists(lit_check_path));
+
+    return result;
+}
+
+// special variant of above for Q2 tests with lit files (e.g. hdr lit)
+testresults_lit_t QbspVisLight_Q2_Lit(
+    const std::filesystem::path &name, std::vector<std::string> extra_light_args, runvis_t run_vis)
+{
+    auto result = QbspVisLight_Common(name, {"-q2bsp"}, extra_light_args, run_vis);
+
+    // load .lit file
+    fs::path lit_path = result.bsp.file;
+    lit_path.replace_extension(".lit");
+    auto lit_variant = LoadLitFile(lit_path, result.bsp);
+
+    return testresults_lit_t{
+        .bsp = std::move(result.bsp), .bspx = std::move(result.bspx), .lit = std::move(lit_variant)};
 }
 
 testresults_t QbspVisLight_HL(
@@ -823,6 +838,15 @@ TEST(ltfaceQ1, lightignore)
     }
 }
 
+TEST(ltfaceQ1, detailFence)
+{
+    // check that func_detail_fence has proper lighting inside (this relies on WriteExtendedContentFlags)
+
+    auto [bsp, bspx, lit] = QbspVisLight_Q1("q1_detail_fence.map", {});
+
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {215, 215, 215}, {140, -80, 64}, {0, 0, 1}, &lit);
+}
+
 TEST(ltfaceQ2, lowLuxelRes)
 {
     auto [bsp, bspx] = QbspVisLight_Q2(
@@ -1106,6 +1130,14 @@ TEST(ltfaceHL, lightBlack)
     }
 }
 
+TEST(ltfaceQ1, litNotGenerated)
+{
+    SCOPED_TRACE("map with no colored lights doesn't generate a .lit");
+    auto [bsp, bspx, lit] = QbspVisLight_Q1("q1_light_skip_shadow.map", {});
+
+    EXPECT_TRUE(std::holds_alternative<lit_none>(lit));
+}
+
 TEST(ltfaceQ1, hdr)
 {
     // center of the room on the floor.
@@ -1148,6 +1180,57 @@ TEST(ltfaceQ1, hdr)
     }
 }
 
+// same as above, for Q2
+TEST(ltfaceQ2, hdr)
+{
+    // center of the room on the floor.
+    // in the non-HDR lightmap this is pure black (0, 0, 0), but in the HDR one it's still receiving a bit of light
+    const qvec3f testpoint = {0, 0, 48};
+    const qvec3f testnormal = {0, 0, 1};
+    const qvec3f expected_hdr_color = {0.0043182373, 0.0037384033, 0.002532959};
+    const qvec3f epsilon = {1e-5, 1e-5, 1e-5};
+
+    {
+        SCOPED_TRACE("lit");
+
+        // this validates the .lit size
+        auto [bsp, bspx, lit] = QbspVisLight_Q2_Lit("q2_hdrtest.map", {"-hdr"});
+
+        EXPECT_EQ(GAME_QUAKE_II, bsp.loadversion->game->id);
+        EXPECT_TRUE(bspx.empty());
+        EXPECT_TRUE(std::holds_alternative<lit_hdr>(lit));
+
+        // check hdr .lit file
+        CheckFaceLuxelAtPoint_HDR(
+            &bsp, &bsp.dmodels[0], expected_hdr_color, epsilon, testpoint, testnormal, &lit, &bspx);
+
+        // check internal lightmap - greyscale, since Q1
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0}, testpoint, testnormal);
+    }
+
+    {
+        SCOPED_TRACE("bspx");
+
+        auto [bsp, bspx] = QbspVisLight_Q2("q2_hdrtest.map", {"-bspxhdr"});
+
+        EXPECT_EQ(GAME_QUAKE_II, bsp.loadversion->game->id);
+        EXPECT_EQ(bspx.size(), 1);
+        EXPECT_NE(bspx.find("LIGHTING_E5BGR9"), bspx.end());
+
+        const std::vector<uint8_t> &bspxhdr = bspx.find("LIGHTING_E5BGR9")->second;
+        EXPECT_EQ(bspxhdr.size(), 4 * bsp.lightsamples());
+        EXPECT_EQ(bsp.lightsamples(), bsp.dlightdata.size() / 3);
+        EXPECT_EQ(0, bsp.dlightdata.size() % 3);
+
+        // check hdr BSPX lump
+        CheckFaceLuxelAtPoint_HDR(
+            &bsp, &bsp.dmodels[0], expected_hdr_color, epsilon, testpoint, testnormal, nullptr, &bspx);
+
+        // check internal lightmap
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0}, testpoint, testnormal);
+    }
+}
+
 TEST(ltfaceQ1, switchableshadowTarget)
 {
     SCOPED_TRACE("Vanilla-compatible switchable shadows");
@@ -1178,6 +1261,33 @@ TEST(ltfaceQ1, switchableshadowTarget)
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {68, 0, 0}, in_shadow, {0, 0, 1}, &lit, &bspx, 32);
 }
 
+TEST(ltfaceQ1, switchableshadowSelfShadows)
+{
+    SCOPED_TRACE(
+        "Siwtchable shadow-casting geometry should always self-shadow as well, even when the world shadow is 'off'");
+
+    auto [bsp, bspx, lit] = QbspVisLight_Q1("q1_light_switchableshadow_selfshadows.map", {});
+
+    const qvec3f selfshadowed_point{720, 1280, 960}; // on the bmodel that toggles
+    const qvec3f switching_point{648, 1288, 944}; // on the floor
+
+    {
+        SCOPED_TRACE("bmodel: is in shadow in style 0 (the bmodel has minlight though, so not 0)");
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[1], {12, 12, 12}, selfshadowed_point, {0, 0, 1}, &lit, &bspx, 0);
+    }
+
+    {
+        SCOPED_TRACE("bmodel: in style 32, there should be no data (so light 0 0 0)");
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[1], {0, 0, 0}, selfshadowed_point, {0, 0, 1}, &lit, &bspx, 32);
+    }
+
+    {
+        SCOPED_TRACE("world: in shadow in style 0, lit up in style 32");
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0}, switching_point, {0, 0, 1}, &lit, &bspx, 0);
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {89, 89, 89}, switching_point, {0, 0, 1}, &lit, &bspx, 32);
+    }
+}
+
 TEST(ltfaceQ1, surflightGroup)
 {
     auto [bsp, bspx, lit] = QbspVisLight_Q1("q1_light_surflight_group.map", {});
@@ -1190,5 +1300,15 @@ TEST(ltfaceQ1, surflightGroup)
     {
         SCOPED_TRACE("right brush is just receiving blue light");
         CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 75}, {720, 1376, 960}, {0, 0, 1}, &lit, &bspx);
+    }
+}
+
+TEST(ltfaceQ1, q1LightSkipShadow)
+{
+    auto [bsp, bspx, lit] = QbspVisLight_Q1("q1_light_skip_shadow.map", {"-lit"});
+
+    {
+        SCOPED_TRACE("func_wall with all skip faces and _shadow 1 casts shadows");
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0}, {552, 1392, 944}, {0, 0, 1}, &lit, &bspx);
     }
 }

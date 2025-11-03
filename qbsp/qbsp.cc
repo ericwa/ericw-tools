@@ -523,6 +523,8 @@ qbsp_settings::qbsp_settings()
       objexport{
           this, "objexport", false, &debugging_group, "export the map file as .OBJ models during various CSG phases"},
       noextendedsurfflags{this, "noextendedsurfflags", false, &debugging_group, "suppress writing a .texinfo file"},
+      noextendedcontentflags{
+          this, "noextendedcontentflags", false, &debugging_group, "suppress writing a .content.json file"},
       wrbrushes{this, {"wrbrushes", "bspx"}, false, &common_format_group,
           "includes a list of brushes for brush-based collision"},
       wrbrushesonly{this, {"wrbrushesonly", "bspxonly"}, {&wrbrushes, &noclip}, &common_format_group,
@@ -565,7 +567,8 @@ qbsp_settings::qbsp_settings()
       loghulls{this, {"loghulls"}, false, &logging_group, "print log output for collision hulls"},
       logbmodels{this, {"logbmodels"}, false, &logging_group, "print log output for bmodels"},
       debug_missing_portal_sides{this, {"debug_missing_portal_sides"}, false, &logging_group,
-          "output debug .prt files for missing portal sides"}
+          "output debug .prt files for missing portal sides"},
+      fixupdetailfence{this, {"fixupdetailfence"}, true, &debugging_group, "fixup detail fence"}
 {
 }
 
@@ -901,10 +904,10 @@ static bool IsTrigger(const mapentity_t &entity)
     return trigger_pos == (tex.size() - strlen("trigger"));
 }
 
-static void CountLeafs_r(node_t *node, content_stats_base_t &stats)
+static void CountLeafs_r(node_t *node, content_stats_t &stats)
 {
     if (auto *leafdata = node->get_leafdata()) {
-        qbsp_options.target_game->count_contents_in_stats(leafdata->contents, stats);
+        stats.count_contents_in_stats(leafdata->contents);
         return;
     }
 
@@ -936,9 +939,9 @@ void CountLeafs(node_t *headnode)
 {
     logging::funcheader();
 
-    auto stats = qbsp_options.target_game->create_content_stats();
-    CountLeafs_r(headnode, *stats);
-    qbsp_options.target_game->print_content_stats(*stats, "leafs");
+    auto stats = content_stats_t();
+    CountLeafs_r(headnode, stats);
+    stats.print_content_stats("leafs");
 
     // count the heights of the tree at each leaf
     logging::stat_tracker_t stat_print;
@@ -973,7 +976,7 @@ static void GatherBspbrushes_r(node_t *node, bspbrush_t::container &container)
 static void GatherLeafVolumes_r(node_t *node, bspbrush_t::container &container)
 {
     if (auto *leafdata = node->get_leafdata()) {
-        if (!leafdata->contents.is_empty(qbsp_options.target_game)) {
+        if (!leafdata->contents.is_empty()) {
             container.push_back(node->volume);
         }
         return;
@@ -1288,6 +1291,7 @@ static void ProcessEntity(mapentity_t &entity, hull_index_t hullnum)
 
     // needs to come after any face creation
     MakeMarkFaces(tree.headnode);
+    FixupDetailFence(tree);
 
     CountLeafs(tree.headnode);
 
@@ -1400,7 +1404,7 @@ static bspxbrushes_permodel BSPX_Brushes_AddModel(int modelnum, const std::vecto
             case CONTENTS_SLIME:
             case CONTENTS_LAVA:
             case CONTENTS_SKY:
-                if (contents.is_clip(qbsp_options.target_game)) {
+                if (contents.is_clip()) {
                     perbrush.contents = BSPXBRUSHES_CONTENTS_CLIP;
                 } else {
                     perbrush.contents = native;
@@ -1410,7 +1414,7 @@ static bspxbrushes_permodel BSPX_Brushes_AddModel(int modelnum, const std::vecto
             //                      perbrush.contents = -16;
             //                      break;
             default: {
-                if (contents.is_clip(qbsp_options.target_game)) {
+                if (contents.is_clip()) {
                     perbrush.contents = BSPXBRUSHES_CONTENTS_CLIP;
                 } else {
                     logging::print("WARNING: Unknown contents: {}. Translating to solid.\n", contents.to_string());

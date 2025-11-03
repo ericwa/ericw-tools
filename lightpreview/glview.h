@@ -38,6 +38,7 @@ See file, 'COPYING', for details.
 #include <common/entdata.h>
 #include <common/bspfile.hh>
 #include <common/bspinfo.hh>
+#include <light/spatialindex.hh>
 
 enum class keys_t : uint32_t
 {
@@ -60,8 +61,9 @@ private:
     std::optional<mbsp_t> m_bsp;
     std::unordered_map<int, std::vector<uint8_t>> m_decompressedVis;
 
+    std::unique_ptr<spatialindex_t> m_spatialindex;
     uint32_t m_keysPressed, m_oldKeysPressed = 0;
-    std::optional<time_point> m_lastFrame;
+    std::optional<qtime_point> m_lastFrame;
     std::optional<QPoint> m_lastMouseDownPos;
     /**
      * units / second
@@ -124,6 +126,10 @@ private:
     QOpenGLVertexArrayObject m_leakVao;
     QOpenGLBuffer m_leakVbo;
 
+    QOpenGLVertexArrayObject m_clickVao;
+    QOpenGLBuffer m_clickVbo;
+    bool m_hasClick = false;
+
     QOpenGLVertexArrayObject m_portalVao;
     QOpenGLBuffer m_portalVbo;
     QOpenGLBuffer m_portalIndexBuffer;
@@ -176,6 +182,7 @@ private:
     std::vector<drawcall_t> m_drawcalls;
     size_t num_leak_points = 0;
     size_t num_portal_indices = 0;
+    int m_selected_face = -1;
 
     QOpenGLShaderProgram *m_program = nullptr, *m_skybox_program = nullptr;
     QOpenGLShaderProgram *m_program_wireframe = nullptr;
@@ -196,6 +203,7 @@ private:
     int m_program_style_scalars_location = 0;
     int m_program_brightness_location = 0;
     int m_program_lightmap_scale_location = 0;
+    int m_program_selected_face_location = 0;
 
     // uniform locations (skybox program)
     int m_skybox_program_mvp_location = 0;
@@ -211,6 +219,7 @@ private:
     int m_skybox_program_style_scalars_location = 0;
     int m_skybox_program_brightness_location = 0;
     int m_skybox_program_lightmap_scale_location = 0;
+    int m_skybox_program_selected_face_location = 0;
 
     // uniform locations (wireframe program)
     int m_program_wireframe_mvp_location = 0;
@@ -260,10 +269,22 @@ public:
     void setBrightness(float brightness);
 
     void takeScreenshot(QString destPath, int w, int h);
+    int getSelectedFace() const { return m_selected_face; }
 
 private:
     void error(const QString &context, const QString &context2, const QString &log);
     void setupProgram(const QString &context, QOpenGLShaderProgram *dest, const char *vert, const char *frag);
+
+private:
+    struct matrices_t
+    {
+        QMatrix4x4 modelMatrix;
+        QMatrix4x4 viewMatrix;
+        QMatrix4x4 projectionMatrix;
+        QMatrix4x4 MVP;
+    };
+
+    matrices_t getMatrices() const;
 
 protected:
     void initializeGL() override;
@@ -283,12 +304,14 @@ protected:
     void mousePressEvent(QMouseEvent *event) override;
 
 private:
+    void clickFace(QMouseEvent *event);
     void applyMouseMotion();
     void applyFlyMovement(float duration);
 
 signals:
     void cameraMoved();
     void stoppedMoving();
+    void selectedFaceChanged();
 
 public:
     qvec3f cameraPosition() const;

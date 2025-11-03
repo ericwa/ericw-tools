@@ -149,25 +149,25 @@ static bool Welds(contentflags_t a, contentflags_t b)
     // FIXME: no clipping same type?
 
     // all types weld with themselves
-    if (a.types_equal(b, qbsp_options.target_game))
+    if (a.types_equal(b))
         return true;
 
     // detail wall only welds with detail wall
-    if (qbsp_options.target_game->contents_are_detail_wall(a) || qbsp_options.target_game->contents_are_detail_wall(b))
+    if (a.is_detail_wall() || b.is_detail_wall())
         return false;
 
     // no need to weld translucent to opaque
     // (because they could have void behind them due to visblocking.
     // e.g. opaque water meeting solid)
-    if (!qbsp_options.target_game->contents_are_opaque(a, qbsp_options.transwater.value()) &&
-        qbsp_options.target_game->contents_are_opaque(b, qbsp_options.transwater.value()))
+    if (!a.is_opaque(qbsp_options.target_game, qbsp_options.transwater.value()) &&
+        b.is_opaque(qbsp_options.target_game, qbsp_options.transwater.value()))
         return false;
-    if (!qbsp_options.target_game->contents_are_opaque(b, qbsp_options.transwater.value()) &&
-        qbsp_options.target_game->contents_are_opaque(a, qbsp_options.transwater.value()))
+    if (!b.is_opaque(qbsp_options.target_game, qbsp_options.transwater.value()) &&
+        a.is_opaque(qbsp_options.target_game, qbsp_options.transwater.value()))
         return false;
 
     // never weld with backfaces
-    if (qbsp_options.target_game->contents_are_empty(a) || qbsp_options.target_game->contents_are_empty(b))
+    if (a.is_empty() || b.is_empty())
         return false;
 
     // otherwise, weld

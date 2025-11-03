@@ -31,12 +31,8 @@ int main(int argc, char *argv[])
 
     QCoreApplication::setOrganizationName("ericw-tools");
     QCoreApplication::setApplicationName("lightpreview");
-
-    QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling, true);
-#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
     // allow non-integer monitor scaling
     QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
-#endif
 
     QApplication a(argc, argv);
     a.setStyle("fusion");

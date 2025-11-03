@@ -196,6 +196,10 @@ enum q2_surf_flags_t : int32_t
     Q2_SURF_ALPHATEST = nth_bit(25), // Paril, KMQ2 flag
 };
 
+static constexpr int32_t Q2_SURF_ALL = Q2_SURF_LIGHT | Q2_SURF_SLICK | Q2_SURF_SKY | Q2_SURF_WARP | Q2_SURF_TRANS33 |
+                                       Q2_SURF_TRANS66 | Q2_SURF_FLOWING | Q2_SURF_NODRAW | Q2_SURF_HINT |
+                                       Q2_SURF_SKIP | Q2_SURF_ALPHATEST;
+
 struct q2_texinfo_t
 {
     texvecf vecs; // [s/t][xyz offset]

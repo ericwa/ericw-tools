@@ -50,7 +50,7 @@ constexpr int PSIDE_FACING = 4;
 
 struct bspstats_t : logging::stat_tracker_t
 {
-    std::unique_ptr<content_stats_base_t> leafstats;
+    content_stats_t leafstats;
     // total number of nodes, includes c_nonvis
     stat &c_nodes = register_stat("nodes");
     // number of nodes created by splitting on a side_t which had !visible
@@ -351,15 +351,15 @@ static void LeafNode(node_t *leafnode, bspbrush_t::container brushes, bspstats_t
 
     auto *leafdata = leafnode->get_leafdata();
 
-    leafdata->contents = qbsp_options.target_game->create_empty_contents();
+    leafdata->contents = contentflags_t::make(EWT_VISCONTENTS_EMPTY);
     for (auto &brush : brushes) {
-        leafdata->contents = qbsp_options.target_game->combine_contents(leafdata->contents, brush->contents);
+        leafdata->contents = contentflags_t::combine_contents(leafdata->contents, brush->contents);
     }
     for (auto &brush : brushes) {
         leafdata->original_brushes.push_back(brush->original_brush());
     }
 
-    qbsp_options.target_game->count_contents_in_stats(leafdata->contents, *stats.leafstats);
+    stats.leafstats.count_contents_in_stats(leafdata->contents);
 
     if (qbsp_options.debugleak.value() || qbsp_options.debugbspbrushes.value()) {
         leafdata->bsp_brushes = brushes;
@@ -876,7 +876,7 @@ static side_t *ChooseMidPlaneFromList(const bspbrush_t::container &brushes, cons
         for (auto &brush : brushes) {
             // FIXME: these conditions need to be kept in sync with SelectSplitPlane
             // ideally, should be deduplicated somehow
-            if ((pass >= 2) != brush->contents.is_any_detail(qbsp_options.target_game))
+            if ((pass >= 2) != brush->contents.is_any_detail())
                 continue;
             for (auto &side : brush->sides) {
                 if (side.bevel)
@@ -999,7 +999,7 @@ static side_t *SelectSplitPlane(
         for (auto &brush : brushes) {
             // FIXME: these conditions need to be kept in sync with ChooseMidPlaneFromList
             // ideally, should be deduplicated somehow
-            if ((pass >= 2) != brush->contents.is_any_detail(qbsp_options.target_game))
+            if ((pass >= 2) != brush->contents.is_any_detail())
                 continue;
             for (auto &side : brush->sides) {
                 if (side.bevel)
@@ -1278,11 +1278,11 @@ void BrushBSP(tree_t &tree, mapentity_t &entity, const bspbrush_t::container &br
         nodedata->planenum = 0;
         nodedata->children[0] = tree.create_node();
         nodedata->children[0]->make_leaf();
-        nodedata->children[0]->get_leafdata()->contents = qbsp_options.target_game->create_empty_contents();
+        nodedata->children[0]->get_leafdata()->contents = contentflags_t::make(EWT_VISCONTENTS_EMPTY);
         nodedata->children[0]->parent = headnode;
         nodedata->children[1] = tree.create_node();
         nodedata->children[1]->make_leaf();
-        nodedata->children[1]->get_leafdata()->contents = qbsp_options.target_game->create_empty_contents();
+        nodedata->children[1]->get_leafdata()->contents = contentflags_t::make(EWT_VISCONTENTS_EMPTY);
         nodedata->children[1]->parent = headnode;
 
         tree.headnode = headnode;
@@ -1336,7 +1336,6 @@ void BrushBSP(tree_t &tree, mapentity_t &entity, const bspbrush_t::container &br
     tree.headnode = node;
 
     bspstats_t stats{};
-    stats.leafstats = qbsp_options.target_game->create_content_stats();
 
     {
         logging::percent_clock clock;
@@ -1361,11 +1360,10 @@ inline bool BrushGE(const bspbrush_t &b1, const bspbrush_t &b2)
         return false;
 
     // detail brushes never bite structural brushes
-    if ((b1.contents.is_any_detail(qbsp_options.target_game)) &&
-        !(b2.contents.is_any_detail(qbsp_options.target_game))) {
+    if ((b1.contents.is_any_detail()) && !(b2.contents.is_any_detail())) {
         return false;
     }
-    return b1.contents.is_any_solid(qbsp_options.target_game) && b2.contents.is_any_solid(qbsp_options.target_game);
+    return b1.contents.is_any_solid() && b2.contents.is_any_solid();
 }
 
 /*

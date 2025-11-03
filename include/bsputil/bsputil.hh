@@ -85,6 +85,7 @@ public:
     settings::setting_func decompile_geomonly;
     settings::setting_func decompile_ignore_brushes;
     settings::setting_func decompile_hull;
+    settings::setting_func reorder_entities;
     settings::setting_func extract_bspx_lump;
     settings::setting_func insert_bspx_lump;
     settings::setting_func remove_bspx_lump;

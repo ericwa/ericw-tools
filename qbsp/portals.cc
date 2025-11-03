@@ -42,8 +42,7 @@ contentflags_t ClusterContents(const node_t *node)
         return leafdata->contents;
 
     auto *nodedata = node->get_nodedata();
-    return qbsp_options.target_game->cluster_contents(
-        ClusterContents(nodedata->children[0]), ClusterContents(nodedata->children[1]));
+    return ClusterContents(nodedata->children[0]).cluster_contents(ClusterContents(nodedata->children[1]));
 }
 
 /*
@@ -66,7 +65,7 @@ bool Portal_VisFlood(const portal_t *p)
     contentflags_t contents1 = ClusterContents(p->nodes[1]);
 
     // Check per-game visibility
-    return qbsp_options.target_game->portal_can_see_through(contents0, contents1, qbsp_options.transwater.value());
+    return contentflags_t::portal_can_see_through(contents0, contents1);
 }
 
 /*
@@ -85,8 +84,7 @@ bool Portal_EntityFlood(const portal_t *p, int32_t s)
     }
 
     // can never cross to a solid
-    if (p->nodes[0]->get_leafdata()->contents.is_solid(qbsp_options.target_game) ||
-        p->nodes[1]->get_leafdata()->contents.is_solid(qbsp_options.target_game)) {
+    if (p->nodes[0]->get_leafdata()->contents.is_solid() || p->nodes[1]->get_leafdata()->contents.is_solid()) {
         return false;
     }
 
@@ -130,7 +128,7 @@ std::list<buildportal_t> MakeHeadnodePortals(tree_t &tree)
     aabb3d bounds = tree.bounds.grow(SIDESPACE);
 
     tree.outside_node.make_leaf();
-    tree.outside_node.get_leafdata()->contents = qbsp_options.target_game->create_solid_contents();
+    tree.outside_node.get_leafdata()->contents = contentflags_t::make(EWT_VISCONTENTS_SOLID);
     tree.outside_node.portals = nullptr;
 
     // create 6 portals forming a cube around the bounds of the map.
@@ -688,7 +686,7 @@ static void FindAreas_r(node_t *node)
     if (leafdata->area)
         return; // already got it
 
-    if (leafdata->contents.is_any_solid(qbsp_options.target_game))
+    if (leafdata->contents.is_any_solid())
         return;
 
     if (!leafdata->occupied)
@@ -777,7 +775,7 @@ static void FindAreaPortalExits_R(node_t *n, std::unordered_set<node_t *> &visit
 
         // is this an exit?
         if (!(neighbour->get_leafdata()->contents.flags & EWT_INVISCONTENTS_AREAPORTAL) &&
-            !neighbour->get_leafdata()->contents.is_solid(qbsp_options.target_game)) {
+            !neighbour->get_leafdata()->contents.is_solid()) {
             exits.emplace_back(p, neighbour);
             continue;
         }
@@ -1017,9 +1015,9 @@ static void FindPortalSide(portal_t *p, visible_faces_stats_t &stats)
     // solid > lava > water, etc
 
     // if either is "_noclipfaces" then we don't require a content change
-    contentflags_t viscontents = qbsp_options.target_game->portal_visible_contents(
+    contentflags_t viscontents = contentflags_t::portal_visible_contents(
         p->nodes[0]->get_leafdata()->contents, p->nodes[1]->get_leafdata()->contents);
-    if (viscontents.is_empty(qbsp_options.target_game))
+    if (viscontents.is_empty())
         return;
 
     // bestside[0] is the brushside visible on portal side[0] which is the positive side of the plane, always
@@ -1038,9 +1036,9 @@ static void FindPortalSide(portal_t *p, visible_faces_stats_t &stats)
             ++it) {
             auto *brush = *it;
             const bool generate_outside_face =
-                qbsp_options.target_game->portal_generates_face(viscontents, brush->contents, SIDE_FRONT);
+                contentflags_t::portal_generates_face(viscontents, brush->contents, SIDE_FRONT);
             const bool generate_inside_face =
-                qbsp_options.target_game->portal_generates_face(viscontents, brush->contents, SIDE_BACK);
+                contentflags_t::portal_generates_face(viscontents, brush->contents, SIDE_BACK);
 
             if (!(generate_outside_face || generate_inside_face)) {
                 continue;
@@ -1136,7 +1134,7 @@ static void MarkVisibleSides_r(node_t *node, visible_faces_stats_t &stats)
     auto *leafdata = node->get_leafdata();
 
     // empty leafs are never boundary leafs
-    if (leafdata->contents.is_empty(qbsp_options.target_game))
+    if (leafdata->contents.is_empty())
         return;
 
     // see if there is a visible face

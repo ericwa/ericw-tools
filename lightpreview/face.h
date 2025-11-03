@@ -21,5 +21,5 @@ private:
     void addStat(const QString &str, int value);
 
 public:
-    void updateWithBSP(const mbsp_t *bsp, const std::vector<entdict_t> &ents, const bspxentries_t &entries, const qvec3f &cameraPos, const qvec3f &cameraForward);
+    void updateWithBSP(const mbsp_t *bsp, const std::vector<entdict_t> &ents, const bspxentries_t &entries, int face_id);
 };

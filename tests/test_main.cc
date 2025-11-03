@@ -17,9 +17,10 @@ public:
     void OnEnvironmentsSetUpStart(const testing::UnitTest &unit_test) override { }
     void OnEnvironmentsSetUpEnd(const testing::UnitTest &unit_test) override { }
     void OnTestSuiteStart(const testing::TestSuite &test_suite) override { }
-    void OnTestStart(const testing::TestInfo &test_info) override {
-    fs::clear();
-    img::clear();
+    void OnTestStart(const testing::TestInfo &test_info) override
+    {
+        fs::clear();
+        img::clear();
     }
     void OnTestDisabled(const testing::TestInfo &test_info) override { }
     void OnTestPartResult(const testing::TestPartResult &test_part_result) override { }
@@ -49,7 +50,7 @@ int main(int argc, char **argv)
             continue;
         }
         // parse "-verbose"
-        if (!strcmp("-verbose", argv[i]) || !strcmp("--verbose", argv[i])) {
+        if (!strcmp("-verbose", argv[i]) || !strcmp("--verbose", argv[i]) || !strcmp("-v", argv[i])) {
             tests_verbose = true;
             continue;
         }

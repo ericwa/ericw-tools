@@ -235,6 +235,11 @@ extern int leaflongs;
 
 extern fs::path portalfile, statefile, statetmpfile;
 
+namespace vis
+{
+extern std::vector<surfflags_t> extended_texinfo_flags;
+}
+
 void BasePortalVis();
 
 visstats_t PortalFlow(visportal_t *p);
@@ -243,7 +248,7 @@ void CalcAmbientSounds(mbsp_t *bsp);
 
 void CalcPHS(mbsp_t *bsp);
 
-extern time_point starttime, endtime, statetime;
+extern qtime_point starttime, endtime, statetime;
 
 void SaveVisState();
 bool LoadVisState();

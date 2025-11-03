@@ -300,12 +300,12 @@ static void CalcPoints_Debug(const lightsurf_t *surf, const mbsp_t *bsp)
 /// This is used for marking sample points as occluded.
 static bool Light_PointInAnySolid(const mbsp_t *bsp, const dmodelh2_t *self, const qvec3f &point)
 {
-    if (Light_PointInSolid(bsp, self, point))
+    if (Light_PointInSolid(bsp, self, extended_content_flags, point))
         return true;
 
     auto *self_modelinfo = ModelInfoForModel(bsp, self - bsp->dmodels.data());
     if (self_modelinfo->object_channel_mask.value() == CHANNEL_MASK_DEFAULT) {
-        if (Light_PointInWorld(bsp, point))
+        if (Light_PointInWorld(bsp, extended_content_flags, point))
             return true;
     }
 
@@ -313,7 +313,7 @@ static bool Light_PointInAnySolid(const mbsp_t *bsp, const dmodelh2_t *self, con
         if (modelinfo->object_channel_mask.value() != self_modelinfo->object_channel_mask.value())
             continue;
 
-        if (Light_PointInSolid(bsp, modelinfo->model, point - modelinfo->offset)) {
+        if (Light_PointInSolid(bsp, modelinfo->model, extended_content_flags, point - modelinfo->offset)) {
             // Only mark occluded if the bmodel is fully opaque
             if (modelinfo->alpha.value() == 1.0f)
                 return true;
@@ -488,8 +488,7 @@ static bool Mod_LeafPvs(const mbsp_t *bsp, const mleaf_t *leaf, uint8_t *out)
 
 static const std::vector<uint8_t> *Mod_LeafPvs(const mbsp_t *bsp, const mleaf_t *leaf)
 {
-    if (bsp->loadversion->game->contents_are_liquid(
-            bsp->loadversion->game->create_contents_from_native(leaf->contents))) {
+    if (bsp->loadversion->game->create_contents_from_native(leaf->contents).is_liquid()) {
         // the liquid case is because leaf->contents might be in an opaque liquid,
         // which we typically want light to pass through, but visdata would report that
         // there's no visibility across the opaque liquid. so, skip culling and do the raytracing.
@@ -539,8 +538,7 @@ static void CalcPvs(const mbsp_t *bsp, lightsurf_t *lightsurf)
         /* copy the pvs for this leaf into pointpvs */
         Mod_LeafPvs(bsp, leaf, pointpvs);
 
-        if (bsp->loadversion->game->contents_are_liquid(
-                bsp->loadversion->game->create_contents_from_native(leaf->contents))) {
+        if (bsp->loadversion->game->create_contents_from_native(leaf->contents).is_liquid()) {
             // hack for when the sample point might be in an opaque liquid, blocking vis,
             // but we typically want light to pass through these.
             // see also VisCullEntity() which handles the case when the light emitter is in liquid.
@@ -693,7 +691,8 @@ static lightsurf_t Lightsurf_Init(const modelinfo_t *modelinfo, const settings::
 
         /* Set up the surface points */
         if (light_options.world_units_per_luxel.is_changed()) {
-            if (bsp->loadversion->game->id == GAME_QUAKE_II && (Face_Texinfo(bsp, face)->flags.native_q2 & Q2_SURF_SKY)) {
+            if (bsp->loadversion->game->id == GAME_QUAKE_II &&
+                (Face_Texinfo(bsp, face)->flags.native_q2 & Q2_SURF_SKY)) {
                 lightsurf.extents = faceextents_t(*face, *bsp, world_units_per_luxel_t{}, 512.f);
             } else if (extended_flags.world_units_per_luxel) {
                 lightsurf.extents =
@@ -1184,8 +1183,7 @@ static bool VisCullEntity(const mbsp_t *bsp, const std::vector<uint8_t> &pvs, co
 
     auto contents = bsp->loadversion->game->create_contents_from_native(entleaf->contents);
 
-    if (bsp->loadversion->game->contents_are_solid(contents) || bsp->loadversion->game->contents_are_sky(contents) ||
-        bsp->loadversion->game->contents_are_liquid(contents)) {
+    if (contents.is_solid() || contents.is_sky() || contents.is_liquid()) {
         // the liquid case is because entleaf->contents might be in an opaque liquid,
         // which we typically want light to pass through, but visdata would report that
         // there's no visibility across the opaque liquid. so, skip culling and do the raytracing.

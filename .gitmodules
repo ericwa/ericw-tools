@@ -1,9 +1,6 @@
 [submodule "lib/fmt"]
 	path = 3rdparty/fmt
 	url = https://github.com/fmtlib/fmt
-[submodule "3rdparty/json"]
-	path = 3rdparty/json
-	url = https://github.com/ArthurSonzogni/nlohmann_json_cmake_fetchcontent
 [submodule "3rdparty/nanobench"]
 	path = 3rdparty/nanobench
 	url = https://github.com/martinus/nanobench

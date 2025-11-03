@@ -22,14 +22,15 @@ if [ "$USE_SYSTEM_TBB_AND_EMBREE" == "1" ]; then
     cmake .. -DCMAKE_BUILD_TYPE=Release -DSKIP_EMBREE_INSTALL=YES -DSKIP_TBB_INSTALL=YES
   fi
 else
-  wget -q https://github.com/embree/embree/releases/download/v3.13.1/embree-3.13.1.x86_64.linux.tar.gz -O embree.tgz
-  wget -q https://github.com/oneapi-src/oneTBB/releases/download/v2021.3.0/oneapi-tbb-2021.3.0-lin.tgz -O tbb.tgz
+  wget -q https://github.com/RenderKit/embree/releases/download/v4.4.0/embree-4.4.0.x86_64.linux.tar.gz -O embree.tgz
+  wget -q https://github.com/uxlfoundation/oneTBB/releases/download/v2021.11.0/oneapi-tbb-2021.11.0-lin.tgz -O tbb.tgz
 
-  tar xf embree.tgz
+  mkdir embree4
+  tar xf embree.tgz --directory embree4
   tar xf tbb.tgz
 
-  EMBREE_CMAKE_DIR="$(pwd)/embree-3.13.1.x86_64.linux/lib/cmake/embree-3.13.1"
-  TBB_CMAKE_DIR="$(pwd)/oneapi-tbb-2021.3.0/lib/cmake"
+  EMBREE_CMAKE_DIR="$(pwd)/embree4/lib/cmake/embree-4.4.0"
+  TBB_CMAKE_DIR="$(pwd)/oneapi-tbb-2021.11.0/lib/cmake/tbb"
 
   # check USE_ASAN environment variable (see cmake.yml)
   if [ "$USE_ASAN" == "YES" ]; then

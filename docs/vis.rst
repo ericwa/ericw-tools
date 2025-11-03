@@ -148,6 +148,10 @@ Output
 
    Disable all ambient sound generation.
 
+   .. seealso::
+
+      :bmodel-key:`_noambient` for selectively disabling ambient sounds.
+
 .. option:: -noautoclean
 
    Don't remove extra files on successful completion. Default is to remove them.
@@ -173,6 +177,13 @@ Advanced
 .. option:: -phsonly
 
    Re-calculate the PHS of a Quake II BSP without touching the PVS.
+
+Model Entity Keys
+=================
+
+.. bmodel-key:: "_noambient" "1"
+
+   Disables ambient sound emission from these specific brushes.
 
 Author
 ======

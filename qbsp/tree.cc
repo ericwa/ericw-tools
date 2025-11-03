@@ -117,16 +117,15 @@ struct prune_stats_t : logging::stat_tracker_t
 static bool IsAnySolidLeaf(const node_t *node)
 {
     auto *leafdata = node->get_leafdata();
-    return leafdata && leafdata->contents.is_any_solid(qbsp_options.target_game);
+    return leafdata && leafdata->contents.is_any_solid();
 }
 
 static void PruneNodes_R(node_t *node, prune_stats_t &stats)
 {
     if (auto *leafdata = node->get_leafdata()) {
         // remap any contents
-        if (qbsp_options.target_game->id != GAME_QUAKE_II &&
-            leafdata->contents.is_detail_wall(qbsp_options.target_game)) {
-            leafdata->contents = qbsp_options.target_game->create_solid_contents();
+        if (qbsp_options.target_game->id != GAME_QUAKE_II && leafdata->contents.is_detail_wall()) {
+            leafdata->contents = contentflags_t::make(EWT_VISCONTENTS_SOLID);
         }
         return;
     }
@@ -140,7 +139,7 @@ static void PruneNodes_R(node_t *node, prune_stats_t &stats)
 
     // fixme-brushbsp: is it correct to strip off detail flags here?
     if (IsAnySolidLeaf(nodedata->children[0]) && IsAnySolidLeaf(nodedata->children[1])) {
-        contentflags_t merged_contents = qbsp_options.target_game->combine_contents(
+        contentflags_t merged_contents = contentflags_t::combine_contents(
             nodedata->children[0]->get_leafdata()->contents, nodedata->children[1]->get_leafdata()->contents);
 
         // This discards any faces on-node. Should be safe (?)
