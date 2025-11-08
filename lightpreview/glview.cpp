@@ -2104,6 +2104,10 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
                                 for (int side = 0; side < 6; ++side) {
                                     const auto &winding = windings[side];
 
+                                    // colors are stored in order of BSPX_LIGHTGRIDS_NORMAL_ORDER.
+                                    // make sure we're building the 6 visual faces in the right order
+                                    Q_assert(qvec3f(winding.plane().normal) == BSPX_LIGHTGRIDS_NORMAL_ORDER[side]);
+
                                     // push the 4 verts
                                     int first_vert_idx = lightgrid_verts.size();
 
