@@ -2,6 +2,24 @@
 Changelog
 =========
 
+2.0.0-alpha11 (unreleased)
+==========================
+
+Features
+--------
+
+- light: support Half-Life style :light-key:`light` fields where the value is ``r g b brightness`` or ``r g b`` instead
+  of the ususal ``brightness``
+- lightpreview: added a visualization for lightgrids ("Draw Lightgrid" checkbox).
+
+Bug fixes
+---------
+
+- light: fix :worldspawn-key:`_bouncecolorscale` being ignored (only worked if specified on command-line).
+  regression from 0.18 (https://github.com/ericwa/ericw-tools/issues/424).
+- light: fix using :light-key:`delay` ``4`` (local minlight) + :light-key:`_light_channel_mask` together on the same
+  light entity
+
 2.0.0-alpha10
 =============
 
