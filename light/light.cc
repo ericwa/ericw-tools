@@ -629,6 +629,7 @@ const qvec3f &Face_LookupTextureBounceColor(const mbsp_t *bsp, const mface_t *fa
     return face_textures[face - bsp->dfaces.data()].bounceColor;
 }
 
+// needs to be done after settings are loaded from worldspawn, because it uses light_options
 static void CacheTextures(const mbsp_t &bsp)
 {
     face_textures.resize(bsp.dfaces.size());
@@ -1325,9 +1326,9 @@ int light_main(int argc, const char **argv)
     extended_texinfo_flags = LoadExtendedTexinfoFlags(source, &bsp);
     extended_content_flags = LoadExtendedContentFlags(source, &bsp);
 
-    CacheTextures(bsp);
-
     LoadEntities(light_options, &bsp);
+
+    CacheTextures(bsp);
 
     light_options.light_postinitialize(argc, argv);
     light_options.print_summary();

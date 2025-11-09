@@ -1380,3 +1380,16 @@ TEST(ltfaceQ1, q1LightHLForm)
         CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {14, 7, 0}, {512, 1280, 944}, {0, 0, 1}, &lit, &bspx);
     }
 }
+
+// tests for https://github.com/ericwa/ericw-tools/issues/424
+// where command-line -bouncecolorscale worked, but worldspawn key didn't
+TEST(ltfaceQ1, bouncecolorscale)
+{
+    auto [bsp, bspx, lit] = QbspVisLight_Q1("deprecated/bouncecolorscaletest.map", {"-lit"});
+    {
+        SCOPED_TRACE(
+            "wall receiving bounced light at (256 312 280) should be yellow, from the yellow texture on the ceiling");
+
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {11, 11, 8}, {256, 312, 280}, {-1, 0, 0}, &lit);
+    }
+}
