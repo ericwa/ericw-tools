@@ -233,6 +233,7 @@ private:
     int m_program_simple_color_location = 0;
 
     // uniform locations (lightgrid program)
+    int m_program_lightgrid_brightness_location = 0;
     int m_program_lightgrid_mvp_location = 0;
     int m_program_lightgrid_style_scalars_location = 0;
 

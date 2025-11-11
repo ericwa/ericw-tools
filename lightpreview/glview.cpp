@@ -420,6 +420,9 @@ struct lightgridvertex_t
 static const char *s_fragShader_Lightgrid = R"(
 #version 330 core
 
+// in - uniforms
+uniform float brightness;
+
 // in
 in vec3 color;
 
@@ -427,7 +430,9 @@ in vec3 color;
 out vec4 color_out;
 
 void main() {
-    color_out = vec4(color, 1.0);
+    float scale = pow(2.0, brightness);
+
+    color_out = vec4(color * scale, 1.0);
 }
 )";
 
@@ -711,6 +716,7 @@ void GLView::initializeGL()
     m_program_simple->release();
 
     m_program_lightgrid->bind();
+    m_program_lightgrid_brightness_location = m_program_lightgrid->uniformLocation("brightness");
     m_program_lightgrid_mvp_location = m_program_lightgrid->uniformLocation("MVP");
     m_program_lightgrid_style_scalars_location = m_program_lightgrid->uniformLocation("style_scalars");
     m_program_lightgrid->release();
@@ -1054,6 +1060,7 @@ void GLView::paintGL()
     if (m_drawLightgrid) {
         // paint lightgrid
         m_program_lightgrid->bind();
+        m_program_lightgrid->setUniformValue(m_program_lightgrid_brightness_location, m_brightness);
         m_program_lightgrid->setUniformValue(m_program_lightgrid_mvp_location, MVP);
 
         QOpenGLVertexArrayObject::Binder vaoBinder(&m_lightgridVao);
