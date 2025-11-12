@@ -1043,6 +1043,33 @@ TEST(ltfaceQ1, sunlight)
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {49, 49, 49}, {0, 0, 0}, {0, 0, 1}, &lit);
 }
 
+TEST(ltfaceQ1, sunlightTwoSuns)
+{
+    auto [bsp, bspx, lit] = QbspVisLight_Q1("deprecated/suntest.map", {"-lit", "-lightgrid"});
+
+    {
+        SCOPED_TRACE("LIGHTGRID_OCTREE lump generated");
+
+        auto it = bspx.find("LIGHTGRID_OCTREE");
+        ASSERT_TRUE(it != bspx.end());
+
+        auto parsed = BSPX_LightgridOctree(bspx);
+        ASSERT_TRUE(parsed.has_value());
+
+        {
+            SCOPED_TRACE("check point getting both suns");
+
+            auto samp_optional = Lightgrid_SampleAtPoint(*parsed, {88, 600, -248});
+            ASSERT_TRUE(samp_optional.has_value());
+
+            ASSERT_FALSE(samp_optional->occluded);
+            ASSERT_EQ(1, samp_optional->used_samples);
+            EXPECT_EQ(0, samp_optional->samples_by_style[0].style);
+            EXPECT_EQ(qvec3b(130, 71, 122), samp_optional->samples_by_style[0].color);
+        }
+    }
+}
+
 TEST(ltfaceQ1, suntexture)
 {
     SCOPED_TRACE("different _sun 1 entities can emit from specific texture names using _suntexture");
@@ -1385,11 +1412,45 @@ TEST(ltfaceQ1, q1LightHLForm)
 // where command-line -bouncecolorscale worked, but worldspawn key didn't
 TEST(ltfaceQ1, bouncecolorscale)
 {
-    auto [bsp, bspx, lit] = QbspVisLight_Q1("deprecated/bouncecolorscaletest.map", {"-lit"});
+    auto [bsp, bspx, lit] = QbspVisLight_Q1("deprecated/bouncecolorscaletest.map", {"-lit", "-lightgrid"});
     {
         SCOPED_TRACE(
             "wall receiving bounced light at (256 312 280) should be yellow, from the yellow texture on the ceiling");
 
         CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {11, 11, 8}, {256, 312, 280}, {-1, 0, 0}, &lit);
+    }
+
+    {
+        SCOPED_TRACE("LIGHTGRID_OCTREE lump generated");
+
+        auto it = bspx.find("LIGHTGRID_OCTREE");
+        ASSERT_TRUE(it != bspx.end());
+
+        auto parsed = BSPX_LightgridOctree(bspx);
+        ASSERT_TRUE(parsed.has_value());
+
+        {
+            SCOPED_TRACE("check point capturing only bounced light off the ceiling");
+
+            auto samp_optional = Lightgrid_SampleAtPoint(*parsed, {120, 248, 312});
+            ASSERT_TRUE(samp_optional.has_value());
+
+            ASSERT_FALSE(samp_optional->occluded);
+            ASSERT_EQ(1, samp_optional->used_samples);
+            EXPECT_EQ(0, samp_optional->samples_by_style[0].style);
+            EXPECT_EQ(qvec3b(23, 21, 16), samp_optional->samples_by_style[0].color);
+        }
+
+        {
+            SCOPED_TRACE("check point capturing direct light from the spotlight, and bounced from above");
+
+            auto samp_optional = Lightgrid_SampleAtPoint(*parsed, {184, 312, 344});
+            ASSERT_TRUE(samp_optional.has_value());
+
+            ASSERT_FALSE(samp_optional->occluded);
+            ASSERT_EQ(1, samp_optional->used_samples);
+            EXPECT_EQ(0, samp_optional->samples_by_style[0].style);
+            EXPECT_EQ(qvec3b(255, 255, 255), samp_optional->samples_by_style[0].color);
+        }
     }
 }
