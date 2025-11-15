@@ -8,6 +8,9 @@
 std::optional<bspx_lightgrid_samples_t> Lightgrid_SampleAtPoint(
     const lightgrid_octree_t &lightgrid, const qvec3f &world_point);
 
+std::optional<lightgrids_sampleset_t> Lightgrids_SampleAtPoint(
+    const lightgrids_t &lightgrid, const qvec3f &world_point);
+
 namespace lightgrid
 {
 // if set, it's an index in the leafs array
@@ -29,4 +32,5 @@ std::tuple<qvec3i, qvec3i> get_octant(int i, qvec3i mins, qvec3i size, qvec3i di
 int get_grid_index(const qvec3i &grid_size, int x, int y, int z);
 
 bspx_lightgrid_samples_t octree_lookup_r(const lightgrid_octree_t &octree, uint32_t node_index, qvec3i test_point);
+lightgrids_sampleset_t octree_lookup_r(const subgrid_t &octree, uint32_t node_index, qvec3i test_point);
 } // namespace lightgrid

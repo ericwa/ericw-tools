@@ -19,6 +19,34 @@ std::optional<bspx_lightgrid_samples_t> Lightgrid_SampleAtPoint(
     return lightgrid::octree_lookup_r(lightgrid, lightgrid.header.root_node, local_point_i);
 }
 
+std::optional<lightgrids_sampleset_t> Lightgrids_SampleAtPoint(const lightgrids_t &lightgrid, const qvec3f &world_point)
+{
+    // check if we're inside any subgirds, in order
+    for (const auto &subgrid : lightgrid.subgrids) {
+        // convert world_point to grid space
+
+        qvec3f local_point_f = (world_point - subgrid.header.grid_mins) / subgrid.header.grid_dist;
+
+        qvec3i local_point_i = {Q_rint(local_point_f[0]), Q_rint(local_point_f[1]), Q_rint(local_point_f[2])};
+
+        // check if in bounds
+        bool out_of_bounds = false;
+        for (int axis = 0; axis < 3; ++axis) {
+            if (local_point_i[axis] < 0 || local_point_i[axis] >= subgrid.header.grid_size[axis]) {
+                out_of_bounds = true;
+            }
+        }
+
+        if (out_of_bounds)
+            continue; // try next subgrid
+
+        // we're in bounds, use this subgrid
+        return lightgrid::octree_lookup_r(subgrid, subgrid.header.root_node, local_point_i);
+    }
+
+    return std::nullopt;
+}
+
 namespace lightgrid
 {
 int child_index(qvec3i division_point, qvec3i test_point)
@@ -70,6 +98,26 @@ bspx_lightgrid_samples_t octree_lookup_r(const lightgrid_octree_t &octree, uint3
     if (node_index & lightgrid::FLAG_LEAF) {
         uint32_t leaf_index = node_index & ~lightgrid::FLAG_LEAF;
         const lightgrid_leaf_t &leaf = octree.leafs[leaf_index];
+
+        qvec3i pos_local = test_point - leaf.mins;
+
+        return leaf.at(pos_local[0], pos_local[1], pos_local[2]);
+    }
+    auto &node = octree.nodes[node_index];
+    int i = child_index(node.division_point, test_point); // [0..7]
+    return octree_lookup_r(octree, node.children[i], test_point);
+}
+
+lightgrids_sampleset_t octree_lookup_r(const subgrid_t &octree, uint32_t node_index, qvec3i test_point)
+{
+    if (node_index & lightgrid::FLAG_OCCLUDED) {
+        lightgrids_sampleset_t result;
+        result.occluded = true;
+        return result;
+    }
+    if (node_index & lightgrid::FLAG_LEAF) {
+        uint32_t leaf_index = node_index & ~lightgrid::FLAG_LEAF;
+        const auto &leaf = octree.leafs[leaf_index];
 
         qvec3i pos_local = test_point - leaf.mins;
 
