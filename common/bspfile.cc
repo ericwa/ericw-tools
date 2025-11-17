@@ -321,7 +321,7 @@ public:
             return contentflags_t::make(EWT_VISCONTENTS_EMPTY);
         } else if (!Q_strcasecmp(texname.data(), "clip")) {
             return contentflags_t::make(EWT_INVISCONTENTS_PLAYERCLIP);
-        } else if (texname[0] == '*') {
+        } else if ((texname[0] == '*') || (texname[0] == '!')) {
             // non-Q2: -transwater implies liquids are detail and translucent
             contents_int_t liquid_flags = 0;
             if (transwater) {
