@@ -590,9 +590,16 @@ exit.
              *lava
              *
 
-   Names beginning with an asterisk are liquids. A prefix of ``*slime``
-   indicates slime, ``*lava`` is for lava and anything else beginning with
+   In all Q1-like games, names beginning with an asterisk are liquids. A prefix of ``*slime``
+   indicates slime, ``*lava`` is for lava, and anything else beginning with
    ``*`` will have contents as water.
+
+.. texture:: !slime
+             !lava
+             !
+
+   In all Q1-like games, for compatibility with Half-Life maps, names beginning with ``!`` are treated the same
+   as names beginning with ``*`` and create liquids.
 
 .. texture:: skip
 
