@@ -1486,7 +1486,8 @@ TEST(testmapsQ1, detailFence)
     EXPECT_EQ(detail_fence_leaf->nummarksurfaces, 0);
 
     contentflags_t detail_fence_leaf_flags = extflags[leafnum];
-    EXPECT_EQ(detail_fence_leaf_flags.flags, EWT_VISCONTENTS_WINDOW | EWT_CFLAG_DETAIL | EWT_CFLAG_TRANSLUCENT | EWT_CFLAG_MIRROR_INSIDE_SET);
+    EXPECT_EQ(detail_fence_leaf_flags.flags,
+        EWT_VISCONTENTS_WINDOW | EWT_CFLAG_DETAIL | EWT_CFLAG_TRANSLUCENT | EWT_CFLAG_MIRROR_INSIDE_SET);
 
     // grab a random face inside the detail_fence - we should find it inside the player start leaf's markfaces list
     const auto back_of_pillar_pos = qvec3d(176, -32, 120);
@@ -2377,6 +2378,22 @@ TEST(qbspHL, basic)
     EXPECT_FALSE(bsp.dtex.textures[1].null_texture);
     EXPECT_EQ(64, bsp.dtex.textures[1].width);
     EXPECT_EQ(64, bsp.dtex.textures[1].height);
+}
+
+TEST(qbspHL, liquids)
+{
+    const auto [bsp, bspx, prt] = LoadTestmap("hl_liquids.map", {"-hlbsp", "-notex"});
+    EXPECT_TRUE(prt);
+
+    const qvec3f liquid_top_face_pos{104, -424, 64};
+    const qvec3f liquid_interior_pos{104, -424, 40};
+
+    const auto *top_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], liquid_top_face_pos, {0, 0, 1});
+    ASSERT_TRUE(top_face);
+
+    EXPECT_EQ(Face_TextureNameView(&bsp, top_face), "!liquidtest");
+
+    EXPECT_EQ(CONTENTS_WATER, BSP_FindContentsAtPoint(&bsp, 0, &bsp.dmodels[0], liquid_interior_pos));
 }
 
 TEST(qbspQ1, wrbrushesAndMiscExternalMap)
