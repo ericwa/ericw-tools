@@ -211,13 +211,24 @@ static int TextureName_Contents(const char *texname)
 {
     if (!Q_strncasecmp(texname, "sky", 3))
         return CONTENTS_SKY;
-    else if (!Q_strncasecmp(texname, "*lava", 5))
-        return CONTENTS_LAVA;
-    else if (!Q_strncasecmp(texname, "*slime", 6))
-        return CONTENTS_SLIME;
-    else if (texname[0] == '*')
-        return CONTENTS_WATER;
-
+	else if (texname[0] == '*') // don't check liquids if not prefixed as such
+	{
+		if (!Q_strncasecmp(texname, "*lava", 5))
+        	return CONTENTS_LAVA;
+    	else if (!Q_strncasecmp(texname, "*slime", 6))
+      		return CONTENTS_SLIME;
+		else
+			return CONTENTS_WATER;
+	}
+	else if (texname[0] == '!') // don't check liquids if not prefixed as such
+	{
+		if (!Q_strncasecmp(texname, "!lava", 5))
+        	return CONTENTS_LAVA;
+    	else if (!Q_strncasecmp(texname, "!slime", 6))
+      		return CONTENTS_SLIME;
+		else
+			return CONTENTS_WATER;
+	}
     return CONTENTS_SOLID;
 }
 
