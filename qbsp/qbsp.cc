@@ -1394,33 +1394,44 @@ static bspxbrushes_permodel BSPX_Brushes_AddModel(int modelnum, const std::vecto
         perbrush.bounds = b->bounds;
 
         const auto &contents = b->contents;
-        const int native = qbsp_options.target_game->contents_to_native(contents);
 
-        switch (native) {
-            // contents should match the engine.
-            case CONTENTS_EMPTY: // really an error, but whatever
-            case CONTENTS_SOLID: // these are okay
-            case CONTENTS_WATER:
-            case CONTENTS_SLIME:
-            case CONTENTS_LAVA:
-            case CONTENTS_SKY:
-                if (contents.is_clip()) {
-                    perbrush.contents = BSPXBRUSHES_CONTENTS_CLIP;
-                } else {
-                    perbrush.contents = native;
+        if (modelnum) {
+            // bmodel brushes all become solid for compatibility with maps built for vanilla Quake
+            if (contents.is_clip())
+                perbrush.contents = BSPXBRUSHES_CONTENTS_CLIP;
+            else
+                perbrush.contents = CONTENTS_SOLID;
+        } else {
+            // world model case
+
+            const int native = qbsp_options.target_game->contents_to_native(contents);
+
+            switch (native) {
+                // contents should match the engine.
+                case CONTENTS_EMPTY: // really an error, but whatever
+                case CONTENTS_SOLID: // these are okay
+                case CONTENTS_WATER:
+                case CONTENTS_SLIME:
+                case CONTENTS_LAVA:
+                case CONTENTS_SKY:
+                    if (contents.is_clip()) {
+                        perbrush.contents = BSPXBRUSHES_CONTENTS_CLIP;
+                    } else {
+                        perbrush.contents = native;
+                    }
+                    break;
+                    //              case CONTENTS_LADDER:
+                    //                      perbrush.contents = -16;
+                    //                      break;
+                default: {
+                    if (contents.is_clip()) {
+                        perbrush.contents = BSPXBRUSHES_CONTENTS_CLIP;
+                    } else {
+                        logging::print("WARNING: Unknown contents: {}. Translating to solid.\n", contents.to_string());
+                        perbrush.contents = CONTENTS_SOLID;
+                    }
+                    break;
                 }
-                break;
-            //              case CONTENTS_LADDER:
-            //                      perbrush.contents = -16;
-            //                      break;
-            default: {
-                if (contents.is_clip()) {
-                    perbrush.contents = BSPXBRUSHES_CONTENTS_CLIP;
-                } else {
-                    logging::print("WARNING: Unknown contents: {}. Translating to solid.\n", contents.to_string());
-                    perbrush.contents = CONTENTS_SOLID;
-                }
-                break;
             }
         }
 

@@ -2417,15 +2417,27 @@ TEST(qbspQ1, wrbrushesContentTypes)
     const auto [bsp, bspx, prt] = LoadTestmap("q1_hull1_content_types.map", {"-wrbrushes"});
 
     const bspxbrushes lump = deserialize<bspxbrushes>(bspx.at("BRUSHLIST"));
-    ASSERT_EQ(lump.models.size(), 1);
+    ASSERT_EQ(lump.models.size(), 7); // world + 6x func_wall (solid, water, slime, lava, sky, clip)
 
-    auto &model = lump.models.at(0);
-    ASSERT_EQ(model.numfaces, 0); // all faces are axial
-    ASSERT_EQ(model.modelnum, 0);
+    auto &worldmodel = lump.models.at(0);
+    ASSERT_EQ(worldmodel.numfaces, 0); // all faces are axial
+    ASSERT_EQ(worldmodel.modelnum, 0);
 
-    const std::vector<int> expected{
-        CONTENTS_SOLID, CONTENTS_SOLID, CONTENTS_SOLID, CONTENTS_SOLID, CONTENTS_SOLID, CONTENTS_SOLID, CONTENTS_WATER,
-        CONTENTS_SLIME, CONTENTS_LAVA, CONTENTS_SOLID, CONTENTS_SKY, BSPXBRUSHES_CONTENTS_CLIP,
+    // clang-format off
+    const std::vector<int> expected
+    {
+        CONTENTS_SOLID,
+        CONTENTS_SOLID,
+        CONTENTS_SOLID,
+        CONTENTS_SOLID,
+        CONTENTS_SOLID,
+        CONTENTS_SOLID,
+        CONTENTS_WATER,
+        CONTENTS_SLIME,
+        CONTENTS_LAVA,
+        CONTENTS_SOLID,
+        CONTENTS_SKY,
+        BSPXBRUSHES_CONTENTS_CLIP,
         CONTENTS_SOLID, // detail solid in source map
         CONTENTS_SOLID, // detail fence in source map
         // detail illusionary brush should be omitted
@@ -2433,11 +2445,45 @@ TEST(qbspQ1, wrbrushesContentTypes)
         // detail illusionary brush should be omitted
         CONTENTS_SOLID // detail wall in source map
     };
-    ASSERT_EQ(model.brushes.size(), expected.size());
+    // clang-format on
+    ASSERT_EQ(worldmodel.brushes.size(), expected.size());
 
     for (size_t i = 0; i < expected.size(); ++i) {
         SCOPED_TRACE(fmt::format("brush {}", i));
-        EXPECT_EQ(expected[i], model.brushes[i].contents);
+        EXPECT_EQ(expected[i], worldmodel.brushes[i].contents);
+    }
+
+    {
+        SCOPED_TRACE("bmodel contents");
+
+        // 6x func_wall
+
+        // clang-format off
+        const std::vector<int> expected_bmodel_contents
+        {
+            CONTENTS_SOLID, // was solid
+            CONTENTS_SOLID, // was water
+            CONTENTS_SOLID, // was slime
+            CONTENTS_SOLID, // was lava
+            CONTENTS_SOLID, // was sky
+
+            // clip is the only contents that doesn't behave as a solid when used in bmodels: you can shoot through
+            // it but not walk through it. By mapping to BSPXBRUSHES_CONTENTS_CLIP
+            // we get the same behaviour in FTEQW with -wrbrushes, as we do in the q1bsp loaded in QS.
+            BSPXBRUSHES_CONTENTS_CLIP, // was clip
+        };
+        // clang-format on
+
+        for (int i = 1; i < 7; ++i) {
+            int expected_content = expected_bmodel_contents.at(i - 1);
+            auto &bmodel = lump.models.at(i);
+
+            ASSERT_EQ(bmodel.numfaces, 0); // all faces are axial
+            ASSERT_EQ(bmodel.modelnum, i);
+
+            ASSERT_EQ(bmodel.brushes.size(), 1);
+            EXPECT_EQ(bmodel.brushes[0].contents, expected_content);
+        }
     }
 }
 
