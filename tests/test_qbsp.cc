@@ -1961,6 +1961,49 @@ int CountClipnodeNodes(const mbsp_t &bsp, int hullnum)
     return CountClipnodeNodes_r(bsp, headnode);
 }
 
+TEST(testmapsQ1, hullExpansionBasic)
+{
+    // this has a func_wall with a triangular prism (5 sides):
+    //
+    //  ^
+    //  |    ^-------\   this end is sheared upwards a bit
+    // +Z   /_\_______\
+    //  |
+    //  ---- +Y -------->
+    //
+    // The way the BRUSHLIST bspx lump makes the AABB of the brush implicit
+    // makes it hard to come up with examples for testing that the "cap" planes
+    // are being inserted.
+    //
+    // this one is completely broken if you try to walk on the top edge of the prism,
+    // and the cap planes are disabled (e.g. return at the start of AddBrushBevels)
+
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_hull_expansion.map", {"-wrbrushes"});
+
+    const bspxbrushes lump = deserialize<bspxbrushes>(bspx.at("BRUSHLIST"));
+    ASSERT_EQ(lump.models.size(), 2); // world + 1x func_wall
+
+    const auto &funcwall = lump.models.at(1);
+    ASSERT_EQ(funcwall.brushes.size(), 1);
+
+    const auto &prism = funcwall.brushes.at(0);
+    ASSERT_GE(prism.faces.size(), 3); // 2 non-axial faces, the sloped sides, plus the cap
+
+    const qplane3d prism_top_cap_plane =
+        qplane3d::from_points({qvec3d(-49.25, -64, 29.5), qvec3d(-62.75, -64, 29.5), qvec3d(-56, 800, 83.5)});
+
+    // conver to qplane3d's
+    std::vector<qplane3d> prism_planes;
+    for (auto &prism_face : prism.faces) {
+        prism_planes.push_back(qplane3d(prism_face.normal, prism_face.dist));
+    }
+
+    // check for presence to top cap
+    using namespace testing;
+    EXPECT_THAT(prism_planes,
+        Contains(Truly([=](const qplane3d &inp) -> bool { return qv::epsilonEqual(prism_top_cap_plane, inp); })));
+}
+
 /**
  * Tests a bad hull expansion
  */
