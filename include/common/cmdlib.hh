@@ -98,6 +98,8 @@ struct natural_case_insensitive_less
 
 std::string_view::const_iterator string_ifind(std::string_view haystack, std::string_view needle);
 bool string_icontains(std::string_view haystack, std::string_view needle);
+// case-insensitive, checks if `haystack` starts with `needle`
+bool string_istarts_with(std::string_view haystack, std::string_view needle);
 
 #include <chrono>
 

@@ -685,6 +685,11 @@ std::string_view::const_iterator string_ifind(std::string_view haystack, std::st
         [](char a, char b) { return tolower(a) == tolower(b); });
 }
 
+bool string_istarts_with(std::string_view haystack, std::string_view needle)
+{
+    return string_ifind(haystack, needle) == haystack.begin();
+}
+
 bool string_icontains(std::string_view haystack, std::string_view needle)
 {
     return string_ifind(haystack, needle) != haystack.end();
