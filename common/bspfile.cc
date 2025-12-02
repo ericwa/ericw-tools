@@ -373,7 +373,7 @@ public:
                     current_flag = EWT_CFLAG_CURRENT_270;
                 } else if (string_istarts_with(texname, "!cur_up")) {
                     current_flag = EWT_CFLAG_CURRENT_UP;
-                } else if (string_istarts_with(texname, "!cur_down")) {
+                } else if (string_istarts_with(texname, "!cur_dwn")) {
                     current_flag = EWT_CFLAG_CURRENT_DOWN;
                 }
 
