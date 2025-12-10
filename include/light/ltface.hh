@@ -19,6 +19,8 @@
 
 #pragma once
 
+#include "common/bspxfile.hh"
+
 #include <common/qvec.hh>
 
 #include <atomic>
@@ -55,34 +57,38 @@ void IndirectLightFace(
     const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::worldspawn_keys &cfg, size_t bounce_depth);
 void PostProcessLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::worldspawn_keys &cfg);
 
+qvec3b round_to_int(const qvec3f &color);
+
 struct lightgrid_sample_t
 {
     bool used = false;
     int style = 0;
-    qvec3f color{};
+
+    // for output to LIGHTGRIDS lump:
+    // the light receivied on the 6 faces of a cube, the order of the normals given by BSPX_LIGHTGRIDS_NORMAL_ORDER
+    qvec3f colors[6] = {};
+
+    // for output to LIGHTGRID_OCTREE lump: when addding each light, whichever side of the cube
+    // receives the most, we use that as the undirectional light amount and add it to this total
+    qvec3f undirectional_color = {};
 
     qvec3b round_to_int() const;
+    qvec3b round_to_int(int side) const;
     float brightness() const;
 
-    /**
-     * - if !used, style and color are ignored for equality
-     * - if a color component is nan, nan is considered equal to nan for the purposes of this comparison
-     */
-    bool operator==(const lightgrid_sample_t &other) const;
-    bool operator!=(const lightgrid_sample_t &other) const; // gcc9 workaround
+    void add(const qvec3f &color, const qvec3f &grid_to_light_dir, float anglescale);
 };
 
 struct lightgrid_samples_t
 {
     std::array<lightgrid_sample_t, 4> samples_by_style;
+    bool occluded = false;
 
-    lightgrid_samples_t &operator+=(const lightgrid_samples_t &other) noexcept;
-    lightgrid_samples_t &operator/=(float scale) noexcept;
-
-    void add(const qvec3f &color, int style);
+    void add(const qvec3f &color, int style, const qvec3f &grid_to_light_dir, float anglescale);
     int used_styles() const;
 
-    bool operator==(const lightgrid_samples_t &other) const;
+    bspx_lightgrid_samples_t to_bspx_lightgrid_samples() const;
+    lightgrids_sampleset_t to_lightgrids_sampleset_t() const;
 };
 
 lightgrid_samples_t CalcLightgridAtPoint(const mbsp_t *bsp, const qvec3f &world_point);

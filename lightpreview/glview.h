@@ -113,6 +113,7 @@ private:
     bool m_keepCullOrigin = false;
     bool m_drawPortals = false;
     bool m_drawLeak = false;
+    bool m_drawLightgrid = false;
     QOpenGLTexture::Filter m_filter = QOpenGLTexture::Linear;
     bool m_drawTranslucencyAsOpaque = false;
     bool m_showBmodels = true;
@@ -137,6 +138,10 @@ private:
     QOpenGLBuffer m_frustumVbo;
     QOpenGLBuffer m_frustumFacesIndexBuffer;
     QOpenGLBuffer m_frustumEdgesIndexBuffer;
+
+    QOpenGLVertexArrayObject m_lightgridVao;
+    QOpenGLBuffer m_lightgridVbo = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
+    QOpenGLBuffer m_lightgridIndexBuffer = QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
 
     struct leaf_vao_t
     {
@@ -185,6 +190,7 @@ private:
     QOpenGLShaderProgram *m_program = nullptr, *m_skybox_program = nullptr;
     QOpenGLShaderProgram *m_program_wireframe = nullptr;
     QOpenGLShaderProgram *m_program_simple = nullptr;
+    QOpenGLShaderProgram *m_program_lightgrid = nullptr;
 
     // uniform locations (default program)
     int m_program_mvp_location = 0;
@@ -226,6 +232,11 @@ private:
     int m_program_simple_mvp_location = 0;
     int m_program_simple_color_location = 0;
 
+    // uniform locations (lightgrid program)
+    int m_program_lightgrid_brightness_location = 0;
+    int m_program_lightgrid_mvp_location = 0;
+    int m_program_lightgrid_style_scalars_location = 0;
+
 public:
     GLView(QWidget *parent = nullptr);
     ~GLView();
@@ -256,6 +267,7 @@ public:
     void setKeepCullOrigin(bool keeporigin);
     void setDrawPortals(bool drawportals);
     void setDrawLeak(bool drawleak);
+    void setDrawLightgrid(bool drawlightgrid);
     // intensity = 0 to 200
     void setLightStyleIntensity(int style_id, int intensity);
     void setMagFilter(QOpenGLTexture::Filter filter);
