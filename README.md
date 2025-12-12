@@ -98,7 +98,7 @@ cmake .. -DCMAKE_TOOLCHAIN_FILE="$(pwd)/../vcpkg/scripts/buildsystems/vcpkg.cmak
 ### macOS 10.15+
 
 ```
-brew install embree tbb qt@6
+brew install embree tbb qt@6 cmake
 python3 -m pip install sphinx_rtd_theme
 git clone --recursive https://github.com/ericwa/ericw-tools
 cd ericw-tools
