@@ -57,6 +57,7 @@ cd ericw-tools
 mkdir build
 cd build
 cmake ..
+make
 ```
 
 ### Windows
@@ -94,16 +95,17 @@ cmake .. -DCMAKE_TOOLCHAIN_FILE="$(pwd)/../vcpkg/scripts/buildsystems/vcpkg.cmak
 
   (see: https://youtrack.jetbrains.com/issue/CPP-29559/Clion-LLDB-does-not-break-on-SEH-exceptions-within-GTest)
 
-### macOS 10.15
+### macOS 10.15+
 
 ```
-brew install embree tbb
+brew install embree tbb qt@6
 python3 -m pip install sphinx_rtd_theme
 git clone --recursive https://github.com/ericwa/ericw-tools
 cd ericw-tools
 mkdir build
 cd build
-cmake .. -GXcode -DCMAKE_PREFIX_PATH="$(brew --prefix embree);$(brew --prefix tbb)"
+cmake .. -DCMAKE_PREFIX_PATH="$(brew --prefix embree);$(brew --prefix tbb)"
+make
 ```
 
 ## Credits
