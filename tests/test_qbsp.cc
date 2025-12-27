@@ -2439,6 +2439,21 @@ TEST(qbspHL, liquids)
     EXPECT_EQ(CONTENTS_WATER, BSP_FindContentsAtPoint(&bsp, 0, &bsp.dmodels[0], liquid_interior_pos));
 }
 
+TEST(qbspHL, currents)
+{
+    const auto [bsp, bspx, prt] = LoadTestmap("hl_currents.map", {"-hlbsp"});
+    EXPECT_TRUE(prt);
+
+    // check the contents at a few points
+    EXPECT_EQ(HL_CONTENTS_CURRENT_90, BSP_FindContentsAtPoint(&bsp, 0, &bsp.dmodels[0], {200, -200, -8}));
+    EXPECT_EQ(HL_CONTENTS_CURRENT_0, BSP_FindContentsAtPoint(&bsp, 0, &bsp.dmodels[0], {376, -56, -8}));
+
+    // we're not generating faces between different currents, unlike the vanilla compiler
+    // (we could, but it'd be more work)
+    const auto *cur90_cur0_transition = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {208, -64, -8});
+    ASSERT_FALSE(cur90_cur0_transition);
+}
+
 TEST(qbspQ1, wrbrushesAndMiscExternalMap)
 {
     const auto [bsp, bspx, prt] = LoadTestmap("q1_external_map_base.map", {"-wrbrushes"});

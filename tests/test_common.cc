@@ -16,6 +16,19 @@ TEST(common, StripFilename)
     ASSERT_EQ("", fs::path("bar.txt").parent_path());
 }
 
+TEST(common, stringIStartsWith)
+{
+    // true cases
+    EXPECT_TRUE(string_istarts_with("asdf", "a"));
+    EXPECT_TRUE(string_istarts_with("asdf", "AS"));
+    EXPECT_TRUE(string_istarts_with("asdf", "ASDF"));
+    EXPECT_TRUE(string_istarts_with("asdf", ""));
+
+    // false cases
+    EXPECT_FALSE(string_istarts_with("asdf", "ASt"));
+    EXPECT_FALSE(string_istarts_with("asdf", "ASDFX"));
+}
+
 TEST(common, q1Contents)
 {
     auto *game_q1 = bspver_q1.game;
@@ -75,6 +88,39 @@ TEST(common, q1Contents)
         EXPECT_FALSE(combined.is_detail_solid());
         EXPECT_TRUE(combined.is_sky());
         EXPECT_TRUE(combined.is_solid());
+    }
+}
+
+TEST(common, hlCurrents)
+{
+    auto *game = bspver_hl.game;
+
+    struct case_t
+    {
+        const char *texname;
+        contents_int_t expected_ewt;
+        int expected_hl;
+    };
+
+    std::vector<case_t> cases{
+        {"!cur_0X", EWT_CFLAG_CURRENT_0 | EWT_VISCONTENTS_WATER, HL_CONTENTS_CURRENT_0},
+        {"!cur_90X", EWT_CFLAG_CURRENT_90 | EWT_VISCONTENTS_WATER, HL_CONTENTS_CURRENT_90},
+        {"!cur_180X", EWT_CFLAG_CURRENT_180 | EWT_VISCONTENTS_WATER, HL_CONTENTS_CURRENT_180},
+        {"!cur_270X", EWT_CFLAG_CURRENT_270 | EWT_VISCONTENTS_WATER, HL_CONTENTS_CURRENT_270},
+        {"!cur_upX", EWT_CFLAG_CURRENT_UP | EWT_VISCONTENTS_WATER, HL_CONTENTS_CURRENT_UP},
+        {"!cur_dwnX", EWT_CFLAG_CURRENT_DOWN | EWT_VISCONTENTS_WATER, HL_CONTENTS_CURRENT_DOWN},
+    };
+
+    for (const case_t &c : cases) {
+        // check face_get_contents
+        auto case_contents = game->face_get_contents(c.texname, {}, {}, false);
+        EXPECT_EQ(case_contents.flags, c.expected_ewt);
+
+        // check EWT -> HL
+        EXPECT_EQ(c.expected_hl, game->contents_to_native(case_contents));
+
+        // check HL -> EWT
+        EXPECT_EQ(c.expected_ewt, game->create_contents_from_native(c.expected_hl).flags);
     }
 }
 
