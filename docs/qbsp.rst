@@ -672,6 +672,11 @@ Half-Life BSP Specifc
 
    During the BSP process, they act like water with extra modifier flags.
 
+   .. note::
+
+      Different from the vanilla HL compiler, we don't generate faces between different ``CONTENTS_CURRENT_*`` textured
+      volumes.
+
 External Map Prefab Support
 ---------------------------
 
