@@ -31,7 +31,6 @@
 #include "common/imglib.hh"
 #include "common/litfile.hh"
 
-#define STB_IMAGE_WRITE_STATIC
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "../3rdparty/stb_image_write.h"
 

@@ -819,8 +819,7 @@ struct planelist_t
     }
 };
 
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include <common/stb_write.h>
+#include "../3rdparty/stb_image_write.h"
 
 static void ExportTextures(const fs::path &source, const gamedef_t *game, const mbsp_t &bsp)
 {
