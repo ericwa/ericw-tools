@@ -920,7 +920,7 @@ static std::vector<compiled_brush_t> DecompileLeafTask(const mbsp_t *bsp, const 
                 } else if (finalSide.plane.source) {
                     ti = BSP_GetTexinfo(bsp, finalSide.plane.source->texinfo);
                     if (ti) {
-                        name = ti->texture.data();
+                        name = ti->texturename.c_str();
                     }
                 }
 

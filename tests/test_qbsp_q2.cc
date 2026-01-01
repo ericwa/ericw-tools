@@ -355,12 +355,14 @@ TEST(testmapsQ2, nodrawLight)
     ASSERT_NE(nullptr, topface);
 
     auto *texinfo = Face_Texinfo(&bsp, topface);
-    EXPECT_EQ(std::string(texinfo->texture.data()), "e1u1/trigger");
+    EXPECT_EQ(texinfo->texturename, "e1u1/trigger");
     EXPECT_EQ(texinfo->flags.native_q2, (Q2_SURF_LIGHT | Q2_SURF_NODRAW));
 }
 
 TEST(testmapsQ2, longTextureName)
 {
+    // the .map contains a texture "long_folder_name_test/long_texture_name_test" (44 chars)
+    // but q2_texinfo_t::texture is 32 bytes.
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_long_texture_name.map");
 
     EXPECT_EQ(GAME_QUAKE_II, bsp.loadversion->game->id);
@@ -371,7 +373,7 @@ TEST(testmapsQ2, longTextureName)
     // this won't work in game, but we're mostly checking for lack of memory corruption
     // (a warning is issued)
     auto *texinfo = Face_Texinfo(&bsp, topface);
-    EXPECT_EQ(std::string(texinfo->texture.data()), "long_folder_name_test/long_text");
+    EXPECT_EQ(texinfo->texturename, "long_folder_name_test/long_text");
     EXPECT_EQ(texinfo->nexttexinfo, -1);
 }
 
@@ -482,7 +484,7 @@ TEST(testmapsQ2, lavaclip)
     ASSERT_NE(nullptr, topface);
 
     auto *texinfo = Face_Texinfo(&bsp, topface);
-    EXPECT_EQ(std::string(texinfo->texture.data()), "e1u1/brlava");
+    EXPECT_EQ(texinfo->texturename, "e1u1/brlava");
     EXPECT_EQ(texinfo->flags.native_q2, (Q2_SURF_LIGHT | Q2_SURF_WARP));
 }
 

@@ -484,6 +484,71 @@ TEST(string, strncasecmp)
     EXPECT_EQ(Q_strncasecmp("*lava123", "*LAVA", 8), 1);
 }
 
+TEST(string, string_copy_to_array_z)
+{
+    {
+        SCOPED_TRACE("source string is empty");
+
+        std::array<char, 2> dest;
+        EXPECT_TRUE(string_copy_to_array_z("", dest));
+        EXPECT_EQ(dest[0], '\0');
+        EXPECT_EQ(dest[1], '\0');
+    }
+
+    {
+        SCOPED_TRACE("common case");
+
+        std::array<char, 4> dest;
+        EXPECT_TRUE(string_copy_to_array_z("x", dest));
+        EXPECT_EQ(dest[0], 'x');
+        EXPECT_EQ(dest[1], '\0');
+        EXPECT_EQ(dest[2], '\0');
+        EXPECT_EQ(dest[3], '\0');
+    }
+
+    {
+        SCOPED_TRACE("source string gets truncated");
+
+        std::array<char, 2> dest;
+        EXPECT_FALSE(string_copy_to_array_z("xy", dest));
+        EXPECT_EQ(dest[0], 'x');
+        EXPECT_EQ(dest[1], '\0');
+    }
+}
+
+TEST(string, string_copy_from_array_z)
+{
+    {
+        SCOPED_TRACE("source array is all zeroes");
+
+        const std::array<char, 2> src {'\0', '\0'};
+        bool ok;
+
+        EXPECT_EQ(string_copy_from_array_z(src, &ok), "");
+        EXPECT_TRUE(ok);
+    }
+
+    {
+        SCOPED_TRACE("common case");
+
+        const std::array<char, 2> src {'x', '\0'};
+        bool ok;
+
+        EXPECT_EQ(string_copy_from_array_z(src, &ok), "x");
+        EXPECT_TRUE(ok);
+    }
+
+    {
+        SCOPED_TRACE("warning case: source array is unterminated");
+
+        const std::array<char, 2> src {'x', 'y'};
+        bool ok;
+
+        EXPECT_EQ(string_copy_from_array_z(src, &ok), "xy");
+        EXPECT_FALSE(ok);
+    }
+}
+
 TEST(surfflags, jsonEmpty)
 {
     surfflags_t flags;

@@ -733,7 +733,7 @@ void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &
                                                                               : src_texinfo.flags.native_q1;
             texinfo["miptex"] = src_texinfo.miptex;
             texinfo["value"] = src_texinfo.value;
-            texinfo["texture"] = std::string(src_texinfo.texture.data());
+            texinfo["texture"] = src_texinfo.texturename;
             texinfo["nexttexinfo"] = src_texinfo.nexttexinfo;
         }
     }

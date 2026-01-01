@@ -17,6 +17,8 @@
     See file, 'COPYING', for details.
 */
 
+#include "common/log.hh"
+
 #include <common/bspfile.hh>
 #include <common/cmdlib.hh>
 #include <common/numeric_cast.hh>
@@ -96,15 +98,25 @@ q2_texinfo_t::q2_texinfo_t(const mtexinfo_t &model)
     : vecs(model.vecs),
       flags(model.flags.native_q2),
       value(model.value),
-      texture(model.texture),
       nexttexinfo(model.nexttexinfo)
 {
+    if (!string_copy_to_array_z(model.texturename, texture)) {
+        logging::print("WARNING: texture name '{}' was truncated to fit in q2_texinfo_t ({} bytes)\n", model.texturename,
+            texture.size());
+    }
 }
 
 // convert to mbsp_t
 q2_texinfo_t::operator mtexinfo_t() const
 {
-    return {vecs, {.native_q2 = static_cast<q2_surf_flags_t>(flags)}, -1, value, texture, nexttexinfo};
+    bool texturename_ok;
+    std::string texturename = string_copy_from_array_z(texture, &texturename_ok);
+
+    if (!texturename_ok) {
+        logging::print("WARNING: texture name {} was not zero-terminated", texturename);
+    }
+
+    return {vecs, {.native_q2 = static_cast<q2_surf_flags_t>(flags)}, -1, value, texturename, nexttexinfo};
 }
 
 void q2_texinfo_t::stream_write(std::ostream &s) const
