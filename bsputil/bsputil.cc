@@ -131,6 +131,11 @@ bsputil_settings::bsputil_settings()
               return this->load_setting(name, src);
           },
           nullptr, "Decompile to the given .map file"},
+      sin_anims{this, "sin_anims",
+          [&](const std::string &name, parser_base_t &parser, settings::source src) {
+              return this->load_setting(name, src);
+          },
+          nullptr, "Use for decompiling; creates a .srf file for a decompiled map for animations"},
       decompile_geomonly{this, "decompile-geomonly",
           [&](const std::string &name, parser_base_t &parser, settings::source src) {
               return this->load_setting(name, src);
@@ -1555,6 +1560,38 @@ int bsputil_main(int _argc, const char **_argv)
             options.hullnum = hullnum;
 
             DecompileBSP(&bsp, options, f);
+
+            f.close();
+
+            if (!f)
+                Error("{}", strerror(errno));
+        }else if (operation->primary_name() == "sin_anims") {
+            source.replace_extension(".srf");
+
+            logging::print("-> writing {}...\n", source);
+
+            std::ofstream f(source);
+
+            if (!f)
+                Error("couldn't open {} for writing\n", source);
+
+            mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);
+
+            std::set<std::string_view, natural_less> written;
+
+            for (auto &tex : bsp.texinfo) {
+                if (written.find(std::string_view(tex.texture.data())) != written.end()) {
+                    continue;
+                }
+
+                if (tex.nexttexinfo != -1) {
+                    auto &next = bsp.texinfo[tex.nexttexinfo];
+
+                    f << std::string_view(tex.texture.data()) << " date 0 anim " << std::string_view(next.texture.data()) << std::endl;
+                }
+
+                written.insert(std::string_view(tex.texture.data()));
+            }
 
             f.close();
 

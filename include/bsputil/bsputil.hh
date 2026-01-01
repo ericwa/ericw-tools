@@ -82,6 +82,7 @@ public:
     settings::setting_func findleaf;
     settings::setting_func settexinfo;
     settings::setting_func decompile;
+    settings::setting_func sin_anims;
     settings::setting_func decompile_geomonly;
     settings::setting_func decompile_ignore_brushes;
     settings::setting_func decompile_hull;

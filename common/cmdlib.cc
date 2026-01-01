@@ -659,12 +659,29 @@ bool stlnatstrlt(const std::string &s1, const std::string &s2, bool case_sensiti
     return natstrlt(s1.c_str(), s2.c_str(), case_sensitive);
 }
 
+bool stlnatstrlt(const std::string_view &s1, const std::string_view &s2, bool case_sensitive)
+{
+    // TODO: assumes null terminated
+    return natstrlt(s1.data(), s2.data(), case_sensitive);
+}
+
 bool natural_equal::operator()(const std::string &l, const std::string &r) const noexcept
 {
     return strcmp(l.c_str(), r.c_str()) == 0;
 }
 
+bool natural_equal::operator()(const std::string_view &l, const std::string_view &r) const noexcept
+{
+    // TODO: assumes null terminated
+    return strcmp(l.data(), r.data()) == 0;
+}
+
 bool natural_less::operator()(const std::string &l, const std::string &r) const noexcept
+{
+    return stlnatstrlt(l, r);
+}
+
+bool natural_less::operator()(const std::string_view &l, const std::string_view &r) const noexcept
 {
     return stlnatstrlt(l, r);
 }
@@ -674,8 +691,20 @@ bool natural_case_insensitive_equal::operator()(const std::string &l, const std:
     return Q_strcasecmp(l.c_str(), r.c_str()) == 0;
 }
 
+bool natural_case_insensitive_equal::operator()(const std::string_view &l, const std::string_view &r) const noexcept
+{
+    // TODO: assumes null terminated
+    return Q_strcasecmp(l.data(), r.data()) == 0;
+}
+
 bool natural_case_insensitive_less::operator()(const std::string &l, const std::string &r) const noexcept
 {
+    return stlnatstrlt(l, r, false);
+}
+
+bool natural_case_insensitive_less::operator()(const std::string_view &l, const std::string_view &r) const noexcept
+{
+    // TODO: assumes null terminated
     return stlnatstrlt(l, r, false);
 }
 

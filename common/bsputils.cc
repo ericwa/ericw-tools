@@ -98,6 +98,18 @@ const mtexinfo_t *BSP_GetTexinfo(const mbsp_t *bsp, int texinfo)
     return tex;
 }
 
+const sin_lightinfo_t *BSP_GetLightinfo(const mbsp_t *bsp, int lightinfo)
+{
+    if (lightinfo < 0) {
+        return nullptr;
+    }
+    if (lightinfo >= bsp->dlightinfo.size()) {
+        return nullptr;
+    }
+    const sin_lightinfo_t *tex = &bsp->dlightinfo[lightinfo];
+    return tex;
+}
+
 mface_t *BSP_GetFace(mbsp_t *bsp, int fnum)
 {
     Q_assert(fnum >= 0 && fnum < bsp->dfaces.size());
@@ -152,6 +164,14 @@ const mtexinfo_t *Face_Texinfo(const mbsp_t *bsp, const mface_t *face)
         return nullptr;
 
     return &bsp->texinfo[face->texinfo];
+}
+
+const sin_lightinfo_t *Face_Lightinfo(const mbsp_t *bsp, const mface_t *face)
+{
+    if (face->lightinfo < 0 || face->lightinfo >= bsp->dlightinfo.size())
+        return nullptr;
+
+    return &bsp->dlightinfo[face->lightinfo];
 }
 
 const miptex_t *Face_Miptex(const mbsp_t *bsp, const mface_t *face)
