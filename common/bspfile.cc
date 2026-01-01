@@ -2079,28 +2079,20 @@ inline void ReadQ1BSP(lump_reader &reader, T &bsp)
 template<typename T>
 inline void ReadQ2BSP(lump_reader &reader, T &bsp)
 {
-    //reader.read(Q2_LUMP_ENTITIES, bsp.dentdata);
-    bsp.dentdata = "{ \"classname\" \"worldspawn\" \"model\" \"*0\" } ";
+    reader.read(Q2_LUMP_ENTITIES, bsp.dentdata);
     reader.read(Q2_LUMP_PLANES, bsp.dplanes);
     reader.read(Q2_LUMP_VERTEXES, bsp.dvertexes);
-    //reader.read(Q2_LUMP_VISIBILITY, bsp.dvis);
+    reader.read(Q2_LUMP_VISIBILITY, bsp.dvis);
     reader.read(Q2_LUMP_NODES, bsp.dnodes);
     reader.read(Q2_LUMP_TEXINFO, bsp.texinfo);
     reader.read(Q2_LUMP_FACES, bsp.dfaces);
-    //reader.read(Q2_LUMP_LIGHTING, bsp.dlightdata);
+    reader.read(Q2_LUMP_LIGHTING, bsp.dlightdata);
     reader.read(Q2_LUMP_LEAFS, bsp.dleafs);
     reader.read(Q2_LUMP_LEAFFACES, bsp.dleaffaces);
     reader.read(Q2_LUMP_LEAFBRUSHES, bsp.dleafbrushes);
     reader.read(Q2_LUMP_EDGES, bsp.dedges);
     reader.read(Q2_LUMP_SURFEDGES, bsp.dsurfedges);
     reader.read(Q2_LUMP_MODELS, bsp.dmodels);
-
-    for (size_t i = 1; i < bsp.dmodels.size(); i++)
-    {
-        q2_dmodel_t &model = bsp.dmodels[i];
-        bsp.dentdata += fmt::format("{{ \"classname\" \"bmodel\" \"model\" \"*{}\" }} ", i);
-    }
-
     reader.read(Q2_LUMP_BRUSHES, bsp.dbrushes);
     reader.read(Q2_LUMP_BRUSHSIDES, bsp.dbrushsides);
     reader.read(Q2_LUMP_AREAS, bsp.dareas);
