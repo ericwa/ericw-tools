@@ -237,7 +237,7 @@ struct mtexinfo_t
 
     // q2 only
     int32_t value; // light emission, etc
-    std::array<char, 64> texture; // texture name (textures/*.wal)
+    std::string texturename; // texture name (textures/*.wal)
     int32_t nexttexinfo = -1; // for animations, -1 = end of chain
 
     // SiN only

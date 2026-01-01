@@ -779,3 +779,49 @@ std::vector<uint8_t> StringToVector(const std::string &str)
     std::vector<uint8_t> result(str.begin(), str.end());
     return result;
 }
+
+bool string_copy_to_array_z(std::string_view in, std::span<char> out)
+{
+    const size_t in_size = in.size();
+    const size_t out_size = out.size();
+
+    if (!out_size)
+        return false;
+
+    for (size_t i = 0; i < (out_size - 1); ++i) {
+        if (i < in_size)
+            out[i] = in[i];
+        else
+            out[i] = '\0';
+    }
+    out[out_size - 1] = '\0';
+
+    return (in_size + 1) <= out_size;
+}
+
+std::string string_copy_from_array_z(std::span<const char> in, bool *success_out)
+{
+    int first_null = -1;
+    for (int i = 0; i < in.size(); ++i) {
+        if (in[i] == '\0') {
+            first_null = i;
+            break;
+        }
+    }
+
+    if (first_null == -1) {
+        // unterminated. Copy the entire array, but give a warning.
+        *success_out = false;
+        return std::string(in.data(), in.size());
+    }
+
+    if (first_null == 0) {
+        // empty case
+        *success_out = true;
+        return std::string();
+    }
+
+    // common case... nonempty, null terminated
+    *success_out = true;
+    return std::string(in.data(), first_null);
+}

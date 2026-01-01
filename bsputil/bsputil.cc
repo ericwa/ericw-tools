@@ -825,12 +825,12 @@ static void ExportTextures(const fs::path &source, const gamedef_t *game, const 
 {
     for (auto &tex : bsp.texinfo) {
         // temp, just for us
-        auto tex_name = (source.parent_path() / "textures" / tex.texture.data()).replace_extension(".tga");
+        auto tex_name = (source.parent_path() / "textures" / tex.texturename).replace_extension(".tga");
 
         if (tex_name.string().find_first_of(' ') != std::string::npos)
             continue;
 
-        auto swl_meta = std::get<0>(img::load_texture(tex.texture.data(), false, game, bsputil_options));
+        auto swl_meta = std::get<0>(img::load_texture(tex.texturename, false, game, bsputil_options));
 
         if (!swl_meta)
             continue;

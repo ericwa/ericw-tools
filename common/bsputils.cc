@@ -208,8 +208,8 @@ const char *Face_TextureName(const mbsp_t *bsp, const mface_t *face)
     }
 
     // Q2 has texture written directly here
-    if (texinfo->texture[0]) {
-        return texinfo->texture.data();
+    if (!texinfo->texturename.empty()) {
+        return texinfo->texturename.data();
     }
 
     // Q1 has it on the miptex

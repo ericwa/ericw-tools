@@ -689,7 +689,7 @@ static void LoadTextures(const mbsp_t *bsp, const settings::common_settings &opt
 {
     // gather all loadable textures...
     for (auto &texinfo : bsp->texinfo) {
-        AddTextureName(texinfo.texture.data(), bsp, options);
+        AddTextureName(texinfo.texturename, bsp, options);
     }
 
     // gather textures used by _project_texture.
