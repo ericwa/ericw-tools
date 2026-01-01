@@ -263,8 +263,11 @@ struct compiled_brush_t
                     ewt::print(stream, " nonlitvalue {}", side.nonlit);
                 }
                 // nb: groupname is copied to directstyle by qbsp3, they should be identical
+                // but they might not be in the case of consoles
                 if (side.lightinfo.directstylename[0]) {
                     ewt::print(stream, " directstyle \"{}\"", side.lightinfo.directstylename.data());
+                } else if (side.groupname[0]) {
+                    ewt::print(stream, " directstyle \"{}\"", side.groupname.data());
                 }
 
             } else if ((bsp->loadversion->game->id == GAME_QUAKE_II) && (native || side.flags.native_q2 || side.value)) {

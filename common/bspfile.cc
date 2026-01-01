@@ -2287,7 +2287,11 @@ private:
         Q_assert(lumpspec.size == 1);
 
         if (version->version.has_value()) {
-            lumps = q2header.lumps.data();
+            if (version->game->id == GAME_SIN) {
+                lumps = sinheader.lumps.data();
+            } else {
+                lumps = q2header.lumps.data();
+            }
         } else {
             lumps = q1header.lumps.data();
         }
@@ -2318,7 +2322,11 @@ private:
         Q_assert(lumpspec.size == 1);
 
         if (version->version.has_value()) {
-            lumps = q2header.lumps.data();
+            if (version->game->id == GAME_SIN) {
+                lumps = sinheader.lumps.data();
+            } else {
+                lumps = q2header.lumps.data();
+            }
         } else {
             lumps = q1header.lumps.data();
         }
@@ -2471,7 +2479,7 @@ void WriteBSPFile(const fs::path &filename, bspdata_t *bspdata)
 
     logging::print("Writing {} as {}\n", filename, *bspdata->version);
     bspfile.stream.open(filename, std::ios_base::out | std::ios_base::trunc | std::ios_base::binary);
-
+    
     if (!bspfile.stream)
         FError("unable to open {} for writing", filename);
 
@@ -2479,7 +2487,11 @@ void WriteBSPFile(const fs::path &filename, bspdata_t *bspdata)
 
     /* Save header space, updated after adding the lumps */
     if (bspfile.version->version.has_value()) {
-        bspfile.stream <= bspfile.q2header;
+        if (bspfile.version->game->id == GAME_SIN) {
+            bspfile.stream <= bspfile.sinheader;
+        } else {
+            bspfile.stream <= bspfile.q2header;
+        }
     } else {
         bspfile.stream <= bspfile.q1header;
     }
@@ -2493,7 +2505,11 @@ void WriteBSPFile(const fs::path &filename, bspdata_t *bspdata)
 
     // write the real header
     if (bspfile.version->version.has_value()) {
-        bspfile.stream <= bspfile.q2header;
+        if (bspfile.version->game->id == GAME_SIN) {
+            bspfile.stream <= bspfile.sinheader;
+        } else {
+            bspfile.stream <= bspfile.sinheader;
+        }
     } else {
         bspfile.stream <= bspfile.q1header;
     }
