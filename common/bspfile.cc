@@ -2555,7 +2555,7 @@ void WriteBSPFile(const fs::path &filename, bspdata_t *bspdata)
         if (bspfile.version->game->id == GAME_SIN) {
             bspfile.stream <= bspfile.sinheader;
         } else {
-            bspfile.stream <= bspfile.sinheader;
+            bspfile.stream <= bspfile.q2header;
         }
     } else {
         bspfile.stream <= bspfile.q1header;
