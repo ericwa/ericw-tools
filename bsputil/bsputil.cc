@@ -1579,17 +1579,17 @@ int bsputil_main(int _argc, const char **_argv)
             std::set<std::string_view, natural_less> written;
 
             for (auto &tex : bsp.texinfo) {
-                if (written.find(std::string_view(tex.texture.data())) != written.end()) {
+                if (written.find(tex.texturename) != written.end()) {
                     continue;
                 }
 
                 if (tex.nexttexinfo != -1) {
                     auto &next = bsp.texinfo[tex.nexttexinfo];
 
-                    f << std::string_view(tex.texture.data()) << " date 0 anim " << std::string_view(next.texture.data()) << std::endl;
+                    f << tex.texturename << " date 0 anim " << next.texturename << std::endl;
                 }
 
-                written.insert(std::string_view(tex.texture.data()));
+                written.insert(tex.texturename);
             }
 
             f.close();
