@@ -627,7 +627,7 @@ static void export_obj_and_lightmaps(const mbsp_t &bsp, const bspxentries_t &bsp
     auto ExportObjFace = [&atlas](std::ostream &f, const mbsp_t *bsp, int face_num, int &vertcount) {
         const auto *face = BSP_GetFace(bsp, face_num);
 
-        const auto &tcs = atlas.facenum_to_lightmap_uvs.at(face_num);
+        auto tcs_it = atlas.facenum_to_lightmap_uvs.find(face_num);
 
         // export the vertices and uvs
         for (int i = 0; i < face->numedges; i++) {
@@ -637,11 +637,15 @@ static void export_obj_and_lightmaps(const mbsp_t &bsp, const bspxentries_t &bsp
             ewt::print(f, "v {:.9} {:.9} {:.9}\n", pos[0], pos[1], pos[2]);
             ewt::print(f, "vn {:.9} {:.9} {:.9}\n", normal[0], normal[1], normal[2]);
 
-            qvec2f tc = tcs[i];
+            if (tcs_it != atlas.facenum_to_lightmap_uvs.end()) {
+                qvec2f tc = tcs_it->second[i];
 
-            tc[1] = 1.0 - tc[1];
+                tc[1] = 1.0 - tc[1];
 
-            ewt::print(f, "vt {:.9} {:.9}\n", tc[0], tc[1]);
+                ewt::print(f, "vt {:.9} {:.9}\n", tc[0], tc[1]);
+            } else {
+                ewt::print(f, "vt 0 0\n");
+            }
         }
 
         f << "f";
