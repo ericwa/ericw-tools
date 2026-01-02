@@ -561,7 +561,7 @@ full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, 
             for (int i = 0; i < s.size(); i++)
                 s[i] = styles[i];
         } else {
-            memcpy(s.data(), face.face->styles.data(), sizeof(s));
+            s = face.face->styles;
         }
 
         result.facenum_to_styles[Face_GetNum(bsp, face.face)] = s;
