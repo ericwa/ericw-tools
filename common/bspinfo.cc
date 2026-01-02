@@ -412,7 +412,7 @@ full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, 
         for (auto &rect : rectangles) {
             int32_t style_index = -1;
 
-            for (size_t s = 0; s < MAXLIGHTMAPS; s++) {
+            for (size_t s = 0; s < rect.face->styles.size(); s++) {
                 if (rect.face->styles[s] == i) {
                     style_index = s;
                     break;

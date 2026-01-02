@@ -241,8 +241,8 @@ struct mtexinfo_t
     int32_t nexttexinfo = -1; // for animations, -1 = end of chain
 };
 
-constexpr size_t MAXLIGHTMAPS = 4;
 constexpr uint16_t INVALID_LIGHTSTYLE_OLD = 0xffu;
+constexpr size_t MFACE_MAXLIGHTMAPS = 16;
 
 struct mface_t
 {
@@ -253,7 +253,7 @@ struct mface_t
     int32_t texinfo;
 
     /* lighting info */
-    std::array<uint8_t, MAXLIGHTMAPS> styles;
+    std::array<uint8_t, MFACE_MAXLIGHTMAPS> styles;
     // start of [numstyles*surfsize] samples. byte offset into bsp.dlightdata.
     int32_t lightofs;
 };

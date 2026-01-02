@@ -673,7 +673,7 @@ static void SaveLitOnlyLightmapSurface(const mbsp_t *bsp, mface_t *face, lightsu
 
     // NOTE: file_p et. al. are not updated, since we're not dynamically allocating the lightmaps
 
-    for (int mapnum = 0; mapnum < MAXLIGHTMAPS; mapnum++) {
+    for (int mapnum = 0; mapnum < face->styles.size(); mapnum++) {
         const int style = face->styles[mapnum];
 
         if (style == 255) {
@@ -721,7 +721,9 @@ int CalculateLightmapStyles(const mbsp_t *bsp, mface_t *face, facesup_t *facesup
 {
     lightmapdict_t &lightmaps = lightsurf->lightmapsByStyle;
 
-    size_t maxfstyles = std::min((size_t)light_options.facestyles.value(), facesup ? MAXLIGHTMAPSSUP : MAXLIGHTMAPS);
+    size_t game_styles = bsp->loadversion->game->max_lightmaps();
+
+    size_t maxfstyles = std::min((size_t)light_options.facestyles.value(), facesup ? MAXLIGHTMAPSSUP : game_styles);
     int maxstyle = facesup ? INVALID_LIGHTSTYLE : INVALID_LIGHTSTYLE_OLD;
 
     // intermediate collection for sorting lightmaps
@@ -846,10 +848,12 @@ void SaveLightmapSurface(const mbsp_t *bsp, mface_t *face, facesup_t *facesup,
         facesup->lmscale = lightsurf->lightmapscale;
     } else {
         int mapnum;
-        for (mapnum = 0; mapnum < id.sorted.size() && mapnum < MAXLIGHTMAPS; mapnum++) {
+        const int max_lightmaps = bsp->loadversion->game->max_lightmaps();
+
+        for (mapnum = 0; mapnum < id.sorted.size() && mapnum < max_lightmaps; mapnum++) {
             face->styles[mapnum] = id.sorted.at(mapnum)->style;
         }
-        for (; mapnum < MAXLIGHTMAPS; mapnum++) {
+        for (; mapnum < max_lightmaps; mapnum++) {
             face->styles[mapnum] = INVALID_LIGHTSTYLE_OLD;
         }
 
@@ -1142,7 +1146,7 @@ void SaveLightmapSurfaces(bspdata_t *bspdata, const fs::path &source)
                 }
                 SaveLightmapSurface(bsp, f, &faces_sup[i], nullptr, &surf, surf.extents, surf.extents, filebase,
                     lit_filebase, lux_filebase, hdr_filebase, intermediate_data[i]);
-                for (int j = 0; j < MAXLIGHTMAPS; j++) {
+                for (int j = 0; j < f->styles.size(); j++) {
                     f->styles[j] =
                         faces_sup[i].styles[j] == INVALID_LIGHTSTYLE ? INVALID_LIGHTSTYLE_OLD : faces_sup[i].styles[j];
                 }

@@ -137,14 +137,14 @@ q2_dface_t::q2_dface_t(const mface_t &model)
       firstedge(model.firstedge),
       numedges(numeric_cast<int16_t>(model.numedges, "dface_t::numedges")),
       texinfo(numeric_cast<int16_t>(model.texinfo, "dface_t::texinfo")),
-      styles(model.styles),
+      styles(styles_mface_to_dface<decltype(styles)>(model.styles)),
       lightofs(model.lightofs)
 {
 }
 
 q2_dface_t::operator mface_t() const
 {
-    return {planenum, side, firstedge, numedges, texinfo, styles, lightofs};
+    return {planenum, side, firstedge, numedges, texinfo, styles_dface_to_mface(styles), lightofs};
 }
 
 void q2_dface_t::stream_write(std::ostream &s) const
@@ -165,14 +165,14 @@ q2_dface_qbism_t::q2_dface_qbism_t(const mface_t &model)
       firstedge(model.firstedge),
       numedges(model.numedges),
       texinfo(model.texinfo),
-      styles(model.styles),
+      styles(styles_mface_to_dface<decltype(styles)>(model.styles)),
       lightofs(model.lightofs)
 {
 }
 
 q2_dface_qbism_t::operator mface_t() const
 {
-    return {planenum, side, firstedge, numedges, texinfo, styles, lightofs};
+    return {planenum, side, firstedge, numedges, texinfo, styles_dface_to_mface(styles), lightofs};
 }
 
 void q2_dface_qbism_t::stream_write(std::ostream &s) const

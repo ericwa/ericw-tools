@@ -221,6 +221,8 @@ struct q2_texinfo_t
     void stream_read(std::istream &s);
 };
 
+static constexpr size_t Q2_MAXLIGHTMAPS = 4;
+
 struct q2_dface_t
 {
     uint16_t planenum; // NOTE: only difference from bsp29_dface_t
@@ -230,7 +232,7 @@ struct q2_dface_t
     int16_t texinfo;
 
     // lighting info
-    std::array<uint8_t, MAXLIGHTMAPS> styles;
+    std::array<uint8_t, Q2_MAXLIGHTMAPS> styles;
     int32_t lightofs; // start of [numstyles*surfsize] samples
 
     q2_dface_t() = default;
@@ -255,7 +257,7 @@ struct q2_dface_qbism_t
     int32_t texinfo;
 
     // lighting info
-    std::array<uint8_t, MAXLIGHTMAPS> styles;
+    std::array<uint8_t, Q2_MAXLIGHTMAPS> styles;
     int32_t lightofs; // start of [numstyles*surfsize] samples
 
     q2_dface_qbism_t() = default;

@@ -428,8 +428,8 @@ static void CheckBSPFile(const mbsp_t *bsp)
             logging::print("warning: face {} has edges out of range ({}..{} >= {})\n", i, face->firstedge,
                 face->firstedge + face->numedges - 1, bsp->dsurfedges.size());
 
-        for (int j = 0; j < 4; j++) {
-            used_lightstyles.insert(face->styles[j]);
+        for (uint8_t style : face->styles) {
+            used_lightstyles.insert(style);
         }
     }
 

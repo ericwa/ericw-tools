@@ -456,6 +456,12 @@ public:
         static const auto palette = make_palette(palette_bytes);
         return palette;
     }
+
+    size_t max_lightmaps() const override
+    {
+        static constexpr size_t n = bsp29_dface_t().styles.size();
+        return n;
+    }
 };
 
 struct gamedef_h2_t : public gamedef_q1_like_t<GAME_HEXEN_II>
@@ -1027,6 +1033,12 @@ public:
             155, 167, 139, 119, 135, 107, 87, 159, 91, 83};
         static const auto palette = make_palette(palette_bytes);
         return palette;
+    }
+
+    size_t max_lightmaps() const override
+    {
+        static constexpr size_t n = q2_dface_t().styles.size();
+        return n;
     }
 };
 

@@ -130,3 +130,37 @@ constexpr ADest array_cast(const ASrc &src, const char *overflow_message = "src"
 
     return dest;
 }
+
+// converts from a mface_t styles array, to a game-specific std::array, silently dropping excess elements
+template<class ArrClass>
+ArrClass styles_mface_to_dface(const std::array<uint8_t, MFACE_MAXLIGHTMAPS> &vec)
+{
+    static_assert(ArrClass().size() != 0);
+    static_assert(ArrClass().size() <= MFACE_MAXLIGHTMAPS);
+
+    ArrClass result;
+    for (size_t i = 0; i < result.size(); ++i) {
+        result[i] = vec[i];
+    }
+    return result;
+}
+
+// converts a game-specific fixed-size std::array of style values, to the larger mface_t array, padding with 255
+template<class ArrClass>
+std::array<uint8_t, MFACE_MAXLIGHTMAPS> styles_dface_to_mface(const ArrClass &array)
+{
+    std::array<uint8_t, MFACE_MAXLIGHTMAPS> result;
+
+    static_assert(ArrClass().size() <= result.size());
+
+    for (size_t i = 0; i < result.size(); ++i) {
+        // the game-specific array might be smaller; pad with 255
+        if (i < array.size()) {
+            result[i] = array[i];
+        } else {
+            result[i] = INVALID_LIGHTSTYLE_OLD;
+        }
+    }
+
+    return result;
+}
