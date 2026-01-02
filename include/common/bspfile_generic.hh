@@ -256,10 +256,6 @@ struct mface_t
     std::array<uint8_t, MAXLIGHTMAPS> styles;
     // start of [numstyles*surfsize] samples. byte offset into bsp.dlightdata.
     int32_t lightofs;
-
-    // serialize for streams
-    void stream_write(std::ostream &s) const;
-    void stream_read(std::istream &s);
 };
 
 /*
