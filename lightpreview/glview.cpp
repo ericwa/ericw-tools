@@ -1823,13 +1823,11 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
                     vertex_normal = plane_normal;
                 }
 
-                std::array<uint8_t, MAXLIGHTMAPS> styles;
-
+                std::vector<uint8_t> styles;
                 if (lightmap.facenum_to_styles.contains(fnum)) {
                     styles = lightmap.facenum_to_styles.at(fnum);
-                } else {
-                    styles.fill(0xFF);
                 }
+                styles.resize(16, 0xFF);
 
                 verts.push_back({.pos = pos + model_offset,
                     .uv = uv,
