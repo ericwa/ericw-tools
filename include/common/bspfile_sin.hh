@@ -225,6 +225,8 @@ struct sin_texinfo_t
     void stream_read(std::istream &s);
 };
 
+constexpr size_t SIN_MAXLIGHTMAPS = 16;
+
 struct sin_dface_t
 {
     uint16_t planenum; // NOTE: only difference from bsp29_dface_t
@@ -234,7 +236,7 @@ struct sin_dface_t
     int16_t texinfo;
 
     // lighting info
-    std::array<uint8_t, MAXLIGHTMAPS> styles;
+    std::array<uint8_t, SIN_MAXLIGHTMAPS> styles;
     int32_t lightofs; // start of [numstyles*surfsize] samples
     int32_t lightinfo;
 

@@ -104,7 +104,7 @@ sin_dface_t::sin_dface_t(const mface_t &face)
       firstedge(face.firstedge),
       numedges(numeric_cast<int16_t>(face.numedges, "dface_t::numedges")),
       texinfo(numeric_cast<int16_t>(face.texinfo, "dface_t::texinfo")),
-      styles(face.styles),
+      styles(styles_vec_to_array<decltype(styles)>(face.styles)),
       lightofs(face.lightofs),
       lightinfo(face.lightinfo)
 {
@@ -112,7 +112,7 @@ sin_dface_t::sin_dface_t(const mface_t &face)
 
 sin_dface_t::operator mface_t() const
 {
-    return {planenum, side, firstedge, numedges, texinfo, styles, lightofs, lightinfo};
+    return {planenum, side, firstedge, numedges, texinfo, styles_array_to_vec(styles), lightofs, lightinfo};
 }
 
 void sin_dface_t::stream_write(std::ostream &s) const

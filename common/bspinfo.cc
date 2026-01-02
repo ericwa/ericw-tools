@@ -303,7 +303,7 @@ full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, 
     }
 
     std::vector<uint16_t> bspx_lmstyle16;
-    int max_styles_per_face = MAXLIGHTMAPS;
+    int max_styles_per_face = bsp.loadversion->game->num_styles();
 
     if (bspx.contains("LMSTYLE16")) {
         auto &lmstyle16 = bspx.at("LMSTYLE16");
@@ -552,7 +552,8 @@ full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, 
         result.facenum_to_lightmap_uvs[Face_GetNum(bsp, face.face)] = std::move(face_lightmap_uvs);
 
         auto face_idx = (intptr_t) (face.face - bsp->dfaces.data());
-        std::array<uint8_t, MAXLIGHTMAPS> s;
+        std::vector<uint8_t> s;
+        s.resize(face.face->styles.size());
 
         if (!bspx_lmstyle16.empty()) {
             const uint16_t *styles = bspx_lmstyle16.data() + face_idx * max_styles_per_face;

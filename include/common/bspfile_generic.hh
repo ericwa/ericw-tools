@@ -253,9 +253,6 @@ struct mtexinfo_t
     std::array<char, 32> groupname;
 };
 
-// SiN TODO: this is 16 in SiN but 4 in Quake;
-// need to expose to gamedef
-constexpr size_t MAXLIGHTMAPS = 16;
 constexpr uint16_t INVALID_LIGHTSTYLE_OLD = 0xffu;
 
 struct mface_t
@@ -267,16 +264,16 @@ struct mface_t
     int32_t texinfo;
 
     /* lighting info */
-    std::array<uint8_t, MAXLIGHTMAPS> styles;
+    // TODO: change to a boost::static_vector to avoid heap allocation
+    // the size of this vector always matches the game-specific dface_t's `styles` array
+    // (see gamedef_t::num_styles()).
+    // when creating a mface_t, you must resize this to match the game you eventually intend export to.
+    std::vector<uint8_t> styles;
     // start of [numstyles*surfsize] samples. byte offset into bsp.dlightdata.
     int32_t lightofs;
 
     // SiN
     int32_t lightinfo;
-
-    // serialize for streams
-    void stream_write(std::ostream &s) const;
-    void stream_read(std::istream &s);
 };
 
 /*

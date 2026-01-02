@@ -130,3 +130,28 @@ constexpr ADest array_cast(const ASrc &src, const char *overflow_message = "src"
 
     return dest;
 }
+
+// converts from a flexible mface_t styles vector, to a game-specific fixed-size std::array.
+// expects the vector to have be resized to match gamedef_t::num_styles() already; throws if misused.
+template<class ArrClass>
+ArrClass styles_vec_to_array(const std::vector<uint8_t> &vec)
+{
+    static_assert(ArrClass().size() != 0);
+
+    if (vec.size() != ArrClass().size()) {
+        throw std::runtime_error("style vector was not the correct size");
+    }
+
+    ArrClass result;
+    for (size_t i = 0; i < vec.size(); ++i) {
+        result[i] = vec[i];
+    }
+    return result;
+}
+
+// converts a game-specific fixed-size std::array of style values, to a vector for use in mface_t
+template<class ArrClass>
+std::vector<uint8_t> styles_array_to_vec(const ArrClass &array)
+{
+    return std::vector<uint8_t>(array.begin(), array.end());
+}
