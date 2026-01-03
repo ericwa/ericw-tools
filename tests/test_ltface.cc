@@ -1171,6 +1171,7 @@ TEST(ltfaceQ2, lightBlack)
 
     const mface_t *face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], point, {-1, 0, 0});
     ASSERT_TRUE(face);
+    ASSERT_EQ(face->styles.size(), 4);
     EXPECT_EQ(face->styles[0], 0);
     EXPECT_EQ(face->styles[1], 255);
     EXPECT_EQ(face->styles[2], 255);
@@ -1190,6 +1191,7 @@ TEST(ltfaceQ1, lightBlack)
 
         const mface_t *face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], point, {-1, 0, 0});
         ASSERT_TRUE(face);
+        ASSERT_EQ(face->styles.size(), 4);
         EXPECT_EQ(face->styles[0], 255);
         EXPECT_EQ(face->styles[1], 255);
         EXPECT_EQ(face->styles[2], 255);
@@ -1210,6 +1212,7 @@ TEST(ltfaceQ1, lightBlack)
         ASSERT_TRUE(texinfo);
 
         EXPECT_EQ(texinfo->flags.native_q1, 0); // i.e. TEX_SPECIAL is not set because it's lit water
+        ASSERT_EQ(face->styles.size(), 4);
         EXPECT_EQ(face->styles[0], 255);
         EXPECT_EQ(face->styles[1], 255);
         EXPECT_EQ(face->styles[2], 255);
@@ -1232,6 +1235,7 @@ TEST(ltfaceHL, lightBlack)
 
         const mface_t *face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], point, {-1, 0, 0});
         ASSERT_TRUE(face);
+        ASSERT_EQ(face->styles.size(), 4);
         EXPECT_EQ(face->styles[0], 255);
         EXPECT_EQ(face->styles[1], 255);
         EXPECT_EQ(face->styles[2], 255);

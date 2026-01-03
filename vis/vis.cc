@@ -787,7 +787,9 @@ int vis_main(int argc, const char **argv)
     }
 
     // no ambient sounds for Q2
-    if (bsp.loadversion->game->id != GAME_QUAKE_II) {
+    if (bsp.loadversion->game->id == GAME_QUAKE ||
+        bsp.loadversion->game->id == GAME_HEXEN_II ||
+        bsp.loadversion->game->id == GAME_HALF_LIFE) {
         CalcAmbientSounds(&bsp);
     } else {
         CalcPHS(&bsp);

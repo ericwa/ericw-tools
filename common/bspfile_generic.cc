@@ -254,17 +254,6 @@ void bsp2_dnode_t::stream_read(std::istream &s)
     s >= std::tie(planenum, children, mins, maxs, firstface, numfaces);
 }
 
-// mface_t
-
-void mface_t::stream_write(std::ostream &s) const
-{
-    s <= std::tie(planenum, side, firstedge, numedges, texinfo, styles, lightofs);
-}
-void mface_t::stream_read(std::istream &s)
-{
-    s >= std::tie(planenum, side, firstedge, numedges, texinfo, styles, lightofs);
-}
-
 // bsp2_dclipnode_t
 
 void bsp2_dclipnode_t::stream_write(std::ostream &s) const
@@ -325,12 +314,12 @@ void dbrush_t::stream_read(std::istream &s)
 
 void q2_dbrushside_qbism_t::stream_write(std::ostream &s) const
 {
-    s <= std::tie(planenum, texinfo);
+    s <= std::tie(planenum, texinfo, lightinfo);
 }
 
 void q2_dbrushside_qbism_t::stream_read(std::istream &s)
 {
-    s >= std::tie(planenum, texinfo);
+    s >= std::tie(planenum, texinfo, lightinfo);
 }
 
 // mbsp_t

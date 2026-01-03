@@ -28,6 +28,7 @@
 #include <common/polylib.hh>
 #include <common/fs.hh>
 #include <common/log.hh>
+#include <common/mapfile.hh>
 #include <common/ostream.hh>
 
 #include <fstream>
@@ -79,7 +80,7 @@ struct texdef_valve_t
             if (length != 0.0) {
                 scale[i] = 1.0 / length;
             } else {
-                scale[i] = 0.0;
+                scale[i] = 0.0f; // don't let scale go to 0
             }
             shift[i] = in_vecs.at(i, 3);
             axis.set_row(i, xyz);
@@ -97,6 +98,20 @@ struct compiled_brush_side_t
     // only for Q2
     surfflags_t flags;
     int32_t value;
+
+    // only for SiN
+    int nexttexinfo = -1;
+    float trans_mag;
+    int trans_angle;
+    int base_angle;
+    float animtime;
+    float nonlit;
+    float translucence;
+    float friction;
+    float restitution;
+    qvec3f color;
+    std::array<char, 32> groupname;
+    sin_lightinfo_t lightinfo;
 
     const q2_dbrushside_qbism_t *source = nullptr;
 };
@@ -141,9 +156,9 @@ static std::unordered_map<std::string, wal_metadata_t> wals;
 struct compiled_brush_t
 {
     const dbrush_t *source = nullptr;
-    std::vector<compiled_brush_side_t> sides;
-    std::optional<qvec3d> brush_offset;
-    contentflags_t contents;
+    std::vector<compiled_brush_side_t> sides {};
+    std::optional<qvec3d> brush_offset {};
+    contentflags_t contents {};
 
     inline void write(const mbsp_t *bsp, std::ofstream &stream)
     {
@@ -171,9 +186,11 @@ struct compiled_brush_t
                 for (auto &v : p) {
                     v += brush_offset.value();
                 }
-
-                side.valve.shift[0] -= qv::dot(brush_offset.value(), side.valve.axis.row(0));
-                side.valve.shift[1] -= qv::dot(brush_offset.value(), side.valve.axis.row(1));
+                
+                for (int i = 0; i < 2; ++i) {
+                    if (side.valve.scale[i] != 0)
+                        side.valve.shift[i] -= qv::dot(brush_offset.value(), side.valve.axis.row(i) / side.valve.scale[i]);
+                }
             }
 
 #if 0
@@ -188,23 +205,90 @@ struct compiled_brush_t
 
             int native = bsp->loadversion->game->contents_to_native(contents);
 
-            if (bsp->loadversion->game->id == GAME_QUAKE_II && (native || side.flags.native_q2 || side.value)) {
+            if (bsp->loadversion->game->id == GAME_SIN) {
+
+                // for SiN we won't care about SWL or SRF stuff.
+                // write contents, flags, then other stuff.
+
+                if (native) {
+                    for (auto &content_name : mapfile::sin_contents_names) {
+                        if (native & (int) content_name.flag) {
+                            ewt::print(stream, " +{}", content_name.name);
+                        }
+                    }
+                }
+
+                if (side.flags.native_q2) {
+                    for (auto &surfflag_name : mapfile::sin_surfflag_names) {
+                        if ((int) side.flags.native_q2 & (int) surfflag_name.flag) {
+                            ewt::print(stream, " +{}", surfflag_name.name);
+                        }
+                    }
+                }
+
+                // nb: anim is written in SRF instead
+
+                if (side.animtime != 0.2f) {
+                    ewt::print(stream, " animtime {}", side.animtime);
+                }
+                if (side.friction != 1.0f) {
+                    ewt::print(stream, " friction {}", side.friction);
+                }
+                if (side.restitution) {
+                    ewt::print(stream, " restitution {}", side.restitution);
+                }
+                if (side.lightinfo.direct) {
+                    ewt::print(stream, " direct {}", side.lightinfo.direct);
+                }
+                if (side.lightinfo.directangle) {
+                    ewt::print(stream, " directangle {}", side.lightinfo.directangle);
+                }
+                // nb: directstyle is unused
+                if (side.translucence) {
+                    ewt::print(stream, " translucence {}", side.translucence);
+                }
+                if (side.trans_mag) {
+                    ewt::print(stream, " trans_mag {}", side.trans_mag);
+                }
+                if (side.trans_angle) {
+                    ewt::print(stream, " trans_angle {}", side.trans_angle);
+                }
+                if (!qv::emptyExact(side.color)) {
+                    ewt::print(stream, " color {} {} {}", side.color[0], side.color[1], side.color[2]);
+                }
+                if (side.lightinfo.value) {
+                    ewt::print(stream, " lightvalue {}", side.lightinfo.value);
+                }
+                if (side.nonlit != 0.5f) {
+                    ewt::print(stream, " nonlitvalue {}", side.nonlit);
+                }
+                // nb: groupname is copied to directstyle by qbsp3, they should be identical
+                // but they might not be in the case of consoles
+                if (side.lightinfo.directstylename[0]) {
+                    ewt::print(stream, " directstyle \"{}\"", side.lightinfo.directstylename.data());
+                } else if (side.groupname[0]) {
+                    ewt::print(stream, " directstyle \"{}\"", side.groupname.data());
+                }
+
+            } else if ((bsp->loadversion->game->id == GAME_QUAKE_II) && (native || side.flags.native_q2 || side.value)) {
                 wal_metadata_t *meta = nullptr;
 
-                auto it = wals.find(side.texture_name);
+                if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+                    auto it = wals.find(side.texture_name);
 
-                if (it != wals.end()) {
-                    meta = &it->second;
-                } else {
-                    auto wal = fs::load((fs::path("textures") / side.texture_name) += ".wal");
+                    if (it != wals.end()) {
+                        meta = &it->second;
+                    } else {
+                        auto wal = fs::load((fs::path("textures") / side.texture_name) += ".wal");
 
-                    if (wal) {
-                        imemstream stream(wal->data(), wal->size(), std::ios_base::in | std::ios_base::binary);
-                        stream >> endianness<std::endian::little>;
-                        stream.seekg(88);
+                        if (wal) {
+                            imemstream stream(wal->data(), wal->size(), std::ios_base::in | std::ios_base::binary);
+                            stream >> endianness<std::endian::little>;
+                            stream.seekg(88);
 
-                        meta = &wals.emplace(side.texture_name, wal_metadata_t{}).first->second;
-                        stream >= *meta;
+                            meta = &wals.emplace(side.texture_name, wal_metadata_t{}).first->second;
+                            stream >= *meta;
+                        }
                     }
                 }
 
@@ -508,6 +592,8 @@ static const char *DefaultSkipTexture(const mbsp_t *bsp)
 {
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         return "e1u1/skip";
+    } else if (bsp->loadversion->game->id == GAME_SIN) {
+        return "GENERIC/misc/skip";
     } else {
         return "skip";
     }
@@ -516,9 +602,11 @@ static const char *DefaultSkipTexture(const mbsp_t *bsp)
 static void DefaultSkipSide(compiled_brush_side_t &side, const mbsp_t *bsp)
 {
     side.texture_name = DefaultSkipTexture(bsp);
-
+    
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         side.flags = {Q2_SURF_NODRAW};
+    } else if (bsp->loadversion->game->id == GAME_SIN) {
+        side.flags = {static_cast<q2_surf_flags_t>(SIN_SURF_NODRAW)};
     }
 }
 
@@ -526,6 +614,8 @@ static const char *DefaultTriggerTexture(const mbsp_t *bsp)
 {
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         return "e1u1/trigger";
+    } else if (bsp->loadversion->game->id == GAME_SIN) {
+        return "GENERIC/misc/trigger";
     } else {
         return "trigger";
     }
@@ -544,6 +634,8 @@ static const char *DefaultOriginTexture(const mbsp_t *bsp)
 {
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         return "e1u1/origin";
+    } else if (bsp->loadversion->game->id == GAME_SIN) {
+        return "GENERIC/misc/origin";
     } else {
         return "origin";
     }
@@ -552,7 +644,7 @@ static const char *DefaultOriginTexture(const mbsp_t *bsp)
 static const char *DefaultTextureForContents(const mbsp_t *bsp, contentflags_t contents)
 {
     int native = bsp->loadversion->game->contents_to_native(contents);
-
+    
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         int visible = native & Q2_ALL_VISIBLE_CONTENTS;
 
@@ -573,6 +665,18 @@ static const char *DefaultTextureForContents(const mbsp_t *bsp, contentflags_t c
         }
 
         return "e1u1/skip";
+    } else if (bsp->loadversion->game->id == GAME_SIN) {
+        int visible = native & SIN_ALL_VISIBLE_CONTENTS;
+
+        if (native & SIN_CONTENTS_PLAYERCLIP) {
+            return "generic/misc/clip";
+        } else if (native & SIN_CONTENTS_MONSTERCLIP) {
+            return "generic/misc/monster";
+        } else if (native & SIN_CONTENTS_AREAPORTAL) {
+            return "GENERIC/misc/trigger";
+        }
+
+        return "GENERIC/misc/skip";
     } else {
         switch (native) {
             case CONTENTS_WATER: return "*waterskip";
@@ -592,6 +696,12 @@ static void OverrideTextureForContents(
 {
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         int native = bsp->loadversion->game->contents_to_native(contents);
+        
+        if (strstr(name, " ")) {
+            side.texture_name = "skip";
+            side.flags = {Q2_SURF_NODRAW};
+            return;
+        }
 
         if (native & (Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_PROJECTILECLIP)) {
             if ((native & Q2_CONTENTS_PLAYERCLIP) == Q2_CONTENTS_PLAYERCLIP) {
@@ -605,6 +715,20 @@ static void OverrideTextureForContents(
             }
 
             side.flags = {Q2_SURF_NODRAW};
+            return;
+        }
+    } else if (bsp->loadversion->game->id == GAME_SIN) {
+        int native = bsp->loadversion->game->contents_to_native(contents);
+        
+        if (strstr(name, " ")) {
+            side.texture_name = "GENERIC/misc/skip";
+            side.flags = {static_cast<q2_surf_flags_t>(SIN_SURF_NODRAW)};
+            return;
+        }
+
+        if (native & (Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP)) {
+            side.texture_name = "GENERIC/misc/clip";
+            side.flags = {static_cast<q2_surf_flags_t>(SIN_SURF_NODRAW)};
             return;
         }
     }
@@ -782,7 +906,8 @@ static std::vector<decomp_brush_t> SplitDifferentTexturedPartsOfBrush(const mbsp
 {
     // Quake II maps include brushes, so we shouldn't ever run into
     // a case where a brush has faces split up beyond the brush bounds.
-    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+    if (bsp->loadversion->game->id == GAME_QUAKE_II ||
+        bsp->loadversion->game->id == GAME_SIN) {
         return {brush};
     }
 
@@ -838,10 +963,10 @@ static std::vector<compiled_brush_t> DecompileLeafTaskGeometryOnly(
 }
 
 static std::vector<compiled_brush_t> DecompileLeafTask(const mbsp_t *bsp, const decomp_options &options,
-    leaf_decompile_task &task, const std::optional<qvec3d> &brush_offset)
+    leaf_decompile_task &task, const std::optional<qvec3d> &brush_offset, const bool isBrushBased)
 {
     std::vector<decomp_brush_t> finalBrushes;
-    if (bsp->loadversion->game->id == GAME_QUAKE_II && !options.ignoreBrushes) {
+    if (isBrushBased) {
         // Q2 doesn't need this - we assume each brush in the brush lump corresponds to exactly one .map file brush
         // and so each side of the brush can only have 1 texture at this point.
         finalBrushes = {BuildInitialBrush_Q2(bsp, task, task.allPlanes)};
@@ -892,10 +1017,13 @@ static std::vector<compiled_brush_t> DecompileLeafTask(const mbsp_t *bsp, const 
 
             if (bsp->loadversion->game->contents_to_native(brush.contents) == 0) {
                 // hint brush
-                side.texture_name = "e1u1/hint";
-
+                
                 if (bsp->loadversion->game->id == GAME_QUAKE_II) {
                     side.flags = {Q2_SURF_HINT};
+                    side.texture_name = "e1u1/hint";
+                } else if (bsp->loadversion->game->id == GAME_SIN) {
+                    side.flags = {static_cast<q2_surf_flags_t>(SIN_SURF_HINT)};
+                    side.texture_name = "GENERIC/misc/hint";
                 }
 
                 side.valve = finalSide.plane.normal;
@@ -910,6 +1038,7 @@ static std::vector<compiled_brush_t> DecompileLeafTask(const mbsp_t *bsp, const 
             } else {
                 const char *name = nullptr;
                 const mtexinfo_t *ti = nullptr;
+                const sin_lightinfo_t *li = nullptr;
 
                 auto faces = finalSide.faces;
 
@@ -917,10 +1046,12 @@ static std::vector<compiled_brush_t> DecompileLeafTask(const mbsp_t *bsp, const 
                     const mface_t *face = faces[0].original_face;
                     name = Face_TextureName(bsp, face);
                     ti = Face_Texinfo(bsp, face);
+                    li = Face_Lightinfo(bsp, face);
                 } else if (finalSide.plane.source) {
                     ti = BSP_GetTexinfo(bsp, finalSide.plane.source->texinfo);
+                    li = BSP_GetLightinfo(bsp, finalSide.plane.source->lightinfo);
                     if (ti) {
-                        name = ti->texture.data();
+                        name = ti->texturename.c_str();
                     }
                 }
 
@@ -933,9 +1064,29 @@ static std::vector<compiled_brush_t> DecompileLeafTask(const mbsp_t *bsp, const 
                 if (ti) {
                     side.valve = ti->vecs;
 
+                    if (qv::epsilonEmpty(side.valve.scale, 0.001)) {
+                        side.valve = finalSide.plane.normal;
+                    }
+
                     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
                         side.flags = ti->flags;
                         side.value = ti->value;
+                    } else if (bsp->loadversion->game->id == GAME_SIN) {
+                        side.flags = ti->flags;
+                        side.value = ti->value;
+
+                        side.nexttexinfo = ti->nexttexinfo;
+                        side.animtime = ti->animtime;
+                        side.base_angle = ti->base_angle;
+                        side.color = ti->color;
+                        side.friction = ti->friction;
+                        side.groupname = ti->groupname;
+                        side.lightinfo = li ? *li : sin_lightinfo_t{};
+                        side.nonlit = ti->nonlit;
+                        side.restitution = ti->restitution;
+                        side.translucence = ti->translucence;
+                        side.trans_angle = ti->trans_angle;
+                        side.trans_mag = ti->trans_mag;
                     }
                 } else {
                     side.valve = finalSide.plane.normal;
@@ -1095,7 +1246,7 @@ static void AddMapBoundsToStack(std::vector<decomp_plane_t> &planestack, const m
 }
 
 static std::vector<compiled_brush_t> DecompileBrushTask(const mbsp_t *bsp, const decomp_options &options,
-    leaf_decompile_task &task, const std::optional<qvec3d> &brush_offset)
+    leaf_decompile_task &task, const std::optional<qvec3d> &brush_offset, const bool isBrushBased)
 {
     for (size_t i = 0; i < task.brush->numsides; i++) {
         const q2_dbrushside_qbism_t *side = &bsp->dbrushsides[task.brush->firstside + i];
@@ -1106,14 +1257,14 @@ static std::vector<compiled_brush_t> DecompileBrushTask(const mbsp_t *bsp, const
     if (options.geometryOnly) {
         return DecompileLeafTaskGeometryOnly(bsp, task, brush_offset);
     } else {
-        return DecompileLeafTask(bsp, options, task, brush_offset);
+        return DecompileLeafTask(bsp, options, task, brush_offset, isBrushBased);
     }
 }
 
 #include "common/parser.hh"
 
 static void DecompileEntity(
-    const mbsp_t *bsp, const decomp_options &options, std::ofstream &file, const entdict_t &dict, bool isWorld)
+    const mbsp_t *bsp, const decomp_options &options, std::ofstream &file, entdict_t &dict, bool isWorld)
 {
     // we use -1 to indicate it's not a brush model
     int modelNum = -1;
@@ -1130,10 +1281,13 @@ static void DecompileEntity(
     // emitted in the same order as the func_areaportal entities.
     if (dict.find("classname")->second == "func_areaportal") {
 
+        dict.remove(std::string_view{"origin"});
+
         if (dict.has("style")) {
             size_t brush_offset = std::stoull(dict.find("style")->second);
 
             for (auto &brush : bsp->dbrushes) {
+                // TODO: use non-native contents
                 if (brush.contents & Q2_CONTENTS_AREAPORTAL) {
                     if (brush_offset == 1) {
                         // we'll use this one
@@ -1183,6 +1337,8 @@ static void DecompileEntity(
     }
 
     std::vector<std::vector<compiled_brush_t>> compiledBrushes;
+    const bool isBrushBased = (bsp->loadversion->game->id == GAME_QUAKE_II || bsp->loadversion->game->id == GAME_SIN)
+                               && !options.ignoreBrushes;
 
     // Print brushes if any
     if (modelNum >= 0) {
@@ -1203,7 +1359,7 @@ static void DecompileEntity(
             compiledBrushes.resize(tasks.size());
             tbb::parallel_for(static_cast<size_t>(0), tasks.size(),
                 [&](size_t i) { compiledBrushes[i] = DecompileLeafTaskGeometryOnly(bsp, tasks[i], brush_offset); });
-        } else if (bsp->loadversion->game->id == GAME_QUAKE_II && !options.ignoreBrushes) {
+        } else if (isBrushBased) {
             std::unordered_map<const dbrush_t *, leaf_decompile_task> brushes;
 
             auto handle_leaf = [&brushes, bsp, model](const mleaf_t *leaf) {
@@ -1252,7 +1408,7 @@ static void DecompileEntity(
             size_t t = brushes.size();
 
             tbb::parallel_for(static_cast<size_t>(0), brushes.size(), [&](size_t i) {
-                compiledBrushes[i] = DecompileBrushTask(bsp, options, brushesVector[i], brush_offset);
+                compiledBrushes[i] = DecompileBrushTask(bsp, options, brushesVector[i], brush_offset, isBrushBased);
                 t--;
             });
         } else {
@@ -1271,16 +1427,17 @@ static void DecompileEntity(
                 if (options.geometryOnly) {
                     compiledBrushes[i] = DecompileLeafTaskGeometryOnly(bsp, tasks[i], brush_offset);
                 } else {
-                    compiledBrushes[i] = DecompileLeafTask(bsp, options, tasks[i], brush_offset);
+                    compiledBrushes[i] = DecompileLeafTask(bsp, options, tasks[i], brush_offset, isBrushBased);
                 }
             });
         }
     } else if (areaportal_brush) {
         leaf_decompile_task task;
         task.brush = areaportal_brush;
-        compiledBrushes.push_back(DecompileBrushTask(bsp, options, task, brush_offset));
+        compiledBrushes.push_back(DecompileBrushTask(bsp, options, task, brush_offset, isBrushBased));
     }
 
+#if 0
     // If we run into a trigger brush, replace all of its faces with trigger texture.
     if (modelNum > 0 && dict.find("classname")->second.compare(0, 8, "trigger_") == 0) {
         for (auto &brushlist : compiledBrushes) {
@@ -1291,45 +1448,73 @@ static void DecompileEntity(
             }
         }
     }
+#endif
 
-    // cleanup step: we're left with visible faces having textures, but
-    // things that aren't output in BSP faces will use a skip texture.
-    // we'll find the best matching texture that we think would work well.
-    for (auto &brushlist : compiledBrushes) {
-        for (auto &brush : brushlist) {
-            for (auto &side : brush.sides) {
-                if (side.texture_name != DefaultSkipTexture(bsp)) {
-                    continue;
-                }
-
-                // check all of the other sides, find the one with the nearest opposite plane
-                qvec3d normal_to_check = -side.plane.normal;
-                double closest_dot = -DBL_MAX;
-                compiled_brush_side_t *closest = nullptr;
-
-                for (auto &side2 : brush.sides) {
-                    if (&side2 == &side) {
+    if (isBrushBased) {
+        // cleanup step: we're left with visible faces having textures, but
+        // things that aren't output in BSP faces will use a skip texture.
+        // we'll find the best matching texture that we think would work well.
+        for (auto &brushlist : compiledBrushes) {
+            for (auto &brush : brushlist) {
+                for (auto &side : brush.sides) {
+                    if (side.texture_name != DefaultSkipTexture(bsp)) {
                         continue;
                     }
 
-                    if (side2.texture_name == DefaultSkipTexture(bsp)) {
-                        continue;
+                    // check all of the other sides, find the one with the nearest opposite plane
+                    qvec3d normal_to_check = -side.plane.normal;
+                    double closest_dot = -DBL_MAX;
+                    compiled_brush_side_t *closest = nullptr;
+
+                    for (auto &side2 : brush.sides) {
+                        if (&side2 == &side) {
+                            continue;
+                        }
+
+                        if (side2.texture_name == DefaultSkipTexture(bsp)) {
+                            continue;
+                        }
+
+                        double d = qv::dot(normal_to_check, side2.plane.normal);
+
+                        if (!closest || d > closest_dot) {
+                            closest_dot = d;
+                            closest = &side2;
+                        }
                     }
 
-                    double d = qv::dot(normal_to_check, side2.plane.normal);
-
-                    if (!closest || d > closest_dot) {
-                        closest_dot = d;
-                        closest = &side2;
+                    if (closest) {
+                        side.texture_name = closest->texture_name;
+                    } else {
+                        side.texture_name = DefaultTextureForContents(bsp, brush.contents);
                     }
-                }
-
-                if (closest) {
-                    side.texture_name = closest->texture_name;
-                } else {
-                    side.texture_name = DefaultTextureForContents(bsp, brush.contents);
                 }
             }
+        }
+    }
+
+    const bool hasImplicitOrigins = bsp->loadversion->game->id == GAME_SIN;
+
+    if (brush_offset.has_value() && hasImplicitOrigins) {
+        // if the game has implicit origins (SiN)
+        // it will automatically set origin brushes on
+        // bmodels to the centroid if it's not set.
+        aabb3d bounds {};
+
+        for (auto &brushlist : compiledBrushes) {
+            for (auto &brush : brushlist) {
+                for (auto &side : brush.sides) {
+                    if (side.winding) {
+                        for (auto &p : *side.winding) {
+                            bounds += p + brush_offset.value();
+                        }
+                    }
+                }
+            }
+        }
+
+        if (qv::epsilonEqual(qvec3i(bounds.centroid()), qvec3i(brush_offset.value()), 1)) {
+            brush_offset.reset();
         }
     }
 

@@ -237,11 +237,22 @@ struct mtexinfo_t
 
     // q2 only
     int32_t value; // light emission, etc
-    std::array<char, 32> texture; // texture name (textures/*.wal)
+    std::string texturename; // texture name (textures/*.wal)
     int32_t nexttexinfo = -1; // for animations, -1 = end of chain
+
+    // SiN only
+    float trans_mag;
+    int trans_angle;
+    int base_angle;
+    float animtime;
+    float nonlit;
+    float translucence;
+    float friction;
+    float restitution;
+    qvec3f color;
+    std::array<char, 32> groupname;
 };
 
-constexpr size_t MAXLIGHTMAPS = 4;
 constexpr uint16_t INVALID_LIGHTSTYLE_OLD = 0xffu;
 
 struct mface_t
@@ -253,13 +264,16 @@ struct mface_t
     int32_t texinfo;
 
     /* lighting info */
-    std::array<uint8_t, MAXLIGHTMAPS> styles;
+    // TODO: change to a boost::static_vector to avoid heap allocation
+    // the size of this vector always matches the game-specific dface_t's `styles` array
+    // (see gamedef_t::num_styles()).
+    // when creating a mface_t, you must resize this to match the game you eventually intend export to.
+    std::vector<uint8_t> styles;
     // start of [numstyles*surfsize] samples. byte offset into bsp.dlightdata.
     int32_t lightofs;
 
-    // serialize for streams
-    void stream_write(std::ostream &s) const;
-    void stream_read(std::istream &s);
+    // SiN
+    int32_t lightinfo;
 };
 
 /*
@@ -368,6 +382,22 @@ struct q2_dbrushside_qbism_t
 {
     uint32_t planenum; // facing out of the leaf
     int32_t texinfo;
+    // SiN
+    int32_t lightinfo;
+
+    // serialize for streams
+    void stream_write(std::ostream &s) const;
+    void stream_read(std::istream &s);
+};
+
+struct sin_lightinfo_t
+{
+    int32_t value;
+    qvec3f color;
+    float direct;
+    float directangle;
+    float directstyle;
+    std::array<char, 32> directstylename;
 
     // serialize for streams
     void stream_write(std::ostream &s) const;
@@ -407,6 +437,7 @@ struct mbsp_t
     std::vector<q2_dbrushside_qbism_t> dbrushsides;
 
     int lightsamples() const;
+    std::vector<sin_lightinfo_t> dlightinfo;
 };
 
 extern const bspversion_t bspver_generic;

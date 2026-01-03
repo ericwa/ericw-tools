@@ -659,12 +659,29 @@ bool stlnatstrlt(const std::string &s1, const std::string &s2, bool case_sensiti
     return natstrlt(s1.c_str(), s2.c_str(), case_sensitive);
 }
 
+bool stlnatstrlt(const std::string_view &s1, const std::string_view &s2, bool case_sensitive)
+{
+    // TODO: assumes null terminated
+    return natstrlt(s1.data(), s2.data(), case_sensitive);
+}
+
 bool natural_equal::operator()(const std::string &l, const std::string &r) const noexcept
 {
     return strcmp(l.c_str(), r.c_str()) == 0;
 }
 
+bool natural_equal::operator()(const std::string_view &l, const std::string_view &r) const noexcept
+{
+    // TODO: assumes null terminated
+    return strcmp(l.data(), r.data()) == 0;
+}
+
 bool natural_less::operator()(const std::string &l, const std::string &r) const noexcept
+{
+    return stlnatstrlt(l, r);
+}
+
+bool natural_less::operator()(const std::string_view &l, const std::string_view &r) const noexcept
 {
     return stlnatstrlt(l, r);
 }
@@ -674,8 +691,20 @@ bool natural_case_insensitive_equal::operator()(const std::string &l, const std:
     return Q_strcasecmp(l.c_str(), r.c_str()) == 0;
 }
 
+bool natural_case_insensitive_equal::operator()(const std::string_view &l, const std::string_view &r) const noexcept
+{
+    // TODO: assumes null terminated
+    return Q_strcasecmp(l.data(), r.data()) == 0;
+}
+
 bool natural_case_insensitive_less::operator()(const std::string &l, const std::string &r) const noexcept
 {
+    return stlnatstrlt(l, r, false);
+}
+
+bool natural_case_insensitive_less::operator()(const std::string_view &l, const std::string_view &r) const noexcept
+{
+    // TODO: assumes null terminated
     return stlnatstrlt(l, r, false);
 }
 
@@ -749,4 +778,50 @@ std::vector<uint8_t> StringToVector(const std::string &str)
 {
     std::vector<uint8_t> result(str.begin(), str.end());
     return result;
+}
+
+bool string_copy_to_array_z(std::string_view in, std::span<char> out)
+{
+    const size_t in_size = in.size();
+    const size_t out_size = out.size();
+
+    if (!out_size)
+        return false;
+
+    for (size_t i = 0; i < (out_size - 1); ++i) {
+        if (i < in_size)
+            out[i] = in[i];
+        else
+            out[i] = '\0';
+    }
+    out[out_size - 1] = '\0';
+
+    return (in_size + 1) <= out_size;
+}
+
+std::string string_copy_from_array_z(std::span<const char> in, bool *success_out)
+{
+    int first_null = -1;
+    for (int i = 0; i < in.size(); ++i) {
+        if (in[i] == '\0') {
+            first_null = i;
+            break;
+        }
+    }
+
+    if (first_null == -1) {
+        // unterminated. Copy the entire array, but give a warning.
+        *success_out = false;
+        return std::string(in.data(), in.size());
+    }
+
+    if (first_null == 0) {
+        // empty case
+        *success_out = true;
+        return std::string();
+    }
+
+    // common case... nonempty, null terminated
+    *success_out = true;
+    return std::string(in.data(), first_null);
 }

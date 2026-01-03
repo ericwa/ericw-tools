@@ -219,8 +219,7 @@ static void EmitFaceFragment(face_t *face, face_fragment_t *fragment, emit_faces
     out.planenum = ExportMapPlane(face->planenum & ~1);
     out.side = face->planenum & 1;
     out.texinfo = ExportMapTexinfo(face->texinfo);
-    for (i = 0; i < MAXLIGHTMAPS; i++)
-        out.styles[i] = 255;
+    out.styles = std::vector<uint8_t>(qbsp_options.target_game->num_styles(), 255);
     out.lightofs = -1;
 
     // emit surfedges

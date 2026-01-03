@@ -31,6 +31,7 @@ class QLineEdit;
 class QCheckBox;
 class QTextEdit;
 class StatsPanel;
+class FacePanel;
 class QLabel;
 
 enum class ETLogTab
@@ -72,6 +73,7 @@ private:
     bool m_fileWasReload = false;
     QString m_mapFile;
     bspdata_t m_bspdata;
+    std::vector<entdict_t> m_entities;
     std::vector<uint8_t> m_litdata;
     std::vector<uint32_t> m_hdr_litdata;
     settings::common_settings render_settings;
@@ -79,6 +81,7 @@ private:
     ETLogTab m_activeLogTab = ETLogTab::TAB_LIGHTPREVIEW;
     QThread *m_compileThread = nullptr;
     QLabel *m_cameraStatus = nullptr;
+    QCheckBox *m_littransucency = nullptr;
 
 public:
     explicit MainWindow(QWidget *parent = nullptr);
@@ -88,11 +91,13 @@ private:
     void createPropertiesSidebar();
     void createOutputLog();
     void createStatsSidebar();
+    void createFaceSidebar();
     void lightpreview_log_callback(logging::flag flags, const char *str);
     void lightpreview_percent_callback(std::optional<uint32_t> percent, std::optional<duration> elapsed);
     void logWidgetSetText(ETLogTab tab, const std::string &str);
     void createStatusBar();
     void updateRecentsSubmenu(const QStringList &recents);
+    void quickSwitch();
     void updateCameraBookmarksSubmenu();
     void setupMenu();
     void fileOpen();
@@ -114,10 +119,12 @@ private:
     void loadFile(const QString &file);
     void loadFileInternal(const QString &file, bool is_reload);
     void displayCameraPositionInfo();
+    void updateCameraFaceInfo();
 
 private:
     GLView *glView = nullptr;
     StatsPanel *stats_panel = nullptr;
+    FacePanel *face_panel = nullptr;
 
     QCheckBox *vis_checkbox = nullptr;
     QCheckBox *light_checkbox = nullptr;
