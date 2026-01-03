@@ -1486,7 +1486,8 @@ TEST(testmapsQ1, detailFence)
     EXPECT_EQ(detail_fence_leaf->nummarksurfaces, 0);
 
     contentflags_t detail_fence_leaf_flags = extflags[leafnum];
-    EXPECT_EQ(detail_fence_leaf_flags.flags, EWT_VISCONTENTS_WINDOW | EWT_CFLAG_DETAIL | EWT_CFLAG_TRANSLUCENT | EWT_CFLAG_MIRROR_INSIDE_SET);
+    EXPECT_EQ(detail_fence_leaf_flags.flags,
+        EWT_VISCONTENTS_WINDOW | EWT_CFLAG_DETAIL | EWT_CFLAG_TRANSLUCENT | EWT_CFLAG_MIRROR_INSIDE_SET);
 
     // grab a random face inside the detail_fence - we should find it inside the player start leaf's markfaces list
     const auto back_of_pillar_pos = qvec3d(176, -32, 120);
@@ -1960,6 +1961,49 @@ int CountClipnodeNodes(const mbsp_t &bsp, int hullnum)
     return CountClipnodeNodes_r(bsp, headnode);
 }
 
+TEST(testmapsQ1, hullExpansionBasic)
+{
+    // this has a func_wall with a triangular prism (5 sides):
+    //
+    //  ^
+    //  |    ^-------\   this end is sheared upwards a bit
+    // +Z   /_\_______\
+    //  |
+    //  ---- +Y -------->
+    //
+    // The way the BRUSHLIST bspx lump makes the AABB of the brush implicit
+    // makes it hard to come up with examples for testing that the "cap" planes
+    // are being inserted.
+    //
+    // this one is completely broken if you try to walk on the top edge of the prism,
+    // and the cap planes are disabled (e.g. return at the start of AddBrushBevels)
+
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_hull_expansion.map", {"-wrbrushes"});
+
+    const bspxbrushes lump = deserialize<bspxbrushes>(bspx.at("BRUSHLIST"));
+    ASSERT_EQ(lump.models.size(), 2); // world + 1x func_wall
+
+    const auto &funcwall = lump.models.at(1);
+    ASSERT_EQ(funcwall.brushes.size(), 1);
+
+    const auto &prism = funcwall.brushes.at(0);
+    ASSERT_GE(prism.faces.size(), 3); // 2 non-axial faces, the sloped sides, plus the cap
+
+    const qplane3d prism_top_cap_plane =
+        qplane3d::from_points({qvec3d(-49.25, -64, 29.5), qvec3d(-62.75, -64, 29.5), qvec3d(-56, 800, 83.5)});
+
+    // conver to qplane3d's
+    std::vector<qplane3d> prism_planes;
+    for (auto &prism_face : prism.faces) {
+        prism_planes.push_back(qplane3d(prism_face.normal, prism_face.dist));
+    }
+
+    // check for presence to top cap
+    using namespace testing;
+    EXPECT_THAT(prism_planes,
+        Contains(Truly([=](const qplane3d &inp) -> bool { return qv::epsilonEqual(prism_top_cap_plane, inp); })));
+}
+
 /**
  * Tests a bad hull expansion
  */
@@ -2379,6 +2423,37 @@ TEST(qbspHL, basic)
     EXPECT_EQ(64, bsp.dtex.textures[1].height);
 }
 
+TEST(qbspHL, liquids)
+{
+    const auto [bsp, bspx, prt] = LoadTestmap("hl_liquids.map", {"-hlbsp", "-notex"});
+    EXPECT_TRUE(prt);
+
+    const qvec3f liquid_top_face_pos{104, -424, 64};
+    const qvec3f liquid_interior_pos{104, -424, 40};
+
+    const auto *top_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], liquid_top_face_pos, {0, 0, 1});
+    ASSERT_TRUE(top_face);
+
+    EXPECT_EQ(Face_TextureNameView(&bsp, top_face), "!liquidtest");
+
+    EXPECT_EQ(CONTENTS_WATER, BSP_FindContentsAtPoint(&bsp, 0, &bsp.dmodels[0], liquid_interior_pos));
+}
+
+TEST(qbspHL, currents)
+{
+    const auto [bsp, bspx, prt] = LoadTestmap("hl_currents.map", {"-hlbsp"});
+    EXPECT_TRUE(prt);
+
+    // check the contents at a few points
+    EXPECT_EQ(HL_CONTENTS_CURRENT_90, BSP_FindContentsAtPoint(&bsp, 0, &bsp.dmodels[0], {200, -200, -8}));
+    EXPECT_EQ(HL_CONTENTS_CURRENT_0, BSP_FindContentsAtPoint(&bsp, 0, &bsp.dmodels[0], {376, -56, -8}));
+
+    // we're not generating faces between different currents, unlike the vanilla compiler
+    // (we could, but it'd be more work)
+    const auto *cur90_cur0_transition = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {208, -64, -8});
+    ASSERT_FALSE(cur90_cur0_transition);
+}
+
 TEST(qbspQ1, wrbrushesAndMiscExternalMap)
 {
     const auto [bsp, bspx, prt] = LoadTestmap("q1_external_map_base.map", {"-wrbrushes"});
@@ -2400,15 +2475,27 @@ TEST(qbspQ1, wrbrushesContentTypes)
     const auto [bsp, bspx, prt] = LoadTestmap("q1_hull1_content_types.map", {"-wrbrushes"});
 
     const bspxbrushes lump = deserialize<bspxbrushes>(bspx.at("BRUSHLIST"));
-    ASSERT_EQ(lump.models.size(), 1);
+    ASSERT_EQ(lump.models.size(), 7); // world + 6x func_wall (solid, water, slime, lava, sky, clip)
 
-    auto &model = lump.models.at(0);
-    ASSERT_EQ(model.numfaces, 0); // all faces are axial
-    ASSERT_EQ(model.modelnum, 0);
+    auto &worldmodel = lump.models.at(0);
+    ASSERT_EQ(worldmodel.numfaces, 0); // all faces are axial
+    ASSERT_EQ(worldmodel.modelnum, 0);
 
-    const std::vector<int> expected{
-        CONTENTS_SOLID, CONTENTS_SOLID, CONTENTS_SOLID, CONTENTS_SOLID, CONTENTS_SOLID, CONTENTS_SOLID, CONTENTS_WATER,
-        CONTENTS_SLIME, CONTENTS_LAVA, CONTENTS_SOLID, CONTENTS_SKY, BSPXBRUSHES_CONTENTS_CLIP,
+    // clang-format off
+    const std::vector<int> expected
+    {
+        CONTENTS_SOLID,
+        CONTENTS_SOLID,
+        CONTENTS_SOLID,
+        CONTENTS_SOLID,
+        CONTENTS_SOLID,
+        CONTENTS_SOLID,
+        CONTENTS_WATER,
+        CONTENTS_SLIME,
+        CONTENTS_LAVA,
+        CONTENTS_SOLID,
+        CONTENTS_SKY,
+        BSPXBRUSHES_CONTENTS_CLIP,
         CONTENTS_SOLID, // detail solid in source map
         CONTENTS_SOLID, // detail fence in source map
         // detail illusionary brush should be omitted
@@ -2416,11 +2503,45 @@ TEST(qbspQ1, wrbrushesContentTypes)
         // detail illusionary brush should be omitted
         CONTENTS_SOLID // detail wall in source map
     };
-    ASSERT_EQ(model.brushes.size(), expected.size());
+    // clang-format on
+    ASSERT_EQ(worldmodel.brushes.size(), expected.size());
 
     for (size_t i = 0; i < expected.size(); ++i) {
         SCOPED_TRACE(fmt::format("brush {}", i));
-        EXPECT_EQ(expected[i], model.brushes[i].contents);
+        EXPECT_EQ(expected[i], worldmodel.brushes[i].contents);
+    }
+
+    {
+        SCOPED_TRACE("bmodel contents");
+
+        // 6x func_wall
+
+        // clang-format off
+        const std::vector<int> expected_bmodel_contents
+        {
+            CONTENTS_SOLID, // was solid
+            CONTENTS_SOLID, // was water
+            CONTENTS_SOLID, // was slime
+            CONTENTS_SOLID, // was lava
+            CONTENTS_SOLID, // was sky
+
+            // clip is the only contents that doesn't behave as a solid when used in bmodels: you can shoot through
+            // it but not walk through it. By mapping to BSPXBRUSHES_CONTENTS_CLIP
+            // we get the same behaviour in FTEQW with -wrbrushes, as we do in the q1bsp loaded in QS.
+            BSPXBRUSHES_CONTENTS_CLIP, // was clip
+        };
+        // clang-format on
+
+        for (int i = 1; i < 7; ++i) {
+            int expected_content = expected_bmodel_contents.at(i - 1);
+            auto &bmodel = lump.models.at(i);
+
+            ASSERT_EQ(bmodel.numfaces, 0); // all faces are axial
+            ASSERT_EQ(bmodel.modelnum, i);
+
+            ASSERT_EQ(bmodel.brushes.size(), 1);
+            EXPECT_EQ(bmodel.brushes[0].contents, expected_content);
+        }
     }
 }
 

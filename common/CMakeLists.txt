@@ -12,6 +12,7 @@ add_library(common STATIC
     decompile.cc
     entdata.cc
     litfile.cc
+    lightgrid.cc
     log.cc
     mathlib.cc
     parser.cc
@@ -56,9 +57,10 @@ add_library(common STATIC
     ../include/common/vectorutils.hh
     ../include/common/ostream.hh
     ../include/common/mapfile.hh
+    ../include/common/lightgrid.hh
 )
 
-target_link_libraries(common ${CMAKE_THREAD_LIBS_INIT} TBB::tbb TBB::tbbmalloc fmt::fmt nlohmann_json::nlohmann_json pareto)
+target_link_libraries(common ${CMAKE_THREAD_LIBS_INIT} TBB::tbb TBB::tbbmalloc fmt::fmt jsoncpp_static pareto)
 
 target_precompile_headers(common INTERFACE
         <filesystem>

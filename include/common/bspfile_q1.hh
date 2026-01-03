@@ -105,6 +105,13 @@ enum q1_contents_t : int32_t
     CONTENTS_MIN = CONTENTS_SKY
 };
 
+constexpr static int HL_CONTENTS_CURRENT_0 = -9;
+constexpr static int HL_CONTENTS_CURRENT_90 = -10;
+constexpr static int HL_CONTENTS_CURRENT_180 = -11;
+constexpr static int HL_CONTENTS_CURRENT_270 = -12;
+constexpr static int HL_CONTENTS_CURRENT_UP = -13;
+constexpr static int HL_CONTENTS_CURRENT_DOWN = -14;
+
 constexpr static int BSPXBRUSHES_CONTENTS_CLIP = -8;
 
 struct bsp29_dnode_t

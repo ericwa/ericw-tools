@@ -501,11 +501,11 @@ static bool IsSkipName(const char *name)
         return false;
     if (!Q_strcasecmp(name, "skip"))
         return true;
-    if (!Q_strcasecmp(name, "*waterskip"))
+    if ((!Q_strcasecmp(name, "*waterskip")) || (!Q_strcasecmp(name, "!waterskip")))
         return true;
-    if (!Q_strcasecmp(name, "*slimeskip"))
+    if ((!Q_strcasecmp(name, "*slimeskip")) || (!Q_strcasecmp(name, "!slimeskip")))
         return true;
-    if (!Q_strcasecmp(name, "*lavaskip"))
+    if ((!Q_strcasecmp(name, "*lavaskip")) || (!Q_strcasecmp(name, "!lavaskip")))
         return true;
     if (!Q_strcasecmp(name, "bevel")) // zhlt compat
         return true;
@@ -527,7 +527,7 @@ static bool IsNoExpandName(const char *name)
  */
 static bool IsSpecialName(const char *name, bool allow_litwater)
 {
-    if (name[0] == '*' && !allow_litwater)
+    if (((name[0] == '*') || (name[0] == '!')) && !allow_litwater)
         return true;
     if (!Q_strncasecmp(name, "sky", 3) && !qbsp_options.splitsky.value())
         return true;

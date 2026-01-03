@@ -32,7 +32,6 @@
 #include <fstream>
 
 #include <stdexcept>
-using nlohmann::json;
 
 /**
  * Returns the output plane number
@@ -255,8 +254,7 @@ static void ExportDrawNodes(node_t *node)
         if (auto *children_i_leafdata = nodedata->children[i]->get_leafdata()) {
             // children[i] is a leaf
             // In Q2, all leaves must have their own ID even if they share solidity.
-            if (qbsp_options.target_game->id != GAME_QUAKE_II &&
-                children_i_leafdata->contents.is_any_solid()) {
+            if (qbsp_options.target_game->id != GAME_QUAKE_II && children_i_leafdata->contents.is_any_solid()) {
                 dnode->children[i] = PLANENUM_LEAF;
             } else {
                 int32_t nextLeafIndex = static_cast<int32_t>(map.bsp.dleafs.size());
@@ -364,13 +362,13 @@ static void WriteExtendedTexinfoFlags()
     std::sort(texinfos_sorted.begin(), texinfos_sorted.end(),
         [](const maptexinfo_t &a, const maptexinfo_t &b) { return a.outputnum < b.outputnum; });
 
-    json texinfofile = json::object();
+    auto texinfofile = Json::Value(Json::objectValue);
 
     for (const auto &tx : texinfos_sorted) {
         if (!tx.outputnum.has_value())
             continue;
 
-        json t = tx.flags.to_json();
+        auto t = tx.flags.to_json();
         texinfofile[std::to_string(*tx.outputnum)].swap(t);
     }
 
@@ -390,10 +388,10 @@ static void WriteExtendedContentFlags()
 
     Q_assert(map.exported_extended_contentflags.size() == map.bsp.dleafs.size());
 
-    json jsonfile = json::array();
+    Json::Value jsonfile = Json::Value(Json::arrayValue);
 
     for (const auto &flags : map.exported_extended_contentflags) {
-        jsonfile.push_back(flags.to_json());
+        jsonfile.append(flags.to_json());
     }
 
     std::ofstream(file, std::ios_base::out | std::ios_base::binary) << jsonfile;

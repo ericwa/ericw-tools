@@ -1,5 +1,8 @@
 ## ericw-tools
  - Website:         http://ericwa.github.io/ericw-tools
+ - Documentation:
+   - 2.0.0-alpha: https://ericw-tools.readthedocs.io
+   - 0.18: [qbsp](https://ericwa.github.io/ericw-tools/doc/qbsp.html), [vis](https://ericwa.github.io/ericw-tools/doc/vis.html), [light](https://ericwa.github.io/ericw-tools/doc/light.html), [bspinfo](https://ericwa.github.io/ericw-tools/doc/bspinfo.html), [bsputil](https://ericwa.github.io/ericw-tools/doc/bsputil.html)
  - Maintainer:      Eric Wasylishen (AKA ericw)
  - Email:           ewasylishen@gmail.com
 
@@ -54,6 +57,7 @@ cd ericw-tools
 mkdir build
 cd build
 cmake ..
+make
 ```
 
 ### Windows
@@ -91,16 +95,17 @@ cmake .. -DCMAKE_TOOLCHAIN_FILE="$(pwd)/../vcpkg/scripts/buildsystems/vcpkg.cmak
 
   (see: https://youtrack.jetbrains.com/issue/CPP-29559/Clion-LLDB-does-not-break-on-SEH-exceptions-within-GTest)
 
-### macOS 10.15
+### macOS 10.15+
 
 ```
-brew install embree tbb
+brew install embree tbb qt@6 cmake
 python3 -m pip install sphinx_rtd_theme
 git clone --recursive https://github.com/ericwa/ericw-tools
 cd ericw-tools
 mkdir build
 cd build
-cmake .. -GXcode -DCMAKE_PREFIX_PATH="$(brew --prefix embree);$(brew --prefix tbb)"
+cmake .. -DCMAKE_PREFIX_PATH="$(brew --prefix embree);$(brew --prefix tbb)"
+make
 ```
 
 ## Credits

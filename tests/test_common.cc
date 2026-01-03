@@ -1,3 +1,5 @@
+#include "common/json.hh"
+
 #include <gtest/gtest.h>
 
 #include <filesystem>
@@ -13,6 +15,19 @@ TEST(common, StripFilename)
 {
     ASSERT_EQ("/home/foo", fs::path("/home/foo/bar.txt").parent_path());
     ASSERT_EQ("", fs::path("bar.txt").parent_path());
+}
+
+TEST(common, stringIStartsWith)
+{
+    // true cases
+    EXPECT_TRUE(string_istarts_with("asdf", "a"));
+    EXPECT_TRUE(string_istarts_with("asdf", "AS"));
+    EXPECT_TRUE(string_istarts_with("asdf", "ASDF"));
+    EXPECT_TRUE(string_istarts_with("asdf", ""));
+
+    // false cases
+    EXPECT_FALSE(string_istarts_with("asdf", "ASt"));
+    EXPECT_FALSE(string_istarts_with("asdf", "ASDFX"));
 }
 
 TEST(common, q1Contents)
@@ -57,7 +72,8 @@ TEST(common, q1Contents)
 
     {
         SCOPED_TRACE("detail_solid plus water");
-        auto combined = contentflags_t::combine_contents(detail_solid, game_q1->create_contents_from_native(CONTENTS_WATER));
+        auto combined =
+            contentflags_t::combine_contents(detail_solid, game_q1->create_contents_from_native(CONTENTS_WATER));
 
         EXPECT_TRUE(combined.is_any_solid());
         EXPECT_TRUE(combined.is_detail_solid());
@@ -67,11 +83,45 @@ TEST(common, q1Contents)
 
     {
         SCOPED_TRACE("detail_solid plus sky");
-        auto combined = contentflags_t::combine_contents(detail_solid, game_q1->create_contents_from_native(CONTENTS_SKY));
+        auto combined =
+            contentflags_t::combine_contents(detail_solid, game_q1->create_contents_from_native(CONTENTS_SKY));
 
         EXPECT_FALSE(combined.is_detail_solid());
         EXPECT_TRUE(combined.is_sky());
         EXPECT_TRUE(combined.is_solid());
+    }
+}
+
+TEST(common, hlCurrents)
+{
+    auto *game = bspver_hl.game;
+
+    struct case_t
+    {
+        const char *texname;
+        contents_int_t expected_ewt;
+        int expected_hl;
+    };
+
+    std::vector<case_t> cases{
+        {"!cur_0X", EWT_CFLAG_CURRENT_0 | EWT_VISCONTENTS_WATER, HL_CONTENTS_CURRENT_0},
+        {"!cur_90X", EWT_CFLAG_CURRENT_90 | EWT_VISCONTENTS_WATER, HL_CONTENTS_CURRENT_90},
+        {"!cur_180X", EWT_CFLAG_CURRENT_180 | EWT_VISCONTENTS_WATER, HL_CONTENTS_CURRENT_180},
+        {"!cur_270X", EWT_CFLAG_CURRENT_270 | EWT_VISCONTENTS_WATER, HL_CONTENTS_CURRENT_270},
+        {"!cur_upX", EWT_CFLAG_CURRENT_UP | EWT_VISCONTENTS_WATER, HL_CONTENTS_CURRENT_UP},
+        {"!cur_dwnX", EWT_CFLAG_CURRENT_DOWN | EWT_VISCONTENTS_WATER, HL_CONTENTS_CURRENT_DOWN},
+    };
+
+    for (const case_t &c : cases) {
+        // check face_get_contents
+        auto case_contents = game->face_get_contents(c.texname, {}, {}, false);
+        EXPECT_EQ(case_contents.flags, c.expected_ewt);
+
+        // check EWT -> HL
+        EXPECT_EQ(c.expected_hl, game->contents_to_native(case_contents));
+
+        // check HL -> EWT
+        EXPECT_EQ(c.expected_ewt, game->create_contents_from_native(c.expected_hl).flags);
     }
 }
 
@@ -338,9 +388,9 @@ TEST(common, q2ContentsRoundtrip)
 TEST(common, jsonContentsEmpty)
 {
     contentflags_t contents{};
-    EXPECT_EQ(nlohmann::json::array(), contents.to_json());
+    EXPECT_EQ(Json::Value(Json::arrayValue), contents.to_json());
 
-    contentflags_t roundtrip = contentflags_t::from_json(nlohmann::json::array());
+    contentflags_t roundtrip = contentflags_t::from_json(Json::Value(Json::arrayValue));
     EXPECT_EQ(roundtrip, contents);
 }
 
@@ -348,7 +398,7 @@ TEST(common, jsonContentsDetailSolid)
 {
     contentflags_t contents = contentflags_t::make(EWT_VISCONTENTS_SOLID | EWT_CFLAG_DETAIL | EWT_CFLAG_Q2_UNUSED_31);
 
-    auto expected_json = nlohmann::json::array({"SOLID", "DETAIL", "Q2_UNUSED_31"});
+    auto expected_json = json_array({"SOLID", "DETAIL", "Q2_UNUSED_31"});
     EXPECT_EQ(expected_json, contents.to_json());
 
     contentflags_t roundtrip = contentflags_t::from_json(expected_json);
@@ -359,8 +409,9 @@ TEST(common, q2PortalCanSeeThrough)
 {
     auto *game_q2 = bspver_q2.game;
 
-    EXPECT_TRUE(contentflags_t::portal_can_see_through(contentflags_t::make(EWT_VISCONTENTS_DETAIL_WALL | EWT_CFLAG_DETAIL),
-        contentflags_t::make(EWT_INVISCONTENTS_PLAYERCLIP)));
+    EXPECT_TRUE(
+        contentflags_t::portal_can_see_through(contentflags_t::make(EWT_VISCONTENTS_DETAIL_WALL | EWT_CFLAG_DETAIL),
+            contentflags_t::make(EWT_INVISCONTENTS_PLAYERCLIP)));
 }
 
 TEST(imglib, png)
@@ -437,9 +488,9 @@ TEST(string, strncasecmp)
 TEST(surfflags, jsonEmpty)
 {
     surfflags_t flags;
-    EXPECT_EQ(nlohmann::json::object(), flags.to_json());
+    EXPECT_EQ(Json::Value(Json::objectValue), flags.to_json());
 
-    surfflags_t roundtrip = surfflags_t::from_json(nlohmann::json::object());
+    surfflags_t roundtrip = surfflags_t::from_json(Json::Value(Json::objectValue));
     EXPECT_EQ(roundtrip, flags);
 }
 
@@ -448,7 +499,7 @@ TEST(surfflags, jsonAllQ2)
     surfflags_t flags;
     flags.native_q2 = static_cast<q2_surf_flags_t>(Q2_SURF_ALL);
 
-    nlohmann::json json = flags.to_json();
+    Json::Value json = flags.to_json();
     surfflags_t roundtrip = surfflags_t::from_json(json);
 
     EXPECT_EQ(roundtrip.native_q2, Q2_SURF_ALL);
@@ -460,7 +511,7 @@ TEST(surfflags, jsonAllQ1)
     surfflags_t flags;
     flags.native_q1 = TEX_SPECIAL;
 
-    nlohmann::json json = flags.to_json();
+    Json::Value json = flags.to_json();
     surfflags_t roundtrip = surfflags_t::from_json(json);
 
     EXPECT_EQ(roundtrip.native_q1, TEX_SPECIAL);
@@ -497,7 +548,7 @@ TEST(surfflags, jsonAllExtended)
         .world_units_per_luxel = std::optional<float>{15.0f},
         .object_channel_mask = std::optional<int32_t>{323}};
 
-    nlohmann::json json = flags.to_json();
+    Json::Value json = flags.to_json();
     surfflags_t roundtrip = surfflags_t::from_json(json);
 
     EXPECT_EQ(roundtrip, flags);
@@ -507,7 +558,7 @@ TEST(surfflags, jsonAllFalse)
 {
     surfflags_t flags{};
 
-    nlohmann::json json = flags.to_json();
+    Json::Value json = flags.to_json();
     surfflags_t roundtrip = surfflags_t::from_json(json);
 
     EXPECT_EQ(roundtrip, flags);

@@ -286,6 +286,7 @@ void MainWindow::createPropertiesSidebar()
 
     auto *drawportals = new QCheckBox(tr("Draw Portals (PRT)"));
     auto *drawleak = new QCheckBox(tr("Draw Leak (PTS/LIN)"));
+    auto *drawlightgrid = new QCheckBox(tr("Draw Lightgrid"));
 
     auto *showtris = new QCheckBox(tr("Show Tris"));
     auto *showtris_seethrough = new QCheckBox(tr("Show Tris (See Through)"));
@@ -320,6 +321,7 @@ void MainWindow::createPropertiesSidebar()
     formLayout->addRow(rendermode_group);
     formLayout->addRow(drawportals);
     formLayout->addRow(drawleak);
+    formLayout->addRow(drawlightgrid);
     formLayout->addRow(showtris);
     formLayout->addRow(showtris_seethrough);
     formLayout->addRow(visculling);
@@ -422,6 +424,8 @@ void MainWindow::createPropertiesSidebar()
         [this](bool checked) { glView->setDrawLeafs(checked ? std::optional<int>{5} : std::nullopt); });
     connect(drawportals, &QAbstractButton::toggled, this, [this](bool checked) { glView->setDrawPortals(checked); });
     connect(drawleak, &QAbstractButton::toggled, this, [this](bool checked) { glView->setDrawLeak(checked); });
+    connect(
+        drawlightgrid, &QAbstractButton::toggled, this, [this](bool checked) { glView->setDrawLightgrid(checked); });
     connect(keepposition, &QAbstractButton::toggled, this, [this](bool checked) { glView->setKeepOrigin(checked); });
     connect(nearest, &QAbstractButton::toggled, this,
         [this](bool checked) { glView->setMagFilter(checked ? QOpenGLTexture::Nearest : QOpenGLTexture::Linear); });

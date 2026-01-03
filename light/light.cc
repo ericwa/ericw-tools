@@ -385,8 +385,9 @@ light_settings::light_settings()
           "generates a lightgrid and writes it to a bspx lump (LIGHTGRID_OCTREE)"},
       lightgrid_dist{this, "lightgrid_dist", 32.f, 32.f, 32.f, &experimental_group,
           "distance between lightgrid sample points, in world units. controls lightgrid size."},
-      lightgrid_format{this, "lightgrid_format", lightgrid_format_t::OCTREE, {{"octree", lightgrid_format_t::OCTREE}},
-          &experimental_group, "lightgrid BSPX lump to use"},
+      lightgrid_format{this, "lightgrid_format", lightgrid_format_t::OCTREE,
+          {{"octree", lightgrid_format_t::OCTREE}, {"lightgrids", lightgrid_format_t::LIGHTGRIDS}}, &experimental_group,
+          "lightgrid BSPX lump to use"},
 
       dirtdebug{this, {"dirtdebug", "debugdirt"},
           [&](const std::string &, parser_base_t &, source) {
@@ -629,6 +630,7 @@ const qvec3f &Face_LookupTextureBounceColor(const mbsp_t *bsp, const mface_t *fa
     return face_textures[face - bsp->dfaces.data()].bounceColor;
 }
 
+// needs to be done after settings are loaded from worldspawn, because it uses light_options
 static void CacheTextures(const mbsp_t &bsp)
 {
     face_textures.resize(bsp.dfaces.size());
@@ -1325,9 +1327,9 @@ int light_main(int argc, const char **argv)
     extended_texinfo_flags = LoadExtendedTexinfoFlags(source, &bsp);
     extended_content_flags = LoadExtendedContentFlags(source, &bsp);
 
-    CacheTextures(bsp);
-
     LoadEntities(light_options, &bsp);
+
+    CacheTextures(bsp);
 
     light_options.light_postinitialize(argc, argv);
     light_options.print_summary();

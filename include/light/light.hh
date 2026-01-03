@@ -268,7 +268,8 @@ enum class emissivequality_t
 
 enum class lightgrid_format_t
 {
-    OCTREE
+    OCTREE,
+    LIGHTGRIDS,
 };
 
 //

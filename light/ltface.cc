@@ -33,6 +33,7 @@
 #include <common/bsputils.hh>
 #include <common/qvec.hh>
 #include <common/ostream.hh>
+#include <common/bspxfile.hh>
 
 #include <atomic>
 #include <cassert>
@@ -1325,8 +1326,6 @@ static void LightFace_Entity(
     }
 }
 
-#define LIGHTPOINT_TAKE_MAX
-
 /**
  * Calculates light at a given point from an entity
  */
@@ -1337,30 +1336,14 @@ static void LightPoint_Entity(const mbsp_t *bsp, raystream_occlusion_t &rs, cons
 
     qvec3f surfpointToLightDir;
     float surfpointToLightDist;
-    qvec3f color{};
+    qvec3f color;
 
-    for (int axis = 0; axis < 3; ++axis) {
-        for (int sign = -1; sign <= +1; sign += 2) {
+    qvec3f normalcontrib_unused;
 
-            qvec3f cube_color;
+    GetLightContrib(light_options, entity, qvec3f(0, 0, 0), false, surfpoint, false, color, surfpointToLightDir,
+        normalcontrib_unused, &surfpointToLightDist);
 
-            qvec3f cube_normal{};
-            cube_normal[axis] = sign;
-
-            qvec3f normalcontrib_unused;
-
-            GetLightContrib(light_options, entity, cube_normal, true, surfpoint, false, cube_color, surfpointToLightDir,
-                normalcontrib_unused, &surfpointToLightDist);
-
-#ifdef LIGHTPOINT_TAKE_MAX
-            if (qv::length2(cube_color) > qv::length2(color)) {
-                color = cube_color;
-            }
-#else
-            color += cube_color / 6.0;
-#endif
-        }
-    }
+    const float anglescale = entity->anglescale.value();
 
     /* Quick distance check first */
     if (fabs(LightSample_Brightness(color)) <= light_options.gate.value()) {
@@ -1378,7 +1361,7 @@ static void LightPoint_Entity(const mbsp_t *bsp, raystream_occlusion_t &rs, cons
             continue;
         }
 
-        result.add(rs.getPushedRayColor(j), entity->style.value());
+        result.add(rs.getPushedRayColor(j), entity->style.value(), surfpointToLightDir, anglescale);
     }
 }
 
@@ -1516,32 +1499,7 @@ static void LightPoint_Sky(const mbsp_t *bsp, raystream_intersection_t &rs, cons
 
     // only 1 ray
     {
-        qvec3f color{};
-
-        for (int axis = 0; axis < 3; ++axis) {
-            for (int sign = -1; sign <= +1; sign += 2) {
-
-                qvec3f cube_color;
-
-                qvec3f cube_normal{};
-                cube_normal[axis] = sign;
-
-                float angle = qv::dot(incoming, cube_normal);
-                angle = std::max(0.0f, angle);
-                angle = (1.0f - sun->anglescale) + sun->anglescale * angle;
-
-                float value = angle * sun->sunlight;
-                cube_color = sun->sunlight_color * (value / 255.0f);
-
-#ifdef LIGHTPOINT_TAKE_MAX
-                if (qv::length2(cube_color) > qv::length2(color)) {
-                    color = cube_color;
-                }
-#else
-                color += cube_color / 6;
-#endif
-            }
-        }
+        qvec3f color = sun->sunlight_color * (sun->sunlight / 255.0f);
 
         /* Quick distance check first */
         if (fabs(LightSample_Brightness(color)) <= light_options.gate.value()) {
@@ -1564,7 +1522,7 @@ static void LightPoint_Sky(const mbsp_t *bsp, raystream_intersection_t &rs, cons
             continue;
         }
 
-        result.add(rs.getPushedRayColor(j), sun->style);
+        result.add(rs.getPushedRayColor(j), sun->style, incoming, sun->anglescale);
     }
 }
 
@@ -1737,6 +1695,11 @@ static void LightFace_LocalMin(
             continue;
         }
 
+        // check lighting channels
+        if (!(entity->light_channel_mask.value() & lightsurf->object_channel_mask)) {
+            return;
+        }
+
         raystream_occlusion_t &rs = occlusion_stream;
         rs.clearPushedRays();
 
@@ -1760,7 +1723,7 @@ static void LightFace_LocalMin(
         }
 
         // local minlight just needs occlusion, not closest hit
-        rs.tracePushedRaysOcclusion(modelinfo, CHANNEL_MASK_DEFAULT);
+        rs.tracePushedRaysOcclusion(modelinfo, entity->shadow_channel_mask.value());
 #if 0
         total_light_rays += rs.numPushedRays();
 #endif
@@ -1837,9 +1800,9 @@ static void LightFace_AutoMin(const mbsp_t *bsp, const mface_t *face, lightsurf_
         }
     }
 
-    auto [grid_samples, occluded] = FixPointAndCalcLightgrid(bsp, center);
+    auto grid_samples = FixPointAndCalcLightgrid(bsp, center);
 
-    if (!occluded) {
+    if (!grid_samples.occluded) {
         // process each of the captured styles
         for (const auto &grid_sample : grid_samples.samples_by_style) {
             if (!grid_sample.used)
@@ -1851,7 +1814,8 @@ static void LightFace_AutoMin(const mbsp_t *bsp, const mface_t *face, lightsurf_
             // apply the minlight
             for (int i = 0; i < lightsurf->samples.size(); i++) {
                 if (apply_to_all || lightsurf->samples[i].occluded) {
-                    lightmap->samples[i].color = qv::max(qvec3f{grid_sample.color}, lightmap->samples[i].color);
+                    lightmap->samples[i].color =
+                        qv::max(grid_sample.undirectional_color, lightmap->samples[i].color);
                 }
             }
 
@@ -2148,26 +2112,8 @@ LightPoint_SurfaceLight(const mbsp_t *bsp, const std::vector<uint8_t> *pvs, rays
 
                 rs.clearPushedRays();
 
-                for (int axis = 0; axis < 3; ++axis) {
-                    for (int sign = -1; sign <= +1; sign += 2) {
-
-                        qvec3f cube_color;
-
-                        qvec3f cube_normal{};
-                        cube_normal[axis] = sign;
-
-                        cube_color = GetSurfaceLighting(cfg, vpl, vpl_settings, dir, dist, cube_normal, true,
-                            standard_scale, sky_scale, hotspot_clamp);
-
-#ifdef LIGHTPOINT_TAKE_MAX
-                        if (qv::length2(cube_color) > qv::length2(indirect)) {
-                            indirect = cube_color;
-                        }
-#else
-                        indirect += cube_color / 6.0f;
-#endif
-                    }
-                }
+                indirect = GetSurfaceLighting(
+                    cfg, vpl, vpl_settings, dir, dist, qvec3f(), false, standard_scale, sky_scale, hotspot_clamp);
 
                 if (!qv::gate(indirect, surflight_gate)) { // Each point contributes very little to the final result
                     rs.pushRay(0, pos, dir, dist, &indirect);
@@ -2187,7 +2133,7 @@ LightPoint_SurfaceLight(const mbsp_t *bsp, const std::vector<uint8_t> *pvs, rays
 
                     // Q_assert(!std::isnan(indirect[0]));
 
-                    result.add(indirect, vpl_settings.style);
+                    result.add(indirect, vpl_settings.style, -dir, 1.0f);
                 }
             }
         }
@@ -2463,7 +2409,10 @@ static void LightPoint_ScaleAndClamp(lightgrid_samples_t &result)
 {
     for (auto &sample : result.samples_by_style) {
         if (sample.used) {
-            LightPoint_ScaleAndClamp(sample.color);
+            for (qvec3f &color : sample.colors) {
+                LightPoint_ScaleAndClamp(color);
+            }
+            LightPoint_ScaleAndClamp(sample.undirectional_color);
         }
     }
 }
@@ -2754,42 +2703,21 @@ void PostProcessLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const setti
 }
 // lightgrid
 
-lightgrid_samples_t &lightgrid_samples_t::operator+=(const lightgrid_samples_t &other) noexcept
-{
-    for (auto &other_sample : other.samples_by_style) {
-        if (!other_sample.used) {
-            break;
-        }
-        add(other_sample.color, other_sample.style);
-    }
-    return *this;
-}
-
-lightgrid_samples_t &lightgrid_samples_t::operator/=(float scale) noexcept
-{
-    for (auto &sample : samples_by_style) {
-        if (!sample.used) {
-            break;
-        }
-        sample.color /= scale;
-    }
-    return *this;
-}
-
-void lightgrid_samples_t::add(const qvec3f &color, int style)
+void lightgrid_samples_t::add(const qvec3f &color, int style, const qvec3f &grid_to_light_dir, float anglescale)
 {
     for (auto &sample : samples_by_style) {
         if (!sample.used) {
             // allocate new style
             sample.used = true;
             sample.style = style;
-            sample.color = color;
+
+            sample.add(color, grid_to_light_dir, anglescale);
             return;
         }
 
         if (sample.style == style) {
             // found matching style
-            sample.color += color;
+            sample.add(color, grid_to_light_dir, anglescale);
             return;
         }
     }
@@ -2810,11 +2738,24 @@ void lightgrid_samples_t::add(const qvec3f &color, int style)
 
     // overwrite the sample at min_brightness_index
     auto &target = samples_by_style[min_brightness_index];
+    target = lightgrid_sample_t(); // clear it
+    target.used = true;
     target.style = style;
-    target.color = color;
+
+    target.add(color, grid_to_light_dir, anglescale);
 }
 
 qvec3b lightgrid_sample_t::round_to_int() const
+{
+    return ::round_to_int(undirectional_color);
+}
+
+qvec3b lightgrid_sample_t::round_to_int(int side) const
+{
+    return ::round_to_int(colors[side]);
+}
+
+qvec3b round_to_int(const qvec3f &color)
 {
     return qvec3b{std::clamp((int)round(color[0]), 0, 255), std::clamp((int)round(color[1]), 0, 255),
         std::clamp((int)round(color[2]), 0, 255)};
@@ -2822,39 +2763,32 @@ qvec3b lightgrid_sample_t::round_to_int() const
 
 float lightgrid_sample_t::brightness() const
 {
-    return (color[0] + color[1] + color[2]) / 3.0;
+    float total = 0.0f;
+    for (const qvec3f &c : colors)
+        for (int i = 0; i < 3; ++i)
+            total += c[i];
+    return total / 18.0f; // 3 components * 6 cube sides
 }
 
-bool lightgrid_sample_t::operator==(const lightgrid_sample_t &other) const
+void lightgrid_sample_t::add(const qvec3f &color, const qvec3f &grid_to_light_dir, float anglescale)
 {
-    if (used != other.used)
-        return false;
+    float max_angle_coefficient = 0.0f;
 
-    if (!used) {
-        // if unused, style and color don't matter
-        return true;
+    for (int i = 0; i < 6; ++i) {
+        const qvec3f &cube_normal = BSPX_LIGHTGRIDS_NORMAL_ORDER[i];
+
+        float dp = qv::dot(cube_normal, grid_to_light_dir);
+        if (dp < 0)
+            continue;
+
+        float angle_coefficient = mix(1.0f, dp, anglescale);
+        colors[i] += color * angle_coefficient;
+
+        max_angle_coefficient = std::max(max_angle_coefficient, angle_coefficient);
     }
 
-    if (style != other.style)
-        return false;
-
-    // color check requires special handling for nan
-    for (int i = 0; i < 3; ++i) {
-        if (std::isnan(color[i])) {
-            if (!std::isnan(other.color[i]))
-                return false;
-        } else {
-            if (color[i] != other.color[i])
-                return false;
-        }
-    }
-
-    return true;
-}
-
-bool lightgrid_sample_t::operator!=(const lightgrid_sample_t &other) const
-{
-    return !(*this == other);
+    // for backwards compat, update undirectional_color
+    undirectional_color += color * max_angle_coefficient;
 }
 
 int lightgrid_samples_t::used_styles() const
@@ -2870,9 +2804,46 @@ int lightgrid_samples_t::used_styles() const
     return used;
 }
 
-bool lightgrid_samples_t::operator==(const lightgrid_samples_t &other) const
+bspx_lightgrid_samples_t lightgrid_samples_t::to_bspx_lightgrid_samples() const
 {
-    return samples_by_style == other.samples_by_style;
+    bspx_lightgrid_samples_t sample_out;
+
+    if (occluded) {
+        sample_out.occluded = true;
+        return sample_out;
+    }
+
+    for (int i = 0; i < used_styles(); ++i) {
+        sample_out.insert(bspx_lightgrid_sample_t{
+            .color = samples_by_style[i].round_to_int(),
+            .style = static_cast<uint8_t>(samples_by_style[i].style),
+        });
+    }
+
+    return sample_out;
+}
+
+lightgrids_sampleset_t lightgrid_samples_t::to_lightgrids_sampleset_t() const
+{
+    lightgrids_sampleset_t sample_out;
+
+    if (occluded) {
+        sample_out.occluded = true;
+        return sample_out;
+    }
+
+    for (int i = 0; i < used_styles(); ++i) {
+        lightgrids_sample_t samp;
+
+        for (int j = 0; j < 6; ++j) {
+            samp.colors[j] = samples_by_style[i].round_to_int(j);
+        }
+        samp.style = static_cast<uint8_t>(samples_by_style[i].style);
+
+        sample_out.insert(samp);
+    }
+
+    return sample_out;
 }
 
 lightgrid_samples_t CalcLightgridAtPoint(const mbsp_t *bsp, const qvec3f &world_point)

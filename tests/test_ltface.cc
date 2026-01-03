@@ -5,6 +5,7 @@
 #include <light/surflight.hh>
 #include <common/bspinfo.hh>
 #include <common/litfile.hh>
+#include <common/lightgrid.hh>
 #include <qbsp/qbsp.hh>
 #include <testmaps.hh>
 #include <vis/vis.hh>
@@ -151,49 +152,6 @@ testresults_t QbspVisLight_HL(
     return QbspVisLight_Common(name, {"-hlbsp"}, extra_light_args, run_vis);
 }
 
-TEST(lightgridsample, styleEquality)
-{
-    lightgrid_sample_t a{.used = true, .style = 4, .color = {}};
-    lightgrid_sample_t b = a;
-    EXPECT_EQ(a, b);
-
-    b.style = 6;
-    EXPECT_NE(a, b);
-}
-
-TEST(lightgridsample, colorEquality)
-{
-    lightgrid_sample_t a{.used = true, .style = 4, .color = {1, 2, 3}};
-    lightgrid_sample_t b = a;
-    EXPECT_EQ(a, b);
-
-    b.color = {6, 5, 4};
-    EXPECT_NE(a, b);
-}
-
-TEST(lightgridsample, nanColors)
-{
-    lightgrid_sample_t a{.used = true, .style = 4, .color = {std::numeric_limits<double>::quiet_NaN(), 1.0, 1.0}};
-    lightgrid_sample_t b = a;
-    EXPECT_EQ(a, b);
-
-    b.color = {0, 0, 0};
-    EXPECT_NE(a, b);
-}
-
-TEST(lightgridsample, unusedEqualityDoesntConsiderOtherAttributes)
-{
-    lightgrid_sample_t a, b;
-    EXPECT_FALSE(a.used);
-    EXPECT_EQ(a, b);
-
-    b.style = 5;
-    EXPECT_EQ(a, b);
-
-    b.color = {1, 0, 0};
-    EXPECT_EQ(a, b);
-}
-
 TEST(worldunitsperluxel, lightgrid)
 {
     auto [bsp, bspx] = QbspVisLight_Q2("q2_lightmap_custom_scale.map", {"-lightgrid"});
@@ -230,6 +188,87 @@ TEST(worldunitsperluxel, lightgrid)
         auto sky_face_info = BSPX_DecoupledLM(bspx, Face_GetNum(&bsp, sky_face));
         EXPECT_EQ(sky_face_info.lmwidth, 0);
         EXPECT_EQ(sky_face_info.lmheight, 0);
+    }
+
+    {
+        SCOPED_TRACE("LIGHTGRID_OCTREE lump generated");
+
+        auto it = bspx.find("LIGHTGRID_OCTREE");
+        ASSERT_TRUE(it != bspx.end());
+
+        const std::vector<uint8_t> orig_bytes = it->second;
+
+        auto parsed = BSPX_LightgridOctree(bspx);
+        ASSERT_TRUE(parsed.has_value());
+
+        {
+            SCOPED_TRACE("try round-tripping it back to bytes");
+            std::ostringstream ostream(std::ios_base::out | std::ios_base::binary);
+            ostream << endianness<std::endian::little>;
+            ostream <= parsed.value();
+
+            std::vector<uint8_t> new_bytes = StringToVector(ostream.str());
+            EXPECT_EQ(orig_bytes, new_bytes);
+        }
+
+        {
+            SCOPED_TRACE("check some sample points");
+
+            auto samp_optional = Lightgrid_SampleAtPoint(*parsed, {144, -336, 96});
+            ASSERT_TRUE(samp_optional.has_value());
+
+            ASSERT_FALSE(samp_optional->occluded);
+            ASSERT_EQ(1, samp_optional->used_samples);
+
+            EXPECT_EQ(1, samp_optional->samples_by_style[0].style);
+            EXPECT_EQ(qvec3b(107, 149, 133), samp_optional->samples_by_style[0].color);
+        }
+    }
+}
+
+TEST(worldunitsperluxel, lightgrids)
+{
+    auto [bsp, bspx] =
+        QbspVisLight_Q2("q2_lightmap_custom_scale.map", {"-lightgrid", "-lightgrid_format", "lightgrids"});
+
+    SCOPED_TRACE("LIGHTGRIDS lump generated");
+
+    auto it = bspx.find("LIGHTGRIDS");
+    ASSERT_TRUE(it != bspx.end());
+
+    const std::vector<uint8_t> orig_bytes = it->second;
+
+    std::optional<lightgrids_t> parsed = BSPX_Lightgrids(bspx);
+    ASSERT_TRUE(parsed.has_value());
+
+    {
+        SCOPED_TRACE("try round-tripping it back to bytes");
+        std::ostringstream ostream(std::ios_base::out | std::ios_base::binary);
+        ostream << endianness<std::endian::little>;
+        ostream <= parsed.value();
+
+        std::vector<uint8_t> new_bytes = StringToVector(ostream.str());
+        EXPECT_EQ(orig_bytes, new_bytes);
+    }
+
+    {
+        SCOPED_TRACE("check some sample points");
+
+        auto samp_optional = Lightgrids_SampleAtPoint(*parsed, {144, -336, 96});
+        ASSERT_TRUE(samp_optional.has_value());
+
+        ASSERT_FALSE(samp_optional->occluded);
+        ASSERT_EQ(1, samp_optional->used_samples);
+
+        EXPECT_EQ(1, samp_optional->samples_by_style[0].style);
+
+        const qvec3b *colors = samp_optional->samples_by_style[0].colors;
+        EXPECT_EQ(qvec3b(107, 149, 133), colors[0]); // +x
+        EXPECT_EQ(qvec3b(0, 0, 0), colors[1]); // -x
+        EXPECT_EQ(qvec3b(107, 149, 133), colors[2]); // +y
+        EXPECT_EQ(qvec3b(0, 0, 0), colors[3]); // -y
+        EXPECT_EQ(qvec3b(67, 93, 83), colors[4]); // +z
+        EXPECT_EQ(qvec3b(0, 0, 0), colors[5]); // -z
     }
 }
 
@@ -678,6 +717,20 @@ TEST(ltfaceQ2, lightChannelMask)
             EXPECT_LE(delta[2], 2);
         });
     }
+
+    {
+        SCOPED_TRACE("ensure delay 4 works with _light_channel_mask 16");
+
+        auto *face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {1672, 1248, 996});
+        ASSERT_TRUE(face);
+
+        CheckFaceLuxels(bsp, *face, [](qvec3b sample) {
+            qvec3i delta = qv::abs(qvec3i(sample) - qvec3i{0, 254, 246});
+            EXPECT_LE(delta[0], 2);
+            EXPECT_LE(delta[1], 2);
+            EXPECT_LE(delta[2], 2);
+        });
+    }
 }
 
 TEST(ltfaceQ2, lightChannelMaskDirtInteraction)
@@ -991,6 +1044,65 @@ TEST(ltfaceQ1, sunlight)
 {
     auto [bsp, bspx, lit] = QbspVisLight_Q1("q1_sunlight.map", {"-lit"});
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {49, 49, 49}, {0, 0, 0}, {0, 0, 1}, &lit);
+}
+
+TEST(ltfaceQ1, sunlightTwoSuns)
+{
+    auto [bsp, bspx, lit] = QbspVisLight_Q1("deprecated/suntest.map", {"-lit", "-lightgrid"});
+
+    {
+        SCOPED_TRACE("LIGHTGRID_OCTREE lump generated");
+
+        auto it = bspx.find("LIGHTGRID_OCTREE");
+        ASSERT_TRUE(it != bspx.end());
+
+        auto parsed = BSPX_LightgridOctree(bspx);
+        ASSERT_TRUE(parsed.has_value());
+
+        {
+            SCOPED_TRACE("check point getting both suns");
+
+            auto samp_optional = Lightgrid_SampleAtPoint(*parsed, {88, 600, -248});
+            ASSERT_TRUE(samp_optional.has_value());
+
+            ASSERT_FALSE(samp_optional->occluded);
+            ASSERT_EQ(1, samp_optional->used_samples);
+            EXPECT_EQ(0, samp_optional->samples_by_style[0].style);
+            EXPECT_EQ(qvec3b(130, 71, 122), samp_optional->samples_by_style[0].color);
+        }
+    }
+}
+
+// same as above, but tests LIGHTGRIDS lump (directionality)
+TEST(ltfaceQ1, sunlightTwoSunsLightgrids)
+{
+    auto [bsp, bspx, lit] =
+        QbspVisLight_Q1("deprecated/suntest.map", {"-lit", "-lightgrid", "-lightgrid_format", "lightgrids"});
+
+    auto it = bspx.find("LIGHTGRIDS");
+    ASSERT_TRUE(it != bspx.end());
+
+    auto parsed = BSPX_Lightgrids(bspx);
+    ASSERT_TRUE(parsed.has_value());
+
+    {
+        SCOPED_TRACE("check point getting both suns");
+
+        auto samp_optional = Lightgrids_SampleAtPoint(*parsed, {88, 600, -248});
+        ASSERT_TRUE(samp_optional.has_value());
+
+        ASSERT_FALSE(samp_optional->occluded);
+        ASSERT_EQ(1, samp_optional->used_samples);
+        EXPECT_EQ(0, samp_optional->samples_by_style[0].style);
+        const qvec3b *colors = samp_optional->samples_by_style[0].colors;
+
+        EXPECT_EQ(qvec3b(60, 24, 24), colors[0]); // +x
+        EXPECT_EQ(qvec3b(30, 30, 76), colors[1]); // -x
+        EXPECT_EQ(qvec3b(63, 25, 25), colors[2]); // +y
+        EXPECT_EQ(qvec3b(33, 33, 84), colors[3]); // -y
+        EXPECT_EQ(qvec3b(127, 68, 114), colors[4]); // +z
+        EXPECT_EQ(qvec3b(0, 0, 0), colors[5]); // -z
+    }
 }
 
 TEST(ltfaceQ1, suntexture)
@@ -1310,5 +1422,125 @@ TEST(ltfaceQ1, q1LightSkipShadow)
     {
         SCOPED_TRACE("func_wall with all skip faces and _shadow 1 casts shadows");
         CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0}, {552, 1392, 944}, {0, 0, 1}, &lit, &bspx);
+    }
+}
+
+// tests "light" key with a color (HL form)
+TEST(ltfaceQ1, q1LightHLForm)
+{
+    auto [bsp, bspx, lit] = QbspVisLight_Q1("q1_light_hlform.map", {"-lit"});
+
+    {
+        SCOPED_TRACE(R"(under "light" "255 127 0")");
+
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {113, 56, 0}, {512, 1152, 944}, {0, 0, 1}, &lit, &bspx);
+    }
+
+    {
+        SCOPED_TRACE(R"(under "light" "1 0.5 0 100")");
+
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {14, 7, 0}, {512, 1280, 944}, {0, 0, 1}, &lit, &bspx);
+    }
+}
+
+// tests for https://github.com/ericwa/ericw-tools/issues/424
+// where command-line -bouncecolorscale worked, but worldspawn key didn't
+TEST(ltfaceQ1, bouncecolorscale)
+{
+    auto [bsp, bspx, lit] = QbspVisLight_Q1("deprecated/bouncecolorscaletest.map", {"-lit", "-lightgrid"});
+    {
+        SCOPED_TRACE(
+            "wall receiving bounced light at (256 312 280) should be yellow, from the yellow texture on the ceiling");
+
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {11, 11, 8}, {256, 312, 280}, {-1, 0, 0}, &lit);
+    }
+
+    {
+        SCOPED_TRACE("LIGHTGRID_OCTREE lump generated");
+
+        auto it = bspx.find("LIGHTGRID_OCTREE");
+        ASSERT_TRUE(it != bspx.end());
+
+        auto parsed = BSPX_LightgridOctree(bspx);
+        ASSERT_TRUE(parsed.has_value());
+
+        {
+            SCOPED_TRACE("check point capturing only bounced light off the ceiling");
+
+            auto samp_optional = Lightgrid_SampleAtPoint(*parsed, {120, 248, 312});
+            ASSERT_TRUE(samp_optional.has_value());
+
+            ASSERT_FALSE(samp_optional->occluded);
+            ASSERT_EQ(1, samp_optional->used_samples);
+            EXPECT_EQ(0, samp_optional->samples_by_style[0].style);
+            EXPECT_EQ(qvec3b(23, 21, 16), samp_optional->samples_by_style[0].color);
+        }
+
+        {
+            SCOPED_TRACE("check point capturing direct light from the spotlight, and bounced from above");
+
+            auto samp_optional = Lightgrid_SampleAtPoint(*parsed, {184, 312, 344});
+            ASSERT_TRUE(samp_optional.has_value());
+
+            ASSERT_FALSE(samp_optional->occluded);
+            ASSERT_EQ(1, samp_optional->used_samples);
+            EXPECT_EQ(0, samp_optional->samples_by_style[0].style);
+            EXPECT_EQ(qvec3b(255, 255, 255), samp_optional->samples_by_style[0].color);
+        }
+    }
+}
+
+// same as above but test directional lightgrid
+TEST(ltfaceQ1, bouncecolorscaleLightgrids)
+{
+    auto [bsp, bspx, lit] = QbspVisLight_Q1(
+        "deprecated/bouncecolorscaletest.map", {"-lit", "-lightgrid", "-lightgrid_format", "lightgrids"});
+
+    SCOPED_TRACE("LIGHTGRIDS lump generated");
+
+    auto it = bspx.find("LIGHTGRIDS");
+    ASSERT_TRUE(it != bspx.end());
+
+    auto parsed = BSPX_Lightgrids(bspx);
+    ASSERT_TRUE(parsed.has_value());
+
+    {
+        SCOPED_TRACE("check point capturing bounced light off the ceiling");
+
+        auto samp_optional = Lightgrids_SampleAtPoint(*parsed, {120, 248, 312});
+        ASSERT_TRUE(samp_optional.has_value());
+
+        ASSERT_FALSE(samp_optional->occluded);
+        ASSERT_EQ(1, samp_optional->used_samples);
+        EXPECT_EQ(0, samp_optional->samples_by_style[0].style);
+
+        const qvec3b *colors = samp_optional->samples_by_style[0].colors;
+
+        EXPECT_EQ(qvec3b(0, 0, 0), colors[0]); // +x
+        EXPECT_EQ(qvec3b(9, 8, 6), colors[1]); // -x
+        EXPECT_EQ(qvec3b(23, 21, 16), colors[2]); // +y
+        EXPECT_EQ(qvec3b(0, 0, 0), colors[3]); // -y
+        EXPECT_EQ(qvec3b(14, 13, 10), colors[4]); // +z
+        EXPECT_EQ(qvec3b(0, 0, 0), colors[5]); // -z
+    }
+
+    {
+        SCOPED_TRACE("check point capturing direct light from the spotlight, and bounced from above");
+
+        auto samp_optional = Lightgrids_SampleAtPoint(*parsed, {184, 312, 344});
+        ASSERT_TRUE(samp_optional.has_value());
+
+        ASSERT_FALSE(samp_optional->occluded);
+        ASSERT_EQ(1, samp_optional->used_samples);
+        EXPECT_EQ(0, samp_optional->samples_by_style[0].style);
+
+        const qvec3b *colors = samp_optional->samples_by_style[0].colors;
+
+        EXPECT_EQ(qvec3b(0, 0, 0), colors[0]); // +x
+        EXPECT_EQ(qvec3b(255, 255, 255), colors[1]); // -x
+        EXPECT_EQ(qvec3b(1, 1, 1), colors[2]); // +y
+        EXPECT_EQ(qvec3b(255, 255, 255), colors[3]); // -y
+        EXPECT_EQ(qvec3b(1, 1, 1), colors[4]); // +z
+        EXPECT_EQ(qvec3b(255, 255, 255), colors[5]); // -z
     }
 }

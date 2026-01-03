@@ -775,6 +775,20 @@ public:
     {
     }
 
+    // TODO: this is repeated serveral times in the codebase
+    static qplane3 from_points(const std::array<qvec<T, 3>, 3> &planepts)
+    {
+        /* calculate the normal/dist plane equation */
+        qvec<T, 3> ab = planepts[0] - planepts[1];
+        qvec<T, 3> cb = planepts[2] - planepts[1];
+
+        T length;
+        qvec<T, 3> normal = qv::normalize(qv::cross(ab, cb), length);
+        T dist = qv::dot(planepts[1], normal);
+
+        return qplane3(normal, dist);
+    }
+
 public:
     // Sort support
     [[nodiscard]] constexpr auto operator<=>(const qplane3 &other) const = default;
@@ -808,6 +822,13 @@ struct fmt::formatter<qplane3<T>> : formatter<qvec<T, 3>>
         return ctx.out();
     }
 };
+
+// gtest support
+template<typename T>
+std::ostream &operator<<(std::ostream &os, const qplane3<T> &p)
+{
+    return os << fmt::format("{}", p);
+}
 
 using qplane3f = qplane3<float>;
 using qplane3d = qplane3<double>;

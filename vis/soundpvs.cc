@@ -105,18 +105,33 @@ void CalcAmbientSounds(mbsp_t *bsp)
                 const auto &miptex = bsp->dtex.textures[info->miptex];
 
                 ambient_type_t ambient_type;
-                if (!Q_strncasecmp(miptex.name.data(), "sky", 3) && !vis_options.noambientsky.value())
+                if (!Q_strncasecmp(miptex.name.data(), "sky", 3) && !vis_options.noambientsky.value()) {
                     ambient_type = AMBIENT_SKY;
-                else if (!Q_strncasecmp(miptex.name.data(), "*water", 6) && !vis_options.noambientwater.value())
-                    ambient_type = AMBIENT_WATER;
-                else if (!Q_strncasecmp(miptex.name.data(), "*04water", 8) && !vis_options.noambientwater.value())
-                    ambient_type = AMBIENT_WATER;
-                else if (!Q_strncasecmp(miptex.name.data(), "*slime", 6) && !vis_options.noambientslime.value())
-                    ambient_type = AMBIENT_WATER; // AMBIENT_SLIME;
-                else if (!Q_strncasecmp(miptex.name.data(), "*lava", 5) && !vis_options.noambientlava.value())
-                    ambient_type = AMBIENT_LAVA;
-                else
+                } else if (!Q_strncasecmp(miptex.name.data(), "*water", 6) ||
+                           !Q_strncasecmp(miptex.name.data(), "!water", 6)) {
+                    if (!vis_options.noambientwater.value()) {
+                        ambient_type = AMBIENT_WATER;
+                    }
+                } else if (!Q_strncasecmp(miptex.name.data(), "*04water", 6) ||
+                           !Q_strncasecmp(miptex.name.data(), "!04water", 6)) {
+                    if (!vis_options.noambientwater.value()) {
+                        ambient_type = AMBIENT_WATER;
+                    }
+                } else if (!Q_strncasecmp(miptex.name.data(), "*slime", 6) ||
+                           !Q_strncasecmp(miptex.name.data(), "!slime", 6)) {
+                    if (!vis_options.noambientslime.value()) {
+                        ambient_type =
+                            AMBIENT_WATER; // AMBIENT_SLIME; // there should probably be a VIS arg to use the acutal
+                                           // AMBIENT_SLIME, for games on custom engines that can parse it
+                    }
+                } else if (!Q_strncasecmp(miptex.name.data(), "*lava", 5) ||
+                           !Q_strncasecmp(miptex.name.data(), "!lava", 5)) {
+                    if (!vis_options.noambientslime.value()) {
+                        ambient_type = AMBIENT_LAVA;
+                    }
+                } else {
                     continue;
+                }
 
                 // noambient surfflag
                 if (vis::extended_texinfo_flags[surf->texinfo].noambient)

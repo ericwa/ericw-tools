@@ -142,32 +142,32 @@ std::string get_contents_display(contents_t bits)
     return s;
 }
 
-nlohmann::json get_contents_json(contents_t bits)
+Json::Value get_contents_json(contents_t bits)
 {
-    nlohmann::json result = nlohmann::json::array();
+    Json::Value result = Json::Value(Json::arrayValue);
 
     for (uint32_t i = 0; i < std::size(bitflag_names); i++) {
         if (bits & nth_bit<contents_int_t>(i)) {
-            result.push_back(bitflag_names[i]);
+            result.append(bitflag_names[i]);
         }
     }
 
     return result;
 }
 
-contents_int_t set_contents_json(const nlohmann::json &json)
+contents_int_t set_contents_json(const Json::Value &json)
 {
     contents_int_t result = EWT_VISCONTENTS_EMPTY;
 
-    if (!json.is_array()) {
+    if (!json.isArray()) {
         return result;
     }
 
-    for (const nlohmann::json &entry : json) {
-        if (!entry.is_string())
+    for (const Json::Value &entry : json) {
+        if (!entry.isString())
             continue;
 
-        const std::string entry_str = entry.get<std::string>();
+        const std::string entry_str = entry.asString();
 
         for (uint32_t i = 0; i < std::size(bitflag_names); i++) {
             if (!Q_strcasecmp(entry_str.c_str(), bitflag_names[i]))
@@ -182,6 +182,8 @@ template<gameid_t ID>
 struct gamedef_q1_like_t : public gamedef_t
 {
 public:
+    bool allows_hl_contents = false;
+
     explicit gamedef_q1_like_t(const char *friendly_name = "quake", const char *base_dir = "ID1")
         : gamedef_t(friendly_name, base_dir)
     {
@@ -243,6 +245,20 @@ public:
             case CONTENTS_WATER: return contentflags_t::make(EWT_VISCONTENTS_WATER);
             case CONTENTS_EMPTY: return contentflags_t::make(EWT_VISCONTENTS_EMPTY);
         }
+
+        if (allows_hl_contents) {
+            // clang-format off
+            switch (native) {
+                case HL_CONTENTS_CURRENT_0: return contentflags_t::make(EWT_VISCONTENTS_WATER | EWT_CFLAG_CURRENT_0);
+                case HL_CONTENTS_CURRENT_90: return contentflags_t::make(EWT_VISCONTENTS_WATER | EWT_CFLAG_CURRENT_90);
+                case HL_CONTENTS_CURRENT_180: return contentflags_t::make(EWT_VISCONTENTS_WATER | EWT_CFLAG_CURRENT_180);
+                case HL_CONTENTS_CURRENT_270: return contentflags_t::make(EWT_VISCONTENTS_WATER | EWT_CFLAG_CURRENT_270);
+                case HL_CONTENTS_CURRENT_UP: return contentflags_t::make(EWT_VISCONTENTS_WATER | EWT_CFLAG_CURRENT_UP);
+                case HL_CONTENTS_CURRENT_DOWN: return contentflags_t::make(EWT_VISCONTENTS_WATER | EWT_CFLAG_CURRENT_DOWN);
+            }
+            // clang-format on
+        }
+
         throw std::invalid_argument(fmt::format("create_contents_from_native: unknown Q1 contents {}", native));
     }
 
@@ -265,6 +281,21 @@ public:
         } else if (contents.flags & EWT_VISCONTENTS_SLIME) {
             return CONTENTS_SLIME;
         } else if (contents.flags & EWT_VISCONTENTS_WATER) {
+            if (allows_hl_contents) {
+                if (contents.flags & EWT_CFLAG_CURRENT_0)
+                    return HL_CONTENTS_CURRENT_0;
+                if (contents.flags & EWT_CFLAG_CURRENT_90)
+                    return HL_CONTENTS_CURRENT_90;
+                if (contents.flags & EWT_CFLAG_CURRENT_180)
+                    return HL_CONTENTS_CURRENT_180;
+                if (contents.flags & EWT_CFLAG_CURRENT_270)
+                    return HL_CONTENTS_CURRENT_270;
+                if (contents.flags & EWT_CFLAG_CURRENT_UP)
+                    return HL_CONTENTS_CURRENT_UP;
+                if (contents.flags & EWT_CFLAG_CURRENT_DOWN)
+                    return HL_CONTENTS_CURRENT_DOWN;
+            }
+
             return CONTENTS_WATER;
         } else if (contents.flags & EWT_VISCONTENTS_MIST) {
             throw std::invalid_argument("EWT_VISCONTENTS_MIST not representable in Q1");
@@ -321,11 +352,34 @@ public:
             return contentflags_t::make(EWT_VISCONTENTS_EMPTY);
         } else if (!Q_strcasecmp(texname.data(), "clip")) {
             return contentflags_t::make(EWT_INVISCONTENTS_PLAYERCLIP);
-        } else if (texname[0] == '*') {
+        } else if ((texname[0] == '*') || (texname[0] == '!')) {
             // non-Q2: -transwater implies liquids are detail and translucent
             contents_int_t liquid_flags = 0;
             if (transwater) {
                 liquid_flags = EWT_CFLAG_DETAIL | EWT_CFLAG_TRANSLUCENT;
+            }
+
+            // HL water with current
+            if (allows_hl_contents) {
+                contents_int_t current_flag = 0;
+
+                if (string_istarts_with(texname, "!cur_0")) {
+                    current_flag = EWT_CFLAG_CURRENT_0;
+                } else if (string_istarts_with(texname, "!cur_90")) {
+                    current_flag = EWT_CFLAG_CURRENT_90;
+                } else if (string_istarts_with(texname, "!cur_180")) {
+                    current_flag = EWT_CFLAG_CURRENT_180;
+                } else if (string_istarts_with(texname, "!cur_270")) {
+                    current_flag = EWT_CFLAG_CURRENT_270;
+                } else if (string_istarts_with(texname, "!cur_up")) {
+                    current_flag = EWT_CFLAG_CURRENT_UP;
+                } else if (string_istarts_with(texname, "!cur_dwn")) {
+                    current_flag = EWT_CFLAG_CURRENT_DOWN;
+                }
+
+                if (current_flag) {
+                    return contentflags_t::make(EWT_VISCONTENTS_WATER | liquid_flags | current_flag);
+                }
             }
 
             if (!Q_strncasecmp(texname.data() + 1, "lava", 4)) {
@@ -466,6 +520,7 @@ struct gamedef_hl_t : public gamedef_q1_like_t<GAME_HALF_LIFE>
         : gamedef_q1_like_t("halflife", "VALVE")
     {
         has_rgb_lightmap = true;
+        allows_hl_contents = true;
     }
 
     std::span<const aabb3d> get_hull_sizes() const override

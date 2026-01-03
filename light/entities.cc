@@ -97,7 +97,7 @@ static void MakeSurfaceLights(const mbsp_t *bsp);
 
 // light_t
 light_t::light_t()
-    : light{this, "light", DEFAULTLIGHTLEVEL},
+    : light{this, "light", &color, DEFAULTLIGHTLEVEL},
       atten{this, "wait", 1.0f, 0.0f, std::numeric_limits<float>::max()},
       formula{this, "delay", LF_LINEAR,
           {{"linear", LF_LINEAR}, {"inverse", LF_INVERSE}, {"inverse2", LF_INVERSE2}, {"infinite", LF_INFINITE},
