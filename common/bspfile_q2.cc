@@ -17,6 +17,8 @@
     See file, 'COPYING', for details.
 */
 
+#include "common/log.hh"
+
 #include <common/bspfile.hh>
 #include <common/cmdlib.hh>
 #include <common/numeric_cast.hh>
@@ -96,15 +98,25 @@ q2_texinfo_t::q2_texinfo_t(const mtexinfo_t &model)
     : vecs(model.vecs),
       flags(model.flags.native_q2),
       value(model.value),
-      texture(model.texture),
       nexttexinfo(model.nexttexinfo)
 {
+    if (!string_copy_to_array_z(model.texturename, texture)) {
+        logging::print("WARNING: texture name '{}' was truncated to fit in q2_texinfo_t ({} bytes)\n", model.texturename,
+            texture.size());
+    }
 }
 
 // convert to mbsp_t
 q2_texinfo_t::operator mtexinfo_t() const
 {
-    return {vecs, {.native_q2 = static_cast<q2_surf_flags_t>(flags)}, -1, value, texture, nexttexinfo};
+    bool texturename_ok;
+    std::string texturename = string_copy_from_array_z(texture, &texturename_ok);
+
+    if (!texturename_ok) {
+        logging::print("WARNING: texture name {} was not zero-terminated", texturename);
+    }
+
+    return {vecs, {.native_q2 = static_cast<q2_surf_flags_t>(flags)}, -1, value, texturename, nexttexinfo};
 }
 
 void q2_texinfo_t::stream_write(std::ostream &s) const
@@ -125,14 +137,14 @@ q2_dface_t::q2_dface_t(const mface_t &model)
       firstedge(model.firstedge),
       numedges(numeric_cast<int16_t>(model.numedges, "dface_t::numedges")),
       texinfo(numeric_cast<int16_t>(model.texinfo, "dface_t::texinfo")),
-      styles(model.styles),
+      styles(styles_mface_to_dface<decltype(styles)>(model.styles)),
       lightofs(model.lightofs)
 {
 }
 
 q2_dface_t::operator mface_t() const
 {
-    return {planenum, side, firstedge, numedges, texinfo, styles, lightofs};
+    return {planenum, side, firstedge, numedges, texinfo, styles_dface_to_mface(styles), lightofs};
 }
 
 void q2_dface_t::stream_write(std::ostream &s) const
@@ -153,14 +165,14 @@ q2_dface_qbism_t::q2_dface_qbism_t(const mface_t &model)
       firstedge(model.firstedge),
       numedges(model.numedges),
       texinfo(model.texinfo),
-      styles(model.styles),
+      styles(styles_mface_to_dface<decltype(styles)>(model.styles)),
       lightofs(model.lightofs)
 {
 }
 
 q2_dface_qbism_t::operator mface_t() const
 {
-    return {planenum, side, firstedge, numedges, texinfo, styles, lightofs};
+    return {planenum, side, firstedge, numedges, texinfo, styles_dface_to_mface(styles), lightofs};
 }
 
 void q2_dface_qbism_t::stream_write(std::ostream &s) const

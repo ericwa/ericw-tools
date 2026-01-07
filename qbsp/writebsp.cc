@@ -82,17 +82,7 @@ size_t ExportMapTexinfo(size_t texinfonum)
     dest.vecs = src.vecs;
 
     const std::string &src_name = map.texinfoTextureName(texinfonum);
-    if (src_name.size() > (dest.texture.size() - 1)) {
-        logging::print("WARNING: texture name '{}' exceeds maximum length {} and will be truncated\n", src_name,
-            dest.texture.size() - 1);
-    }
-    for (size_t i = 0; i < (dest.texture.size() - 1); ++i) {
-        if (i < src_name.size())
-            dest.texture[i] = src_name[i];
-        else
-            dest.texture[i] = '\0';
-    }
-    dest.texture[dest.texture.size() - 1] = '\0';
+    dest.texturename = src_name;
     dest.value = map.miptex[src.miptex].value;
 
     src.outputnum = i;

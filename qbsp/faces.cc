@@ -219,8 +219,7 @@ static void EmitFaceFragment(face_t *face, face_fragment_t *fragment, emit_faces
     out.planenum = ExportMapPlane(face->planenum & ~1);
     out.side = face->planenum & 1;
     out.texinfo = ExportMapTexinfo(face->texinfo);
-    for (i = 0; i < MAXLIGHTMAPS; i++)
-        out.styles[i] = 255;
+    out.styles.fill(INVALID_LIGHTSTYLE_OLD);
     out.lightofs = -1;
 
     // emit surfedges

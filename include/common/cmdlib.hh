@@ -24,6 +24,7 @@
 #include <array>
 #include <cstdint>
 #include <cstring> // for memcpy()
+#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -98,6 +99,8 @@ struct natural_case_insensitive_less
 
 std::string_view::const_iterator string_ifind(std::string_view haystack, std::string_view needle);
 bool string_icontains(std::string_view haystack, std::string_view needle);
+// case-insensitive, checks if `haystack` starts with `needle`
+bool string_istarts_with(std::string_view haystack, std::string_view needle);
 
 #include <chrono>
 
@@ -593,6 +596,17 @@ void CRC_ProcessByte(uint16_t &crcvalue, uint8_t data);
 uint16_t CRC_Block(const uint8_t *start, int count);
 
 std::vector<uint8_t> StringToVector(const std::string &str);
+
+// Copies the chars from `in` to `out`, null terminating and zero-filling
+// `out`.
+// Returns false if we had to drop some characters from `in` in order to
+// fit it in the array, otherwise returns true.
+bool string_copy_to_array_z(std::string_view in, std::span<char> out);
+
+// copies from a null-terminated fixed size array `in` to a std::string.
+// if `in` isn't null-terminated, returns false in `success_out` so calling
+// code can issue a warning (but still returns the entire array as a string.)
+std::string string_copy_from_array_z(std::span<const char> in, bool *success_out);
 
 template<class T>
 T deserialize(const std::vector<uint8_t> &bytes)

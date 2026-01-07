@@ -105,6 +105,13 @@ enum q1_contents_t : int32_t
     CONTENTS_MIN = CONTENTS_SKY
 };
 
+constexpr static int HL_CONTENTS_CURRENT_0 = -9;
+constexpr static int HL_CONTENTS_CURRENT_90 = -10;
+constexpr static int HL_CONTENTS_CURRENT_180 = -11;
+constexpr static int HL_CONTENTS_CURRENT_270 = -12;
+constexpr static int HL_CONTENTS_CURRENT_UP = -13;
+constexpr static int HL_CONTENTS_CURRENT_DOWN = -14;
+
 constexpr static int BSPXBRUSHES_CONTENTS_CLIP = -8;
 
 struct bsp29_dnode_t
@@ -213,6 +220,8 @@ struct texinfo_t
  */
 using bsp29_dedge_t = std::array<uint16_t, 2>; /* vertex numbers */
 
+static constexpr size_t Q1_MAXLIGHTMAPS = 4;
+
 struct bsp29_dface_t
 {
     int16_t planenum;
@@ -222,7 +231,7 @@ struct bsp29_dface_t
     int16_t texinfo;
 
     /* lighting info */
-    std::array<uint8_t, MAXLIGHTMAPS> styles;
+    std::array<uint8_t, Q1_MAXLIGHTMAPS> styles;
     int32_t lightofs; /* start of [numstyles*surfsize] samples */
 
     bsp29_dface_t() = default;
@@ -247,7 +256,7 @@ struct bsp2_dface_t
     int32_t texinfo;
 
     /* lighting info */
-    std::array<uint8_t, MAXLIGHTMAPS> styles;
+    std::array<uint8_t, Q1_MAXLIGHTMAPS> styles;
     int32_t lightofs; /* start of [numstyles*surfsize] samples */
 
     bsp2_dface_t() = default;

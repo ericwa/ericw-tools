@@ -68,7 +68,7 @@ parser_t::parser_t(const void *start, size_t length, parser_source_location base
 }
 
 parser_t::parser_t(std::string_view view, parser_source_location base_location)
-    : parser_t(&view.front(), view.size(), base_location)
+    : parser_t(view.data(), view.size(), base_location)
 {
 }
 

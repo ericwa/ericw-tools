@@ -43,20 +43,28 @@ source code.
 
 Dependencies: Embree 3.0+, TBB (TODO: version?), Sphinx (for building manuals)
 
-### Ubuntu
+### Ubuntu 24.04
 
 NOTE: Builds using Ubuntu's embree packages produce a significantly slower `light` (i.e. over twice as slow) than ones released on Embree's GitHub. See `build-linux-64.sh` for a better method. 
 
 ```
-sudo apt install libembree-dev libtbb-dev cmake build-essential g++
-sudo apt install python3-pip
-python3 -m pip install sphinx_rtd_theme
-export PATH="~/.local/bin/:$PATH"
+sudo apt update
+sudo apt install libembree-dev libtbb-dev cmake build-essential g++ qt6-base-dev
 git clone --recursive https://github.com/ericwa/ericw-tools
 cd ericw-tools
 mkdir build
 cd build
-cmake ..
+cmake .. -DCMAKE_BUILD_TYPE=Release
+make -j 8
+
+# run tests
+./tests/tests
+
+# print qbsp help
+./qbsp/qbsp --help
+
+# launch lightpreview gui
+./lightpreview/lightpreview
 ```
 
 ### Windows
@@ -94,16 +102,17 @@ cmake .. -DCMAKE_TOOLCHAIN_FILE="$(pwd)/../vcpkg/scripts/buildsystems/vcpkg.cmak
 
   (see: https://youtrack.jetbrains.com/issue/CPP-29559/Clion-LLDB-does-not-break-on-SEH-exceptions-within-GTest)
 
-### macOS 10.15
+### macOS 10.15+
 
 ```
-brew install embree tbb
+brew install embree tbb qt@6 cmake
 python3 -m pip install sphinx_rtd_theme
 git clone --recursive https://github.com/ericwa/ericw-tools
 cd ericw-tools
 mkdir build
 cd build
-cmake .. -GXcode -DCMAKE_PREFIX_PATH="$(brew --prefix embree);$(brew --prefix tbb)"
+cmake .. -DCMAKE_PREFIX_PATH="$(brew --prefix embree);$(brew --prefix tbb)" -DCMAKE_BUILD_TYPE=Release
+make
 ```
 
 ## Credits

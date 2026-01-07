@@ -495,6 +495,8 @@ struct gamedef_t
         const std::string &texname, const surfflags_t &flags, contentflags_t contents, bool transwater) const = 0;
     virtual void init_filesystem(const fs::path &source, const settings::common_settings &settings) const = 0;
     virtual const std::vector<qvec3b> &get_default_palette() const = 0;
+    // size of this game's dface_t::styles array
+    virtual size_t max_lightmaps() const = 0;
 };
 
 // Lump specification; stores the name and size

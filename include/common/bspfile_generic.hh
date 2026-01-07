@@ -237,12 +237,12 @@ struct mtexinfo_t
 
     // q2 only
     int32_t value; // light emission, etc
-    std::array<char, 32> texture; // texture name (textures/*.wal)
+    std::string texturename; // texture name (textures/*.wal)
     int32_t nexttexinfo = -1; // for animations, -1 = end of chain
 };
 
-constexpr size_t MAXLIGHTMAPS = 4;
 constexpr uint16_t INVALID_LIGHTSTYLE_OLD = 0xffu;
+constexpr size_t MFACE_MAXLIGHTMAPS = 16;
 
 struct mface_t
 {
@@ -253,13 +253,9 @@ struct mface_t
     int32_t texinfo;
 
     /* lighting info */
-    std::array<uint8_t, MAXLIGHTMAPS> styles;
+    std::array<uint8_t, MFACE_MAXLIGHTMAPS> styles;
     // start of [numstyles*surfsize] samples. byte offset into bsp.dlightdata.
     int32_t lightofs;
-
-    // serialize for streams
-    void stream_write(std::ostream &s) const;
-    void stream_read(std::istream &s);
 };
 
 /*

@@ -16,6 +16,19 @@ TEST(common, StripFilename)
     ASSERT_EQ("", fs::path("bar.txt").parent_path());
 }
 
+TEST(common, stringIStartsWith)
+{
+    // true cases
+    EXPECT_TRUE(string_istarts_with("asdf", "a"));
+    EXPECT_TRUE(string_istarts_with("asdf", "AS"));
+    EXPECT_TRUE(string_istarts_with("asdf", "ASDF"));
+    EXPECT_TRUE(string_istarts_with("asdf", ""));
+
+    // false cases
+    EXPECT_FALSE(string_istarts_with("asdf", "ASt"));
+    EXPECT_FALSE(string_istarts_with("asdf", "ASDFX"));
+}
+
 TEST(common, q1Contents)
 {
     auto *game_q1 = bspver_q1.game;
@@ -75,6 +88,39 @@ TEST(common, q1Contents)
         EXPECT_FALSE(combined.is_detail_solid());
         EXPECT_TRUE(combined.is_sky());
         EXPECT_TRUE(combined.is_solid());
+    }
+}
+
+TEST(common, hlCurrents)
+{
+    auto *game = bspver_hl.game;
+
+    struct case_t
+    {
+        const char *texname;
+        contents_int_t expected_ewt;
+        int expected_hl;
+    };
+
+    std::vector<case_t> cases{
+        {"!cur_0X", EWT_CFLAG_CURRENT_0 | EWT_VISCONTENTS_WATER, HL_CONTENTS_CURRENT_0},
+        {"!cur_90X", EWT_CFLAG_CURRENT_90 | EWT_VISCONTENTS_WATER, HL_CONTENTS_CURRENT_90},
+        {"!cur_180X", EWT_CFLAG_CURRENT_180 | EWT_VISCONTENTS_WATER, HL_CONTENTS_CURRENT_180},
+        {"!cur_270X", EWT_CFLAG_CURRENT_270 | EWT_VISCONTENTS_WATER, HL_CONTENTS_CURRENT_270},
+        {"!cur_upX", EWT_CFLAG_CURRENT_UP | EWT_VISCONTENTS_WATER, HL_CONTENTS_CURRENT_UP},
+        {"!cur_dwnX", EWT_CFLAG_CURRENT_DOWN | EWT_VISCONTENTS_WATER, HL_CONTENTS_CURRENT_DOWN},
+    };
+
+    for (const case_t &c : cases) {
+        // check face_get_contents
+        auto case_contents = game->face_get_contents(c.texname, {}, {}, false);
+        EXPECT_EQ(case_contents.flags, c.expected_ewt);
+
+        // check EWT -> HL
+        EXPECT_EQ(c.expected_hl, game->contents_to_native(case_contents));
+
+        // check HL -> EWT
+        EXPECT_EQ(c.expected_ewt, game->create_contents_from_native(c.expected_hl).flags);
     }
 }
 
@@ -436,6 +482,71 @@ TEST(string, strncasecmp)
 {
     EXPECT_EQ(Q_strncasecmp("*lava123", "*LAVA", 5), 0);
     EXPECT_EQ(Q_strncasecmp("*lava123", "*LAVA", 8), 1);
+}
+
+TEST(string, string_copy_to_array_z)
+{
+    {
+        SCOPED_TRACE("source string is empty");
+
+        std::array<char, 2> dest;
+        EXPECT_TRUE(string_copy_to_array_z("", dest));
+        EXPECT_EQ(dest[0], '\0');
+        EXPECT_EQ(dest[1], '\0');
+    }
+
+    {
+        SCOPED_TRACE("common case");
+
+        std::array<char, 4> dest;
+        EXPECT_TRUE(string_copy_to_array_z("x", dest));
+        EXPECT_EQ(dest[0], 'x');
+        EXPECT_EQ(dest[1], '\0');
+        EXPECT_EQ(dest[2], '\0');
+        EXPECT_EQ(dest[3], '\0');
+    }
+
+    {
+        SCOPED_TRACE("source string gets truncated");
+
+        std::array<char, 2> dest;
+        EXPECT_FALSE(string_copy_to_array_z("xy", dest));
+        EXPECT_EQ(dest[0], 'x');
+        EXPECT_EQ(dest[1], '\0');
+    }
+}
+
+TEST(string, string_copy_from_array_z)
+{
+    {
+        SCOPED_TRACE("source array is all zeroes");
+
+        const std::array<char, 2> src {'\0', '\0'};
+        bool ok;
+
+        EXPECT_EQ(string_copy_from_array_z(src, &ok), "");
+        EXPECT_TRUE(ok);
+    }
+
+    {
+        SCOPED_TRACE("common case");
+
+        const std::array<char, 2> src {'x', '\0'};
+        bool ok;
+
+        EXPECT_EQ(string_copy_from_array_z(src, &ok), "x");
+        EXPECT_TRUE(ok);
+    }
+
+    {
+        SCOPED_TRACE("warning case: source array is unterminated");
+
+        const std::array<char, 2> src {'x', 'y'};
+        bool ok;
+
+        EXPECT_EQ(string_copy_from_array_z(src, &ok), "xy");
+        EXPECT_FALSE(ok);
+    }
 }
 
 TEST(surfflags, jsonEmpty)
