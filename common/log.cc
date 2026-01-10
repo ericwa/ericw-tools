@@ -35,7 +35,7 @@
 #include <common/settings.hh>
 #include <common/cmdlib.hh>
 
-#if defined(_WIN32)
+#ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h> // for OutputDebugStringA
 #include <io.h> // for _isatty
@@ -47,9 +47,9 @@
 #undef max
 #endif
 
-#elif defined(__unix__)
+#else // assume __unix__ is defined
 #include <unistd.h> // for isatty
-#endif
+#endif // ifdef _WIN32
 
 static std::ofstream logfile;
 
@@ -60,12 +60,10 @@ bool enable_color_codes = false;
 
 static bool is_terminal()
 {
-#if defined(_WIN32)
+#ifdef _WIN32
     return _isatty(_fileno(stdout)) != 0;
-#elif defined(__unix__)
-    return isatty(STDOUT_FILENO) != 0;
 #else
-    return true;
+    return isatty(STDOUT_FILENO) != 0;
 #endif
 }
 
