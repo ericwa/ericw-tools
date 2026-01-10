@@ -36,19 +36,19 @@
 #include <common/cmdlib.hh>
 
 #if defined(_WIN32)
-#   define WIN32_LEAN_AND_MEAN
-#   include <windows.h> // for OutputDebugStringA
-#   include <io.h> // for _isatty
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h> // for OutputDebugStringA
+#include <io.h> // for _isatty
 
-#   ifdef min
-#       undef min
-#   endif
-#   ifdef max
-#       undef max
-#   endif
+#ifdef min
+#undef min
+#endif
+#ifdef max
+#undef max
+#endif
 
 #elif defined(__unix__)
-#   include <unistd.h> // for isatty
+#include <unistd.h> // for isatty
 #endif
 
 static std::ofstream logfile;
@@ -58,7 +58,8 @@ namespace logging
 bitflags<flag> mask = bitflags<flag>(flag::ALL) & ~bitflags<flag>(flag::VERBOSE);
 bool enable_color_codes = false;
 
-static bool is_terminal() {
+static bool is_terminal()
+{
 #if defined(_WIN32)
     return _isatty(_fileno(stdout)) != 0;
 #elif defined(__unix__)
