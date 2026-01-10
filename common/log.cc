@@ -38,6 +38,7 @@
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h> // for OutputDebugStringA
+#include <io.h> // for _isatty
 
 #ifdef min
 #undef min
@@ -45,14 +46,26 @@
 #ifdef max
 #undef max
 #endif
-#endif
+
+#else // assume __unix__ is defined
+#include <unistd.h> // for isatty
+#endif // ifdef _WIN32
 
 static std::ofstream logfile;
 
 namespace logging
 {
 bitflags<flag> mask = bitflags<flag>(flag::ALL) & ~bitflags<flag>(flag::VERBOSE);
-bool enable_color_codes = true;
+bool enable_color_codes = false;
+
+static bool is_terminal()
+{
+#ifdef _WIN32
+    return _isatty(_fileno(stdout)) != 0;
+#else
+    return isatty(STDOUT_FILENO) != 0;
+#endif
+}
 
 void preinitialize()
 {
@@ -61,6 +74,8 @@ void preinitialize()
     HANDLE hOutput = GetStdHandle(STD_OUTPUT_HANDLE);
     SetConsoleMode(hOutput, ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING | ENABLE_WRAP_AT_EOL_OUTPUT);
 #endif
+
+    enable_color_codes = is_terminal();
 }
 
 void init(std::optional<fs::path> filename, const settings::common_settings &settings)
