@@ -59,7 +59,7 @@ void preinitialize()
 #ifdef _WIN32
     // enable processing of ANSI escape sequences on Windows
     HANDLE hOutput = GetStdHandle(STD_OUTPUT_HANDLE);
-    SetConsoleMode(hOutput, ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+    SetConsoleMode(hOutput, ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING | ENABLE_WRAP_AT_EOL_OUTPUT);
 #endif
 }
 
