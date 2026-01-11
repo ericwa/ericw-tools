@@ -1,7 +1,9 @@
 #include "common/json.hh"
+#include "common/numeric_cast.hh"
 
 #include <gtest/gtest.h>
 
+#include <cstdint>
 #include <filesystem>
 #include <common/bspfile.hh>
 #include <common/bspfile_q1.hh>
@@ -626,4 +628,39 @@ TEST(surfflags, jsonAllFalse)
     surfflags_t roundtrip = surfflags_t::from_json(json);
 
     EXPECT_EQ(roundtrip, flags);
+}
+
+TEST(numericCast, arrayCastPadTruncate)
+{
+    std::array src{1,2,3};
+
+    // extend with zeros
+    EXPECT_EQ((std::array{1,2,3,0,0}), (array_cast<std::array<int,5>>(src, "something")));
+
+    // truncate
+    EXPECT_EQ((std::array{1,2}), (array_cast<std::array<int,2>>(src, "something")));
+}
+
+TEST(numericCast, arrayCastUnsignedToSignedOverflow)
+{
+    std::array<uint32_t, 1> src{UINT32_MAX};
+    EXPECT_THROW((array_cast<std::array<int32_t, 1>>(src, "something")), std::overflow_error);
+}
+
+TEST(numericCast, arrayCastSignedToUnsignedOverflow)
+{
+    std::array<int32_t, 1> src{-1};
+    EXPECT_THROW((array_cast<std::array<uint32_t, 1>>(src, "something")), std::overflow_error);
+}
+
+TEST(numericCast, arrayCastSignedToSignedOverflow)
+{
+    std::array<int32_t, 1> src{INT32_MAX};
+    EXPECT_THROW((array_cast<std::array<int16_t, 1>>(src, "something")), std::overflow_error);
+}
+
+TEST(numericCast, arrayCastUnsignedToUnsignedOverflow)
+{
+    std::array<uint32_t, 1> src{UINT32_MAX};
+    EXPECT_THROW((array_cast<std::array<uint16_t, 1>>(src, "something")), std::overflow_error);
 }
