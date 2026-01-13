@@ -1499,6 +1499,10 @@ TEST(testmapsQ1, detailFence)
     EXPECT_EQ(player_start_leaf->contents, CONTENTS_EMPTY);
     auto markfaces = Leaf_Markfaces(&bsp, player_start_leaf);
     EXPECT_THAT(markfaces, testing::Contains(back_of_pillar_face));
+    // check that its bounds were extended to encompass the faces inside the func_detail_fence -
+    // they're using the player start leaf as "storage".
+    EXPECT_EQ(qvec3f(-128, -320, 64), player_start_leaf->mins);
+    EXPECT_EQ(qvec3f(224, 16, 192), player_start_leaf->maxs);
 
     // check the cubby off to the side - it _shouldn't_ have got the back_of_pillar_face added to its marksurfaces
     // (make sure the flood fill in FixupDetailFence() isn't propagating them excessively)
@@ -1507,6 +1511,41 @@ TEST(testmapsQ1, detailFence)
     EXPECT_EQ(cubby_leaf->contents, CONTENTS_EMPTY);
     auto cubby_leaf_markfaces = Leaf_Markfaces(&bsp, cubby_leaf);
     EXPECT_THAT(cubby_leaf_markfaces, testing::Not(testing::Contains(back_of_pillar_face)));
+}
+
+TEST(testmapsQ1, detailFence2)
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_detail_fence2.map");
+
+    // similar to above.. this one repro's an issue where the "faces inside the func_detail_fence volume" get
+    // added to a leaf that can get frustum culled, so we expand the bounds.
+
+    const aabb3f func_detail_fence_box = aabb3f({-80, -192, -48}, {-16, -48, 64});
+
+    // grab a random face inside the detail_fence
+    const auto in_fence_pos = qvec3d(-80, -104, 8);
+    auto *in_fence_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], in_fence_pos);
+
+    // find the "storage leaf", that is an empty leaf that has in_fence_face in its marksurfaces
+    const mleaf_t *storage_leaf = nullptr;
+    for (const mleaf_t &l : bsp.dleafs) {
+        auto markfaces = Leaf_Markfaces(&bsp, &l);
+        if (l.contents != CONTENTS_EMPTY) {
+            continue;
+        }
+        if (std::ranges::find(markfaces, in_fence_face) != markfaces.end()) {
+            storage_leaf = &l;
+            break;
+        }
+    }
+
+    ASSERT_NE(nullptr, storage_leaf);
+
+    const aabb3f storage_leaf_bounds = aabb3f(storage_leaf->mins, storage_leaf->maxs);
+
+    SCOPED_TRACE(testing::Message() << "storage_leaf_bounds: " << storage_leaf_bounds
+                                    << " func_detail_fence_box: " << func_detail_fence_box);
+    ASSERT_TRUE(storage_leaf_bounds.contains(func_detail_fence_box));
 }
 
 TEST(testmapsQ1, detailFenceWithoutExtendedContents)
