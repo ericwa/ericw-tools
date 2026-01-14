@@ -98,7 +98,7 @@ struct compiled_brush_side_t
     surfflags_t flags;
     int32_t value;
 
-    const q2_dbrushside_qbism_t *source = nullptr;
+    const mbrushside_t *source = nullptr;
 };
 
 struct planepoints : std::array<qvec3d, 3>
@@ -226,7 +226,7 @@ struct compiled_brush_t
 struct decomp_plane_t : qplane3d
 {
     const bsp2_dnode_t *node = nullptr; // can be nullptr
-    const q2_dbrushside_qbism_t *source = nullptr;
+    const mbrushside_t *source = nullptr;
     const bsp2_dclipnode_t *clipnode = nullptr; // can be nullptr
 };
 
@@ -1098,7 +1098,7 @@ static std::vector<compiled_brush_t> DecompileBrushTask(const mbsp_t *bsp, const
     leaf_decompile_task &task, const std::optional<qvec3d> &brush_offset)
 {
     for (size_t i = 0; i < task.brush->numsides; i++) {
-        const q2_dbrushside_qbism_t *side = &bsp->dbrushsides[task.brush->firstside + i];
+        const mbrushside_t *side = &bsp->dbrushsides[task.brush->firstside + i];
         decomp_plane_t &plane = task.allPlanes.emplace_back(decomp_plane_t{qplane3d{bsp->dplanes[side->planenum]}});
         plane.source = side;
     }

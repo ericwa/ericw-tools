@@ -248,13 +248,13 @@ void q2_dleaf_qbism_t::stream_read(std::istream &s)
 
 // q2_dbrushside_t
 
-q2_dbrushside_t::q2_dbrushside_t(const q2_dbrushside_qbism_t &model)
+q2_dbrushside_t::q2_dbrushside_t(const mbrushside_t &model)
     : planenum(numeric_cast<uint16_t>(model.planenum, "dbrushside_t::planenum")),
       texinfo(numeric_cast<int16_t>(model.texinfo, "dbrushside_t::texinfo"))
 {
 }
 
-q2_dbrushside_t::operator q2_dbrushside_qbism_t() const
+q2_dbrushside_t::operator mbrushside_t() const
 {
     return {planenum, texinfo};
 }
@@ -265,6 +265,29 @@ void q2_dbrushside_t::stream_write(std::ostream &s) const
 }
 
 void q2_dbrushside_t::stream_read(std::istream &s)
+{
+    s >= std::tie(planenum, texinfo);
+}
+
+// q2_dbrushside_qbism_t
+
+q2_dbrushside_qbism_t::q2_dbrushside_qbism_t(const mbrushside_t &model)
+    : planenum(model.planenum),
+      texinfo(model.texinfo)
+{
+}
+
+q2_dbrushside_qbism_t::operator mbrushside_t() const
+{
+    return {planenum, texinfo};
+}
+
+void q2_dbrushside_qbism_t::stream_write(std::ostream &s) const
+{
+    s <= std::tie(planenum, texinfo);
+}
+
+void q2_dbrushside_qbism_t::stream_read(std::istream &s)
 {
     s >= std::tie(planenum, texinfo);
 }

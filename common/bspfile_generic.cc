@@ -310,18 +310,6 @@ void dbrush_t::stream_read(std::istream &s)
     s >= std::tie(firstside, numsides, contents);
 }
 
-// q2_dbrushside_qbism_t
-
-void q2_dbrushside_qbism_t::stream_write(std::ostream &s) const
-{
-    s <= std::tie(planenum, texinfo);
-}
-
-void q2_dbrushside_qbism_t::stream_read(std::istream &s)
-{
-    s >= std::tie(planenum, texinfo);
-}
-
 // mbsp_t
 
 int mbsp_t::lightsamples() const

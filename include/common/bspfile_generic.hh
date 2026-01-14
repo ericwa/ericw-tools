@@ -360,14 +360,10 @@ struct dbrush_t
     void stream_read(std::istream &s);
 };
 
-struct q2_dbrushside_qbism_t
+struct mbrushside_t
 {
     uint32_t planenum; // facing out of the leaf
     int32_t texinfo;
-
-    // serialize for streams
-    void stream_write(std::ostream &s) const;
-    void stream_read(std::istream &s);
 };
 
 struct bspversion_t;
@@ -400,7 +396,7 @@ struct mbsp_t
     std::vector<darea_t> dareas;
     std::vector<dareaportal_t> dareaportals;
     std::vector<dbrush_t> dbrushes;
-    std::vector<q2_dbrushside_qbism_t> dbrushsides;
+    std::vector<mbrushside_t> dbrushsides;
 
     int lightsamples() const;
 };

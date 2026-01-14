@@ -285,3 +285,13 @@
 "origin" "120 -72 104"
 "wait" "0.3"
 }
+// entity 6
+{
+"classname" "ambient_thunder"
+"origin" "-128 -320 64"
+}
+// entity 7
+{
+"classname" "ambient_suck_wind"
+"origin" "224 16 192"
+}
