@@ -94,19 +94,17 @@ cd vcpkg
 cd ..
 ```
 
-Next, clone and build ericw-tools:
+Next, clone the ericw-tools git repository + submodules:
 
 ```bat
 git clone --recursive https://github.com/ericwa/ericw-tools
-cd ericw-tools
-
-mkdir build
-cd build
-
-cmake .. -DCMAKE_TOOLCHAIN_FILE="%cd%\..\..\vcpkg\scripts\buildsystems\vcpkg.cmake"
 ```
 
-Open `ericw-tools.sln`.
+Open the `ericw-tools` folder in VS2022 (or higher) as a CMake project.
+
+Go to "Project -> CMake Settings". Under "CMake Toolchain File", press the "..." button and browse to `vcpkg\scripts\buildsystems\vcpkg.cmake`. Then press "Save" to save your CMakeSettings.json.
+
+Once CMake finishes, you should be able to select e.g. `qbsp.exe (qbsp\qbsp.exe)` in the "Select Startup Item" dropdown in the toolbar. (I had to restart VS).
 
 #### IDE Tips - CLion
 
