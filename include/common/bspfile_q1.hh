@@ -220,7 +220,7 @@ struct texinfo_t
  */
 using bsp29_dedge_t = std::array<uint16_t, 2>; /* vertex numbers */
 
-constexpr size_t Q1_MAXLIGHTMAPS = 4;
+static constexpr size_t Q1_MAXLIGHTMAPS = 4;
 
 struct bsp29_dface_t
 {

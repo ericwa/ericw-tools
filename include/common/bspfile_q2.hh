@@ -28,6 +28,7 @@
 #include <common/qvec.hh>
 #include <common/bitflags.hh>
 #include <common/bspfile_common.hh>
+#include <common/bspfile_generic.hh>
 
 constexpr int32_t Q2_BSPVERSION = 38;
 constexpr int32_t Q2_BSPIDENT = (('P' << 24) + ('S' << 16) + ('B' << 8) + 'I');
@@ -221,6 +222,8 @@ struct q2_texinfo_t
     void stream_read(std::istream &s);
 };
 
+static constexpr size_t Q2_MAXLIGHTMAPS = 4;
+
 struct q2_dface_t
 {
     uint16_t planenum; // NOTE: only difference from bsp29_dface_t
@@ -230,7 +233,7 @@ struct q2_dface_t
     int16_t texinfo;
 
     // lighting info
-    std::array<uint8_t, Q1_MAXLIGHTMAPS> styles;
+    std::array<uint8_t, Q2_MAXLIGHTMAPS> styles;
     int32_t lightofs; // start of [numstyles*surfsize] samples
 
     q2_dface_t() = default;
@@ -255,7 +258,7 @@ struct q2_dface_qbism_t
     int32_t texinfo;
 
     // lighting info
-    std::array<uint8_t, Q1_MAXLIGHTMAPS> styles;
+    std::array<uint8_t, Q2_MAXLIGHTMAPS> styles;
     int32_t lightofs; // start of [numstyles*surfsize] samples
 
     q2_dface_qbism_t() = default;
@@ -337,10 +340,28 @@ struct q2_dbrushside_t
     q2_dbrushside_t() = default;
 
     // convert from mbsp_t
-    explicit q2_dbrushside_t(const q2_dbrushside_qbism_t &model);
+    explicit q2_dbrushside_t(const mbrushside_t &model);
 
     // convert to mbsp_t
-    explicit operator q2_dbrushside_qbism_t() const;
+    explicit operator mbrushside_t() const;
+
+    // serialize for streams
+    void stream_write(std::ostream &s) const;
+    void stream_read(std::istream &s);
+};
+
+struct q2_dbrushside_qbism_t
+{
+    uint32_t planenum; // facing out of the leaf
+    int32_t texinfo;
+
+    q2_dbrushside_qbism_t() = default;
+
+    // convert from mbsp_t
+    explicit q2_dbrushside_qbism_t(const mbrushside_t &model);
+
+    // convert to mbsp_t
+    explicit operator mbrushside_t() const;
 
     // serialize for streams
     void stream_write(std::ostream &s) const;

@@ -439,8 +439,8 @@ static void CheckBSPFile(const mbsp_t *bsp)
             logging::print("warning: face {} has edges out of range ({}..{} >= {})\n", i, face->firstedge,
                 face->firstedge + face->numedges - 1, bsp->dsurfedges.size());
 
-        for (int j = 0; j < 4; j++) {
-            used_lightstyles.insert(face->styles[j]);
+        for (uint8_t style : face->styles) {
+            used_lightstyles.insert(style);
         }
     }
 
@@ -825,12 +825,12 @@ static void ExportTextures(const fs::path &source, const gamedef_t *game, const 
 {
     for (auto &tex : bsp.texinfo) {
         // temp, just for us
-        auto tex_name = (source.parent_path() / "textures" / tex.texture.data()).replace_extension(".tga");
+        auto tex_name = (source.parent_path() / "textures" / tex.texturename).replace_extension(".tga");
 
         if (tex_name.string().find_first_of(' ') != std::string::npos)
             continue;
 
-        auto swl_meta = std::get<0>(img::load_texture(tex.texture.data(), false, game, bsputil_options));
+        auto swl_meta = std::get<0>(img::load_texture(tex.texturename, false, game, bsputil_options));
 
         if (!swl_meta)
             continue;
@@ -1579,17 +1579,17 @@ int bsputil_main(int _argc, const char **_argv)
             std::set<std::string_view, natural_less> written;
 
             for (auto &tex : bsp.texinfo) {
-                if (written.find(std::string_view(tex.texture.data())) != written.end()) {
+                if (written.find(tex.texturename) != written.end()) {
                     continue;
                 }
 
                 if (tex.nexttexinfo != -1) {
                     auto &next = bsp.texinfo[tex.nexttexinfo];
 
-                    f << std::string_view(tex.texture.data()) << " date 0 anim " << std::string_view(next.texture.data()) << std::endl;
+                    f << tex.texturename << " date 0 anim " << next.texturename << std::endl;
                 }
 
-                written.insert(std::string_view(tex.texture.data()));
+                written.insert(tex.texturename);
             }
 
             f.close();

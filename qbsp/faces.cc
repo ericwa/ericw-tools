@@ -219,8 +219,7 @@ static void EmitFaceFragment(face_t *face, face_fragment_t *fragment, emit_faces
     out.planenum = ExportMapPlane(face->planenum & ~1);
     out.side = face->planenum & 1;
     out.texinfo = ExportMapTexinfo(face->texinfo);
-    for (i = 0; i < MAXLIGHTMAPS; i++)
-        out.styles[i] = 255;
+    out.styles.fill(INVALID_LIGHTSTYLE_OLD);
     out.lightofs = -1;
 
     // emit surfedges
@@ -408,6 +407,24 @@ static node_t *FixupMarkFaces_ProcessCluster_FindStorageLeaf(node_t *node)
     return node;
 }
 
+static const aabb3d BoundFaces(const std::set<face_t *> &marfaces_to_add)
+{
+    aabb3d result;
+    for (const face_t *face : marfaces_to_add) {
+        for (const qvec3d &pt : face->w) {
+            result += pt;
+        }
+    }
+    return result;
+}
+
+static void AddBoundsToNode(node_t *start, const aabb3d &bounds_to_add)
+{
+    for (node_t *node = start; node; node = node->parent) {
+        node->bounds += bounds_to_add;
+    }
+}
+
 static void FixupMarkFaces_AddFacesToLeaf(node_t *node, const std::set<face_t *> &marfaces_to_add)
 {
     Q_assert(FixupMarkFaces_IsUsableLeaf(node));
@@ -422,6 +439,16 @@ static void FixupMarkFaces_AddFacesToLeaf(node_t *node, const std::set<face_t *>
 
     auto new_markfaces = std::vector<face_t *>(current_markfaces.begin(), current_markfaces.end());
     leafdata->markfaces = new_markfaces;
+
+    // expand the bounds of `node` (plus all ancestors) to encompass `markfaces_to_add`, to prevent frustum culling
+    // of the storage leaf when the markfaces_to_add are in view (fixes q1_detail_fence2.map test case).
+    //
+    // This does mean we "lie" about the node bounds. Alternative to this would be adding the marfaces to _every_
+    // eligible leaf in the storage clusters, which would potentially waste a ton of marksurfaces
+    aabb3d added_bounds = BoundFaces(marfaces_to_add);
+    //logging::print("old storage node bounds: {}, want to add faces bounds: {}\n", node->bounds, added_bounds);
+
+    AddBoundsToNode(node, added_bounds);
 }
 
 /**

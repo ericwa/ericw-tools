@@ -113,7 +113,7 @@ struct compiled_brush_side_t
     std::array<char, 32> groupname;
     sin_lightinfo_t lightinfo;
 
-    const q2_dbrushside_qbism_t *source = nullptr;
+    const mbrushside_t *source = nullptr;
 };
 
 struct planepoints : std::array<qvec3d, 3>
@@ -186,7 +186,7 @@ struct compiled_brush_t
                 for (auto &v : p) {
                     v += brush_offset.value();
                 }
-                
+
                 for (int i = 0; i < 2; ++i) {
                     if (side.valve.scale[i] != 0)
                         side.valve.shift[i] -= qv::dot(brush_offset.value(), side.valve.axis.row(i) / side.valve.scale[i]);
@@ -310,7 +310,7 @@ struct compiled_brush_t
 struct decomp_plane_t : qplane3d
 {
     const bsp2_dnode_t *node = nullptr; // can be nullptr
-    const q2_dbrushside_qbism_t *source = nullptr;
+    const mbrushside_t *source = nullptr;
     const bsp2_dclipnode_t *clipnode = nullptr; // can be nullptr
 };
 
@@ -602,7 +602,7 @@ static const char *DefaultSkipTexture(const mbsp_t *bsp)
 static void DefaultSkipSide(compiled_brush_side_t &side, const mbsp_t *bsp)
 {
     side.texture_name = DefaultSkipTexture(bsp);
-    
+
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         side.flags = {Q2_SURF_NODRAW};
     } else if (bsp->loadversion->game->id == GAME_SIN) {
@@ -644,7 +644,7 @@ static const char *DefaultOriginTexture(const mbsp_t *bsp)
 static const char *DefaultTextureForContents(const mbsp_t *bsp, contentflags_t contents)
 {
     int native = bsp->loadversion->game->contents_to_native(contents);
-    
+
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         int visible = native & Q2_ALL_VISIBLE_CONTENTS;
 
@@ -696,7 +696,7 @@ static void OverrideTextureForContents(
 {
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         int native = bsp->loadversion->game->contents_to_native(contents);
-        
+
         if (strstr(name, " ")) {
             side.texture_name = "skip";
             side.flags = {Q2_SURF_NODRAW};
@@ -719,7 +719,7 @@ static void OverrideTextureForContents(
         }
     } else if (bsp->loadversion->game->id == GAME_SIN) {
         int native = bsp->loadversion->game->contents_to_native(contents);
-        
+
         if (strstr(name, " ")) {
             side.texture_name = "GENERIC/misc/skip";
             side.flags = {static_cast<q2_surf_flags_t>(SIN_SURF_NODRAW)};
@@ -1017,7 +1017,7 @@ static std::vector<compiled_brush_t> DecompileLeafTask(const mbsp_t *bsp, const 
 
             if (bsp->loadversion->game->contents_to_native(brush.contents) == 0) {
                 // hint brush
-                
+
                 if (bsp->loadversion->game->id == GAME_QUAKE_II) {
                     side.flags = {Q2_SURF_HINT};
                     side.texture_name = "e1u1/hint";
@@ -1051,7 +1051,7 @@ static std::vector<compiled_brush_t> DecompileLeafTask(const mbsp_t *bsp, const 
                     ti = BSP_GetTexinfo(bsp, finalSide.plane.source->texinfo);
                     li = BSP_GetLightinfo(bsp, finalSide.plane.source->lightinfo);
                     if (ti) {
-                        name = ti->texture.data();
+                        name = ti->texturename.c_str();
                     }
                 }
 
@@ -1249,7 +1249,7 @@ static std::vector<compiled_brush_t> DecompileBrushTask(const mbsp_t *bsp, const
     leaf_decompile_task &task, const std::optional<qvec3d> &brush_offset, const bool isBrushBased)
 {
     for (size_t i = 0; i < task.brush->numsides; i++) {
-        const q2_dbrushside_qbism_t *side = &bsp->dbrushsides[task.brush->firstside + i];
+        const mbrushside_t *side = &bsp->dbrushsides[task.brush->firstside + i];
         decomp_plane_t &plane = task.allPlanes.emplace_back(decomp_plane_t{qplane3d{bsp->dplanes[side->planenum]}});
         plane.source = side;
     }

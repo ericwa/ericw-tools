@@ -1528,7 +1528,7 @@ static void LightPoint_Sky(const mbsp_t *bsp, raystream_intersection_t &rs, cons
 
 // Mottle
 
-static int mod_round_to_neg_inf(int x, int y)
+static constexpr int mod_round_to_neg_inf(int x, int y)
 {
     assert(y > 0);
     if (x >= 0) {
@@ -1536,8 +1536,24 @@ static int mod_round_to_neg_inf(int x, int y)
     }
     // e.g. with mod_round_to_neg_inf(-7, 3) we want +2
     const int temp = (-x) % y;
+
+    // mod_round_to_neg_inf(-X, X) should return 0
+    if (temp == 0)
+        return 0;
+
     return y - temp;
 }
+
+// some quick checks
+static_assert(mod_round_to_neg_inf(-4, 3) == 2);
+static_assert(mod_round_to_neg_inf(-3, 3) == 0);
+static_assert(mod_round_to_neg_inf(-2, 3) == 1);
+static_assert(mod_round_to_neg_inf(-1, 3) == 2);
+static_assert(mod_round_to_neg_inf(+0, 3) == 0);
+static_assert(mod_round_to_neg_inf(+1, 3) == 1);
+static_assert(mod_round_to_neg_inf(+2, 3) == 2);
+static_assert(mod_round_to_neg_inf(+3, 3) == 0);
+static_assert(mod_round_to_neg_inf(+4, 3) == 1);
 
 constexpr int mottle_texsize = 256;
 

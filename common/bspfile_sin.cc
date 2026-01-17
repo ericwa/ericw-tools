@@ -17,6 +17,8 @@
     See file, 'COPYING', for details.
 */
 
+#include "common/log.hh"
+
 #include <common/bspfile.hh>
 #include <common/cmdlib.hh>
 #include <common/numeric_cast.hh>
@@ -51,7 +53,6 @@ void sin_lightinfo_t::stream_read(std::istream &s)
 sin_texinfo_t::sin_texinfo_t(const mtexinfo_t &model)
     : vecs(model.vecs),
       flags(model.flags.native_q2),
-      texture(model.texture),
       nexttexinfo(model.nexttexinfo),
       trans_mag(model.trans_mag),
       trans_angle(model.trans_angle),
@@ -64,12 +65,22 @@ sin_texinfo_t::sin_texinfo_t(const mtexinfo_t &model)
       color(model.color),
       groupname(model.groupname)
 {
+    if (!string_copy_to_array_z(model.texturename, texture)) {
+        logging::print("WARNING: texture name '{}' was truncated to fit in sin_texinfo_t ({} bytes)\n",
+            model.texturename, texture.size());
+    }
 }
 
 sin_texinfo_t::operator mtexinfo_t() const
 {
-    return {vecs, {.native_q2 = static_cast<q2_surf_flags_t>(flags)}, 0, 0, texture, nexttexinfo, trans_mag, trans_angle, base_angle, animtime, nonlit, translucence,
-            friction, restitution, color, groupname};
+    bool texturename_ok;
+    std::string texturename = string_copy_from_array_z(texture, &texturename_ok);
+
+    if (!texturename_ok) {
+        logging::print("WARNING: texture name {} was not zero-terminated", texturename);
+    }
+    return {vecs, {.native_q2 = static_cast<q2_surf_flags_t>(flags)}, 0, 0, texturename, nexttexinfo, trans_mag,
+        trans_angle, base_angle, animtime, nonlit, translucence, friction, restitution, color, groupname};
 }
 
 void sin_texinfo_t::stream_write(std::ostream &s) const
@@ -113,13 +124,13 @@ void sin_dface_t::stream_read(std::istream &s)
 
 // sin_dbrushside_t
 
-sin_dbrushside_t::sin_dbrushside_t(const q2_dbrushside_qbism_t &model)
+sin_dbrushside_t::sin_dbrushside_t(const mbrushside_t &model)
     : q2_dbrushside_t(model),
       lightinfo(model.lightinfo)
 {
 }
 
-sin_dbrushside_t::operator q2_dbrushside_qbism_t() const
+sin_dbrushside_t::operator mbrushside_t() const
 {
     return {planenum, texinfo, lightinfo};
 }

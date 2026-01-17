@@ -1823,7 +1823,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
                     vertex_normal = plane_normal;
                 }
 
-                std::array<uint8_t, MAXLIGHTMAPS> styles;
+                std::array<uint8_t, MFACE_MAXLIGHTMAPS> styles;
 
                 if (lightmap.facenum_to_styles.contains(fnum)) {
                     styles = lightmap.facenum_to_styles.at(fnum);

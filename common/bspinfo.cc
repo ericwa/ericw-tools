@@ -303,7 +303,8 @@ full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, 
     }
 
     std::vector<uint16_t> bspx_lmstyle16;
-    int max_styles_per_face = MAXLIGHTMAPS;
+    // this is the most we support across all games directly in the mface_t (not counting bspx)
+    int max_styles_per_face = mface_t().styles.size();
 
     if (bspx.contains("LMSTYLE16")) {
         auto &lmstyle16 = bspx.at("LMSTYLE16");
@@ -552,7 +553,7 @@ full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, 
         result.facenum_to_lightmap_uvs[Face_GetNum(bsp, face.face)] = std::move(face_lightmap_uvs);
 
         auto face_idx = (intptr_t) (face.face - bsp->dfaces.data());
-        std::array<uint8_t, MAXLIGHTMAPS> s;
+        std::array<uint8_t, MFACE_MAXLIGHTMAPS> s;
 
         if (!bspx_lmstyle16.empty()) {
             const uint16_t *styles = bspx_lmstyle16.data() + face_idx * max_styles_per_face;
@@ -796,7 +797,7 @@ void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &
                                                                               : src_texinfo.flags.native_q1;
             texinfo["miptex"] = src_texinfo.miptex;
             texinfo["value"] = src_texinfo.value;
-            texinfo["texture"] = std::string(src_texinfo.texture.data());
+            texinfo["texture"] = src_texinfo.texturename;
             texinfo["nexttexinfo"] = src_texinfo.nexttexinfo;
         }
     }

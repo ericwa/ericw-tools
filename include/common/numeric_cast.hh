@@ -21,6 +21,7 @@
 
 #include <limits>
 #include <stdexcept>
+#include <common/bspfile_generic.hh>
 
 template<typename Dst, typename Src>
 constexpr bool numeric_cast_will_overflow(const Src &value)
@@ -79,6 +80,7 @@ constexpr bool numeric_cast_will_overflow(const Src &value)
     return false;
 }
 
+// throws std::overflow_error if the given conversion would overflow
 template<typename Dst, typename Src>
 constexpr Dst numeric_cast(const Src &value, const char *overflow_message = "value")
 {
@@ -113,8 +115,13 @@ inline qvec<T, 3> aabb_maxs_cast(const qvec<F, 3> &f, const char *overflow_messa
             numeric_cast<T>(f[2], overflow_message)};
 }
 
-// shortcut template to trim (& convert) std::arrays
-// between two lengths
+// shortcut template to trim (& convert) std::arrays between two lengths.
+//
+// ADest is value-initialized so if ADest is longer than ASrc, the extra elements are zero
+// (for numeric types) or have their default constructor called.
+//
+// arithmetic types are passed through `numeric_cast`, which throws on overflow.
+// other types are converted via `static_cast`.
 template<typename ADest, typename ASrc>
 constexpr ADest array_cast(const ASrc &src, const char *overflow_message = "src")
 {
@@ -129,4 +136,38 @@ constexpr ADest array_cast(const ASrc &src, const char *overflow_message = "src"
     }
 
     return dest;
+}
+
+// converts from a mface_t styles array, to a game-specific std::array, silently dropping excess elements
+template<class ArrClass>
+ArrClass styles_mface_to_dface(const std::array<uint8_t, MFACE_MAXLIGHTMAPS> &vec)
+{
+    static_assert(ArrClass().size() != 0);
+    static_assert(ArrClass().size() <= MFACE_MAXLIGHTMAPS);
+
+    ArrClass result;
+    for (size_t i = 0; i < result.size(); ++i) {
+        result[i] = vec[i];
+    }
+    return result;
+}
+
+// converts a game-specific fixed-size std::array of style values, to the larger mface_t array, padding with 255
+template<class ArrClass>
+std::array<uint8_t, MFACE_MAXLIGHTMAPS> styles_dface_to_mface(const ArrClass &array)
+{
+    std::array<uint8_t, MFACE_MAXLIGHTMAPS> result;
+
+    static_assert(ArrClass().size() <= result.size());
+
+    for (size_t i = 0; i < result.size(); ++i) {
+        // the game-specific array might be smaller; pad with 255
+        if (i < array.size()) {
+            result[i] = array[i];
+        } else {
+            result[i] = INVALID_LIGHTSTYLE_OLD;
+        }
+    }
+
+    return result;
 }

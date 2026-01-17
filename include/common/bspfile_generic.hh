@@ -237,7 +237,7 @@ struct mtexinfo_t
 
     // q2 only
     int32_t value; // light emission, etc
-    std::array<char, 64> texture; // texture name (textures/*.wal)
+    std::string texturename; // texture name (textures/*.wal)
     int32_t nexttexinfo = -1; // for animations, -1 = end of chain
 
     // SiN only
@@ -253,10 +253,8 @@ struct mtexinfo_t
     std::array<char, 32> groupname;
 };
 
-// SiN TODO: this is 16 in SiN but 4 in Quake;
-// need to expose to gamedef
-constexpr size_t MAXLIGHTMAPS = 16;
 constexpr uint16_t INVALID_LIGHTSTYLE_OLD = 0xffu;
+constexpr size_t MFACE_MAXLIGHTMAPS = 16;
 
 struct mface_t
 {
@@ -267,16 +265,12 @@ struct mface_t
     int32_t texinfo;
 
     /* lighting info */
-    std::array<uint8_t, MAXLIGHTMAPS> styles;
+    std::array<uint8_t, MFACE_MAXLIGHTMAPS> styles;
     // start of [numstyles*surfsize] samples. byte offset into bsp.dlightdata.
     int32_t lightofs;
 
     // SiN
     int32_t lightinfo;
-
-    // serialize for streams
-    void stream_write(std::ostream &s) const;
-    void stream_read(std::istream &s);
 };
 
 /*
@@ -381,16 +375,12 @@ struct dbrush_t
     void stream_read(std::istream &s);
 };
 
-struct q2_dbrushside_qbism_t
+struct mbrushside_t
 {
     uint32_t planenum; // facing out of the leaf
     int32_t texinfo;
     // SiN
     int32_t lightinfo;
-
-    // serialize for streams
-    void stream_write(std::ostream &s) const;
-    void stream_read(std::istream &s);
 };
 
 struct sin_lightinfo_t
@@ -437,7 +427,7 @@ struct mbsp_t
     std::vector<darea_t> dareas;
     std::vector<dareaportal_t> dareaportals;
     std::vector<dbrush_t> dbrushes;
-    std::vector<q2_dbrushside_qbism_t> dbrushsides;
+    std::vector<mbrushside_t> dbrushsides;
 
     int lightsamples() const;
     std::vector<sin_lightinfo_t> dlightinfo;

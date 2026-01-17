@@ -542,7 +542,7 @@ void light_settings::light_postinitialize(int argc, const char **argv)
     }
 
     // upgrade to uint16 if facestyles is specified
-    if (light_options.facestyles.value() > MAXLIGHTMAPS && !light_options.compilerstyle_max.is_changed()) {
+    if (light_options.facestyles.is_changed() && !light_options.compilerstyle_max.is_changed()) {
         light_options.compilerstyle_max.set_value(INVALID_LIGHTSTYLE, settings::source::COMMANDLINE);
     }
 }
@@ -674,9 +674,7 @@ static void CreateLightmapSurfaces(mbsp_t *bsp)
                 }
             } else {
                 face->lightofs = -1;
-                for (size_t i = 0; i < MAXLIGHTMAPS; i++) {
-                    face->styles[i] = INVALID_LIGHTSTYLE_OLD;
-                }
+                face->styles.fill(INVALID_LIGHTSTYLE_OLD);
 
                 if (facesup_decoupled) {
                     facesup_decoupled->offset = -1;
@@ -911,7 +909,7 @@ static void LightWorld(bspdata_t *bspdata, const fs::path &source, bool forcedsc
             for (; j < MAXLIGHTMAPSSUP; j++) {
                 if (faces_sup[i].styles[j] == INVALID_LIGHTSTYLE)
                     break;
-                if (j < MAXLIGHTMAPS && bsp.dfaces[i].styles[j] != faces_sup[i].styles[j]) {
+                if (j < bsp.dfaces[i].styles.size() && bsp.dfaces[i].styles[j] != faces_sup[i].styles[j]) {
                     needstyles = true;
                 }
                 if (maxstyle < faces_sup[i].styles[j])
