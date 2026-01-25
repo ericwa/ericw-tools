@@ -455,6 +455,24 @@ struct gamedef_t
     // whether the game uses an RGB lightmap or not
     bool has_rgb_lightmap = false;
 
+    // Q1-likes shrink bodel bounds by 1 unit on the mins and maxs
+    bool uses_shrunk_model_bounds = false;
+
+    // Q1-likes have vis calculate per-leaf ambient sounds
+    bool has_ambient_sounds = false;
+
+    // Q1-likes use leaf 0 as a shared solid leaf
+    bool has_shared_solid_leaf = false;
+
+    // Q2-likes calculate potentially hearable set in vis
+    bool has_phs = false;
+
+    // Q2-likes have native cluster suport
+    bool has_cluster_support = false;
+
+    // Q2-likes have brushes
+    bool has_brushes = false;
+
     // whether the game supports content flags on brush models
     bool allow_contented_bmodels = false;
 

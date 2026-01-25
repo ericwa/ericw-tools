@@ -422,7 +422,7 @@ static void ClusterFlow(int clusternum, leafbits_t &buffer, mbsp_t *bsp)
     int numvis = 0;
 
     uint8_t *outbuffer;
-    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+    if (bsp->loadversion->game->has_cluster_support) {
         outbuffer = uncompressed.data() + clusternum * leafbytes;
         for (int i = 0; i < portalleafs; i++) {
             if (buffer[i]) {
@@ -449,7 +449,7 @@ static void ClusterFlow(int clusternum, leafbits_t &buffer, mbsp_t *bsp)
      * increment totalvis by
      * (# of real leafs in this cluster) x (# of real leafs visible from this cluster)
      */
-    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+    if (bsp->loadversion->game->has_cluster_support) {
         // FIXME: not sure what this is supposed to be?
         totalvis += numvis;
     } else {
@@ -463,7 +463,7 @@ static void ClusterFlow(int clusternum, leafbits_t &buffer, mbsp_t *bsp)
     compressed.clear();
 
     /* Allocate for worst case where RLE might grow the data (unlikely) */
-    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+    if (bsp->loadversion->game->has_cluster_support) {
         CompressRow(outbuffer, (portalleafs + 7) >> 3, std::back_inserter(compressed));
     } else {
         CompressRow(outbuffer, (portalleafs_real + 7) >> 3, std::back_inserter(compressed));
@@ -475,7 +475,7 @@ static void ClusterFlow(int clusternum, leafbits_t &buffer, mbsp_t *bsp)
     bsp->dvis.set_bit_offset(VIS_PVS, clusternum, visofs);
 
     // Set pointers
-    if (bsp->loadversion->game->id != GAME_QUAKE_II) {
+    if (!bsp->loadversion->game->has_cluster_support) {
         for (int i = 0; i < portalleafs_real; i++) {
             if (bsp->dleafs[i + 1].cluster == clusternum) {
                 bsp->dleafs[i + 1].visofs = visofs;
@@ -561,7 +561,7 @@ visstats_t CalcVis(mbsp_t *bsp)
 
     int64_t avg = totalvis;
 
-    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+    if (bsp->loadversion->game->has_cluster_support) {
         avg /= static_cast<int64_t>(portalleafs);
 
         logging::print("average clusters visible: {}\n", avg);
@@ -592,7 +592,7 @@ static void LoadPortals(const fs::path &name, mbsp_t *bsp)
     portalleafs_real = prtfile.portalleafs_real;
 
     /* Allocate for worst case where RLE might grow the data (unlikely) */
-    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+    if (bsp->loadversion->game->has_cluster_support) {
         compressed.reserve(std::max(1, (portalleafs * 2) / 8));
     } else {
         compressed.reserve(std::max(1, (portalleafs_real * 2) / 8));
@@ -600,7 +600,7 @@ static void LoadPortals(const fs::path &name, mbsp_t *bsp)
 
     numportals = prtfile.portals.size();
 
-    if (bsp->loadversion->game->id != GAME_QUAKE_II) {
+    if (!bsp->loadversion->game->has_cluster_support) {
         // since q2bsp has native cluster support, we shouldn't look at portalleafs_real at all.
         logging::print("{:6} leafs\n", portalleafs_real);
     }
@@ -609,7 +609,7 @@ static void LoadPortals(const fs::path &name, mbsp_t *bsp)
 
     leafbytes = ((portalleafs + 63) & ~63) >> 3;
     leaflongs = leafbytes / sizeof(long);
-    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+    if (bsp->loadversion->game->has_cluster_support) {
         // not used in Q2
         leafbytes_real = 0;
     } else {
@@ -620,7 +620,7 @@ static void LoadPortals(const fs::path &name, mbsp_t *bsp)
     portals.resize(numportals * 2);
     leafs.resize(portalleafs);
 
-    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+    if (bsp->loadversion->game->has_cluster_support) {
         originalvismapsize = portalleafs * ((portalleafs + 7) / 8);
     } else {
         originalvismapsize = portalleafs_real * ((portalleafs_real + 7) / 8);
@@ -668,7 +668,7 @@ static void LoadPortals(const fs::path &name, mbsp_t *bsp)
     }
 
     // Q2 doesn't need this, it's PRT1 has the data we need
-    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+    if (bsp->loadversion->game->has_cluster_support) {
         return;
     }
 
@@ -752,7 +752,7 @@ int vis_main(int argc, const char **argv)
     vis::extended_texinfo_flags = LoadExtendedTexinfoFlags(vis_options.sourceMap, &bsp);
 
     if (vis_options.phsonly.value()) {
-        if (bsp.loadversion->game->id != GAME_QUAKE_II) {
+        if (!bsp.loadversion->game->has_phs) {
             FError("need a Q2-esque BSP for -phsonly");
         }
 
@@ -760,7 +760,7 @@ int vis_main(int argc, const char **argv)
         leafbytes = ((portalleafs + 63) & ~63) >> 3;
         leaflongs = leafbytes / sizeof(long);
 
-        if (bsp.loadversion->game->id == GAME_QUAKE_II) {
+        if (bsp.loadversion->game->has_cluster_support) {
             originalvismapsize = portalleafs * ((portalleafs + 7) / 8);
         }
     } else {
@@ -770,7 +770,7 @@ int vis_main(int argc, const char **argv)
         statefile = fs::path(vis_options.sourceMap).replace_extension("vis");
         statetmpfile = fs::path(vis_options.sourceMap).replace_extension("vi0");
 
-        if (bsp.loadversion->game->id != GAME_QUAKE_II) {
+        if (!bsp.loadversion->game->has_cluster_support) {
             uncompressed.resize(portalleafs * leafbytes_real);
         } else {
             uncompressed.resize(portalleafs * leafbytes);
@@ -787,11 +787,10 @@ int vis_main(int argc, const char **argv)
     }
 
     // no ambient sounds for Q2
-    if (bsp.loadversion->game->id == GAME_QUAKE ||
-        bsp.loadversion->game->id == GAME_HEXEN_II ||
-        bsp.loadversion->game->id == GAME_HALF_LIFE) {
+    if (bsp.loadversion->game->has_ambient_sounds) {
         CalcAmbientSounds(&bsp);
-    } else {
+    }
+    if (bsp.loadversion->game->has_phs) {
         CalcPHS(&bsp);
     }
 

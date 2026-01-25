@@ -468,7 +468,7 @@ static bool Mod_LeafPvs(const mbsp_t *bsp, const mleaf_t *leaf, uint8_t *out)
     // init to all visible
     memset(out, 0xFF, num_pvsclusterbytes);
 
-    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+    if (bsp->loadversion->game->has_cluster_support) {
         auto it = UncompressedVis().find(leaf->cluster);
         if (it == UncompressedVis().end()) {
             return false;
@@ -496,7 +496,7 @@ static const std::vector<uint8_t> *Mod_LeafPvs(const mbsp_t *bsp, const mleaf_t 
         return nullptr;
     }
 
-    const int key = (bsp->loadversion->game->id == GAME_QUAKE_II) ? leaf->cluster : leaf->visofs;
+    const int key = (bsp->loadversion->game->has_cluster_support) ? leaf->cluster : leaf->visofs;
     if (auto it = UncompressedVis().find(key); it != UncompressedVis().end()) {
         return &it->second;
     }

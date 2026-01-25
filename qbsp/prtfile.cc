@@ -193,7 +193,7 @@ static void WritePortalfile(node_t *headnode, portal_state_t &state)
 
     // q2 uses a PRT1 file, but with clusters.
     // (Since q2bsp natively supports clusters, we don't need PRT2.)
-    if (qbsp_options.target_game->id == GAME_QUAKE_II) {
+    if (qbsp_options.target_game->has_cluster_support) {
         portalFile.portalleafs = state.num_visclusters.count.load();
         WritePortals_r(headnode, portalFile, true);
     } else if (!state.uses_detail) {

@@ -508,8 +508,7 @@ GLView::face_visibility_key_t GLView::desiredFaceVisibility() const
 
         result.leafnum = leafnum;
 
-        if (bsp.loadversion->game->id == GAME_QUAKE_II ||
-            bsp.loadversion->game->id == GAME_SIN) {
+        if (bsp.loadversion->game->has_cluster_support) {
             result.clusternum = leaf->cluster;
         } else {
             result.clusternum = leaf->visofs;
@@ -561,7 +560,7 @@ void GLView::updateFaceVisibility(const std::array<QVector4D, 4> &frustum)
         in_solid = true;
     if (desired.clusternum == -1)
         in_solid = true;
-    if (desired.leafnum == 0 && bsp.loadversion->game->id != GAME_QUAKE_II && bsp.loadversion->game->id != GAME_SIN)
+    if (desired.leafnum == 0 && bsp.loadversion->game->has_shared_solid_leaf)
         in_solid = true;
 
     bool found_visdata = false;
@@ -863,7 +862,7 @@ void GLView::paintGL()
             active_program = draw.key.program;
             active_program->bind();
         }
-        
+
         if (active_program == m_program) {
             m_program->setUniformValue(m_program_alpha_test_location, draw.key.alpha_test);
 
@@ -1549,7 +1548,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
             // determine opacity
             float opacity = 1.0f;
             bool alpha_test = false, fullbright = false;
-            
+
             if (bsp.loadversion->game->id == GAME_QUAKE_II) {
                 if (texinfo->flags.is_nodraw()) {
                     continue;
@@ -2095,8 +2094,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
     for (int hullnum = 0;; ++hullnum) {
         if (hullnum >= 1) {
             // check if hullnum 1 or higher is valid for this bsp (hull0 is always present); it's slightly involved
-            if (bsp.loadversion->game->id == GAME_QUAKE_II ||
-                bsp.loadversion->game->id == GAME_SIN) {
+            if (hullnum >= bsp.loadversion->game->get_hull_sizes().size()) {
                 break;
             }
             if (hullnum >= bsp.dmodels[0].headnode.size())
