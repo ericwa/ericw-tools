@@ -188,6 +188,9 @@ public:
         : gamedef_t(friendly_name, base_dir)
     {
         this->id = ID;
+        uses_shrunk_model_bounds = true;
+        has_ambient_sounds = true;
+        has_shared_solid_leaf = true;
     }
 
     bool surf_is_lightmapped(
@@ -551,7 +554,10 @@ struct gamedef_q2_t : public gamedef_t
     {
         this->id = GAME_QUAKE_II;
         has_rgb_lightmap = true;
+        has_phs = true;
+        has_cluster_support = true;
         allow_contented_bmodels = true;
+        has_brushes = true;
         max_entity_key = 256;
     }
 

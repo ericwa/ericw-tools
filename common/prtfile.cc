@@ -55,14 +55,14 @@ prtfile_t LoadPrtFile(const fs::path &name, const bspversion_t *loadversion)
         if (f.bad())
             FError("unable to parse {} header\n", PORTALFILE);
 
-        if (loadversion->game->id == GAME_QUAKE_II) {
+        if (loadversion->game->has_cluster_support) {
             // since q2bsp has native cluster support, we shouldn't look at portalleafs_real at all.
             result.portalleafs_real = 0;
         } else {
             result.portalleafs_real = result.portalleafs;
         }
     } else if (magic == PORTALFILE2) {
-        if (loadversion->game->id == GAME_QUAKE_II) {
+        if (loadversion->game->has_cluster_support) {
             FError("{} can not be used with Q2\n", PORTALFILE2);
         }
         f >> result.portalleafs_real >> result.portalleafs >> numportals;
@@ -70,7 +70,7 @@ prtfile_t LoadPrtFile(const fs::path &name, const bspversion_t *loadversion)
         if (f.bad())
             FError("unable to parse {} header\n", PORTALFILE);
     } else if (magic == PORTALFILEAM) {
-        if (loadversion->game->id == GAME_QUAKE_II) {
+        if (loadversion->game->has_cluster_support) {
             FError("{} can not be used with Q2\n", PORTALFILEAM);
         }
         f >> result.portalleafs >> numportals >> result.portalleafs_real;
@@ -114,7 +114,7 @@ prtfile_t LoadPrtFile(const fs::path &name, const bspversion_t *loadversion)
     }
 
     // Q2 doesn't need this, it's PRT1 has the data we need
-    if (loadversion->game->id == GAME_QUAKE_II) {
+    if (loadversion->game->has_cluster_support) {
         return result;
     }
 
@@ -254,7 +254,7 @@ void WritePortalfile(
 
     // q2 uses a PRT1 file, but with clusters.
     // (Since q2bsp natively supports clusters, we don't need PRT2.)
-    if (loadversion->game->id == GAME_QUAKE_II) {
+    if (loadversion->game->has_cluster_support) {
         ewt::print(portalFile, "PRT1\n");
         ewt::print(portalFile, "{}\n", prtfile.portalleafs);
         ewt::print(portalFile, "{}\n", prtfile.portals.size());
