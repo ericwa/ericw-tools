@@ -7,10 +7,20 @@
 namespace mapfile
 {
 
-/*static*/ bool brush_side_t::is_valid_texture_projection(
-    const qvec3f &faceNormal, const qvec3f &s_vec, const qvec3f &t_vec)
+/*static*/ bool brush_side_t::is_valid_texture_projection(const qvec3f &faceNormal, const texvecf &vecs)
 {
     // TODO: This doesn't match how light does it (TexSpaceToWorld)
+
+    for (int row = 0; row < 2; ++row) {
+        for (int col = 0; col < 4; ++col) {
+            if (std::isnan(vecs.row(row)[col])) {
+                return false;
+            }
+        }
+    }
+
+    qvec3f s_vec = vecs.row(0).xyz();
+    qvec3f t_vec = vecs.row(1).xyz();
 
     const qvec3f tex_normal = qv::normalize(qv::cross(s_vec, t_vec));
 
@@ -31,17 +41,16 @@ namespace mapfile
     return true;
 }
 
+bool brush_side_t::is_valid_texture_projection() const
+{
+    return is_valid_texture_projection(plane.normal, vecs);
+}
+
 void brush_side_t::validate_texture_projection()
 {
     if (!is_valid_texture_projection()) {
-        /*
-        if (qbsp_options.verbose.value()) {
-        logging::print("WARNING: {}: repairing invalid texture projection (\"{}\" near {} {} {})\n", mapface.line,
-        mapface.texname, (int)mapface.planepts[0][0], (int)mapface.planepts[0][1], (int)mapface.planepts[0][2]);
-        } else {
-        issue_stats.num_repaired++;
-        }
-        */
+        logging::print("WARNING: {}: repairing invalid texture projection (\"{}\" near {} {} {})\n", location,
+            texture, (int)planepts[0][0], (int)planepts[0][1], (int)planepts[0][2]);
 
         // Reset texturing to sensible defaults
         set_texinfo(texdef_quake_ed_t{{0.0, 0.0}, 0, {1.0, 1.0}});
