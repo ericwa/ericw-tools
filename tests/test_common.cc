@@ -1,6 +1,8 @@
+#include "test_main.hh"
 #include "common/json.hh"
 #include "common/numeric_cast.hh"
 
+#include "gmock/gmock-matchers.h"
 #include <gtest/gtest.h>
 
 #include <cstdint>
@@ -663,4 +665,28 @@ TEST(numericCast, arrayCastUnsignedToUnsignedOverflow)
 {
     std::array<uint32_t, 1> src{UINT32_MAX};
     EXPECT_THROW((array_cast<std::array<uint16_t, 1>>(src, "something")), std::overflow_error);
+}
+
+TEST(tests, logMessages1)
+{
+    logging::print("hello1\n");
+    EXPECT_EQ(std::vector{std::string{"hello1\n"}}, get_current_test_log());
+}
+
+// checks that the logMessages1 messages were cleared
+TEST(tests, logMessages2)
+{
+    logging::print("hello2\n");
+    EXPECT_EQ(std::vector{std::string{"hello2\n"}}, get_current_test_log());
+}
+
+TEST(tests, logMessagesPrefix)
+{
+    logging::print("not warning\n");
+
+    auto WarningMatcher = testing::Contains(testing::StartsWith("WARNING:"));
+    EXPECT_THAT(get_current_test_log(), testing::Not(WarningMatcher));
+
+    logging::print("WARNING: something\n");
+    EXPECT_THAT(get_current_test_log(), WarningMatcher);
 }

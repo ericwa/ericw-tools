@@ -9,6 +9,13 @@
 
 bool tests_verbose = false;
 
+std::vector<std::string> current_test_log_messages;
+
+const std::vector<std::string> &get_current_test_log()
+{
+    return current_test_log_messages;
+}
+
 class clear_shared_data_listener : public testing::TestEventListener
 {
 public:
@@ -21,6 +28,7 @@ public:
     {
         fs::clear();
         img::clear();
+        current_test_log_messages.clear();
     }
     void OnTestDisabled(const testing::TestInfo &test_info) override { }
     void OnTestPartResult(const testing::TestPartResult &test_part_result) override { }
@@ -32,12 +40,19 @@ public:
     void OnTestProgramEnd(const testing::UnitTest &unit_test) override { }
 };
 
+void log_print_callback(logging::flag logflag, const char *str)
+{
+    current_test_log_messages.push_back(str);
+}
+
 int main(int argc, char **argv)
 {
     logging::preinitialize();
 
     // writing console colors within test case output breaks doctest/CLion integration
     logging::enable_color_codes = false;
+
+    logging::set_print_callback(log_print_callback);
 
     for (int i = 1; i < argc; ++i) {
         // parse "-threads 1"
