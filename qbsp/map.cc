@@ -405,7 +405,7 @@ int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_inf
     int i;
 
     // FIXME: figure out a way that we can move this to gamedef
-    if (qbsp_options.target_game->id != GAME_QUAKE_II) {
+    if (qbsp_options.target_game->id != GAME_QUAKE_II && qbsp_options.target_game->id != GAME_SIN) {
         /* Ignore leading path in texture names (Q2 map compatibility) */
         pathsep = strrchr(name, '/');
         if (pathsep)

@@ -1253,7 +1253,7 @@ struct gamedef_sin_t : public gamedef_t
 
     inline int32_t get_content_type(contentflags_t contents) const
     {
-        return 0;
+        return contents.flags & (EWT_ALL_VISIBLE_CONTENTS | EWT_ALL_INVISCONTENTS);
     }
 
     int32_t contents_from_string(std::string_view str) const override
@@ -1263,7 +1263,8 @@ struct gamedef_sin_t : public gamedef_t
 
     contentflags_t contents_remap_for_export(contentflags_t contents, remap_type_t type) const override
     {
-        return {};
+        // TODO: logic from gamedef_q2_t?
+        return contents;
     }
 
     std::span<const aabb3d> get_hull_sizes() const override { return {}; }
@@ -1271,7 +1272,16 @@ struct gamedef_sin_t : public gamedef_t
     contentflags_t face_get_contents(
         const std::string &texname, const surfflags_t &flags, contentflags_t contents, bool transwater) const override
     {
-        return {};
+        contents_int_t surf_contents = contents.flags;
+
+        // if we don't have a declared content type, assume solid.
+        if (!get_content_type(contents)) {
+            surf_contents |= EWT_VISCONTENTS_SOLID;
+        }
+
+        // TODO: logic from gamedef_q2_t?
+
+        return contentflags_t::make(surf_contents);
     }
 
 private:
