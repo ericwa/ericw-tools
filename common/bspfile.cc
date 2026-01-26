@@ -1311,10 +1311,11 @@ public:
                     basedir = gamedir.parent_path() / default_base_dir;
                 }
             }
-
+            
+            std::error_code ec;
             if (!exists(basedir)) {
                 logging::print("WARNING: failed to find basedir '{}'\n", basedir);
-            } else if (!exists(gamedir) || !equivalent(gamedir, basedir)) {
+            } else if (!exists(gamedir) || !equivalent(gamedir, basedir, ec)) {
                 addArchive(basedir);
                 logging::print("using basedir: '{}'\n", basedir);
             }

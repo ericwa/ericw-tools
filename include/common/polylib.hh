@@ -1210,6 +1210,13 @@ public:
         return result;
     }
 
+    void translateInPlace(const vec3_type &offset)
+    {
+        for (auto it = begin(); it != end(); it++) {
+            *it += offset;
+        }
+    }
+
     winding_base_t translate(const vec3_type &offset) const
     {
         winding_base_t result = this->clone();

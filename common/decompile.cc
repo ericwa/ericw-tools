@@ -243,7 +243,6 @@ struct compiled_brush_t
                 if (side.lightinfo.directangle) {
                     ewt::print(stream, " directangle {}", side.lightinfo.directangle);
                 }
-                // nb: directstyle is unused
                 if (side.translucence) {
                     ewt::print(stream, " translucence {}", side.translucence);
                 }
@@ -263,7 +262,10 @@ struct compiled_brush_t
                     ewt::print(stream, " nonlitvalue {}", side.nonlit);
                 }
                 // nb: groupname is copied to directstyle by qbsp3, they should be identical
-                // but they might not be in the case of consoles
+                // but they might not be in the case of consoles.
+                // the original lightinfo directstyle is only really used for
+                // the controllable lights *or* setting a lightstyle on a surface as an integer
+                // but the latter should just work:tm:
                 if (side.lightinfo.directstylename[0]) {
                     ewt::print(stream, " directstyle \"{}\"", side.lightinfo.directstylename.data());
                 } else if (side.groupname[0]) {
@@ -943,7 +945,19 @@ static std::vector<compiled_brush_t> DecompileLeafTaskGeometryOnly(
     compiled_brush_t brush;
     brush.source = task.brush;
     brush.brush_offset = brush_offset;
-    brush.contents = bsp->loadversion->game->create_contents_from_native(task.brush  ? task.brush->contents
+
+    int native_contents = task.brush->contents;
+
+    if (bsp->loadversion->game->id == GAME_SIN) {
+        // SiN cleanup
+        if (native_contents & SIN_CONTENTS_DUMMYFENCE) {
+            native_contents &= ~SIN_CONTENTS_DUMMYFENCE;
+            native_contents &= ~SIN_CONTENTS_WINDOW;
+            native_contents |= SIN_CONTENTS_FENCE;
+        }
+    }
+
+    brush.contents = bsp->loadversion->game->create_contents_from_native(task.brush  ? native_contents
                                                                          : task.leaf ? task.leaf->contents
                                                                                      : task.contents.value());
 
@@ -1005,7 +1019,19 @@ static std::vector<compiled_brush_t> DecompileLeafTask(const mbsp_t *bsp, const 
         compiled_brush_t brush;
         brush.source = task.brush;
         brush.brush_offset = brush_offset;
-        brush.contents = bsp->loadversion->game->create_contents_from_native(task.brush  ? task.brush->contents
+
+        int native_contents = task.brush->contents;
+
+        if (bsp->loadversion->game->id == GAME_SIN) {
+            // SiN cleanup
+            if (native_contents & SIN_CONTENTS_DUMMYFENCE) {
+                native_contents &= ~SIN_CONTENTS_DUMMYFENCE;
+                native_contents &= ~SIN_CONTENTS_WINDOW;
+                native_contents |= SIN_CONTENTS_FENCE;
+            }
+        }
+
+        brush.contents = bsp->loadversion->game->create_contents_from_native(task.brush  ? native_contents
                                                                              : task.leaf ? task.leaf->contents
                                                                                          : task.contents.value());
 
@@ -1264,12 +1290,20 @@ static std::vector<compiled_brush_t> DecompileBrushTask(const mbsp_t *bsp, const
 #include "common/parser.hh"
 
 static void DecompileEntity(
-    const mbsp_t *bsp, const decomp_options &options, std::ofstream &file, entdict_t &dict, bool isWorld)
+    const mbsp_t *bsp, const decomp_options &options, std::ofstream &file, std::vector<entdict_t> &dicts, int entityNum)
 {
+    auto &dict = dicts[entityNum];
+
     // we use -1 to indicate it's not a brush model
     int modelNum = -1;
-    if (isWorld) {
+    if (entityNum == 0) {
         modelNum = 0;
+
+        dict.remove(std::string_view{"surfacefile"});
+
+        if (!options.sin_srfName.empty()) {
+            dict.set(std::string_view{"surfacefile"}, options.sin_srfName);
+        }
     }
 
     const dbrush_t *areaportal_brush = nullptr;
@@ -1304,7 +1338,76 @@ static void DecompileEntity(
         return;
     }
 
+    // in SiN, custom light styles can be set on certain entities
+    // to be controlled by scripts (basically just `trigger_SetLightStyle`). These are set on the entity as a string "style",
+    // which is converted to a style ID on compilation and then the directstyle lightinfo
+    // value is set with the equivalent value.
+    // To reverse this, find entities with the integral style key, then scan all of
+    // the lightinfo in the map to find the matching directstyle ID and write its
+    // name here instead.
+    if (bsp->loadversion->game->id == GAME_SIN && dict.has("style")) {
+        if (dict.find("classname")->second != "func_areaportal" &&
+            !dict.find("classname")->second.starts_with("light")) {
+            int styleId = dict.get_int("style");
+            
+            if (styleId >= 32) {
+                dict.remove("style");
+                
+                std::string face_style;
+                std::string targetname_style;
+
+                // find matching face style
+                for (auto &lightinfo : bsp->dlightinfo) {
+                    if (lightinfo.directstyle == styleId) {
+                        // found it; set the style ID.
+                        // we don't have to unset the `directstyle` since we don't
+                        // bother writing it.
+                        face_style = lightinfo.directstylename.data();
+                        break;
+                    }
+                }
+
+                // find matching light style
+                for (auto &ent : dicts) {
+                    if (!ent.has("classname") || !ent.get("classname").starts_with("light"))
+                        continue;
+
+                    if (ent.has("style") && ent.get_int("style") == styleId) {
+                        std::string targetname = ent.get("targetname");
+
+                        if (!targetname_style.empty() && targetname_style != targetname) {
+                            logging::print("WARNING: lightstyle @ {} has conflicting light targetname/style\n{} resolved to both {} and {}\n", dict.get("origin"), styleId, targetname_style, targetname);
+                        } else {
+                            targetname_style = targetname;
+                        }
+                    }
+                }
+
+                if (face_style.empty() && targetname_style.empty()) {
+                    logging::print("WARNING: light style {} @ {} exists on an entity but no matching directstyle lightinfo or light targetname was found\n", styleId, dict.get("origin"));
+                } else if (!face_style.empty() && !targetname_style.empty() &&
+                    face_style != targetname_style) {
+                    logging::print("WARNING: light style {} @ {} exists on an entity, and both a matching lightinfo ({}) and light targetname ({}) was found. We can't figure out which one was intended.\n", styleId, dict.get("origin"), face_style, targetname_style);
+                } else if (!face_style.empty()) {
+                    logging::print("Remapped light style {} @ {} to {}\n", styleId, dict.get("origin"), face_style);
+                    dict.set("style", face_style);
+                } else {
+                    logging::print("Remapped light style {} @ {} to {}\n", styleId, dict.get("origin"), targetname_style);
+                    dict.set("style", targetname_style);
+                }
+            }
+        } else if (dict.find("classname")->second.starts_with("light")) {
+            // remove controllable style IDs from lights just in case
+            int styleId = dict.get_int("style");
+
+            if (styleId >= 32) {
+                dict.remove("style");
+            }
+        }
+    }
+
     // First, print the key/values for this entity
+    ewt::print(file, "// entity {}\n", entityNum);
     ewt::print(file, "{{\n");
     for (const auto &keyValue : dict) {
         if (keyValue.first == "model" && !keyValue.second.empty() && keyValue.second[0] == '*') {
@@ -1549,6 +1652,8 @@ static void DecompileEntity(
     }
 
     ewt::print(file, "}}\n");
+    if (modelNum != -1)
+        ewt::print(file, "// was brush model {}\n", modelNum);
 }
 
 void DecompileBSP(const mbsp_t *bsp, const decomp_options &options, std::ofstream &file)
@@ -1556,8 +1661,7 @@ void DecompileBSP(const mbsp_t *bsp, const decomp_options &options, std::ofstrea
     auto entdicts = EntData_Parse(*bsp);
 
     for (size_t i = 0; i < entdicts.size(); ++i) {
-        // entity 0 is implicitly worldspawn (model 0)
-        DecompileEntity(bsp, options, file, entdicts[i], i == 0);
+        DecompileEntity(bsp, options, file, entdicts, i);
     }
 }
 

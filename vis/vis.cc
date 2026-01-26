@@ -412,7 +412,10 @@ static void ClusterFlow(int clusternum, leafbits_t &buffer, mbsp_t *bsp)
     }
 
     if (buffer[clusternum])
+    {
         logging::print("WARNING: Leaf portals saw into cluster ({})\n", clusternum);
+        logging::print("- see around {}\n", leaf->portals[0]->winding->origin);
+    }
 
     buffer[clusternum] = true;
 
@@ -422,7 +425,8 @@ static void ClusterFlow(int clusternum, leafbits_t &buffer, mbsp_t *bsp)
     int numvis = 0;
 
     uint8_t *outbuffer;
-    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+    if (bsp->loadversion->game->id == GAME_QUAKE_II ||
+        bsp->loadversion->game->id == GAME_SIN) {
         outbuffer = uncompressed.data() + clusternum * leafbytes;
         for (int i = 0; i < portalleafs; i++) {
             if (buffer[i]) {
@@ -449,7 +453,8 @@ static void ClusterFlow(int clusternum, leafbits_t &buffer, mbsp_t *bsp)
      * increment totalvis by
      * (# of real leafs in this cluster) x (# of real leafs visible from this cluster)
      */
-    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+    if (bsp->loadversion->game->id == GAME_QUAKE_II ||
+        bsp->loadversion->game->id == GAME_SIN) {
         // FIXME: not sure what this is supposed to be?
         totalvis += numvis;
     } else {
@@ -463,7 +468,8 @@ static void ClusterFlow(int clusternum, leafbits_t &buffer, mbsp_t *bsp)
     compressed.clear();
 
     /* Allocate for worst case where RLE might grow the data (unlikely) */
-    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+    if (bsp->loadversion->game->id == GAME_QUAKE_II ||
+        bsp->loadversion->game->id == GAME_SIN) {
         CompressRow(outbuffer, (portalleafs + 7) >> 3, std::back_inserter(compressed));
     } else {
         CompressRow(outbuffer, (portalleafs_real + 7) >> 3, std::back_inserter(compressed));
@@ -475,7 +481,8 @@ static void ClusterFlow(int clusternum, leafbits_t &buffer, mbsp_t *bsp)
     bsp->dvis.set_bit_offset(VIS_PVS, clusternum, visofs);
 
     // Set pointers
-    if (bsp->loadversion->game->id != GAME_QUAKE_II) {
+    if (bsp->loadversion->game->id != GAME_QUAKE_II &&
+        bsp->loadversion->game->id != GAME_SIN) {
         for (int i = 0; i < portalleafs_real; i++) {
             if (bsp->dleafs[i + 1].cluster == clusternum) {
                 bsp->dleafs[i + 1].visofs = visofs;
@@ -552,7 +559,7 @@ visstats_t CalcVis(mbsp_t *bsp)
     //
     // assemble the leaf vis lists by oring and compressing the portal lists
     //
-    logging::print("Expanding clusters...\n");
+    logging::print(logging::flag::VERBOSE, "Expanding clusters...\n");
     leafbits_t buffer(portalleafs);
     for (int i = 0; i < portalleafs; i++) {
         ClusterFlow(i, buffer, bsp);
@@ -561,14 +568,15 @@ visstats_t CalcVis(mbsp_t *bsp)
 
     int64_t avg = totalvis;
 
-    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+    if (bsp->loadversion->game->id == GAME_QUAKE_II ||
+        bsp->loadversion->game->id == GAME_SIN) {
         avg /= static_cast<int64_t>(portalleafs);
 
-        logging::print("average clusters visible: {}\n", avg);
+        logging::print(logging::flag::VERBOSE, "average clusters visible: {}\n", avg);
     } else {
         avg /= static_cast<int64_t>(portalleafs_real);
 
-        logging::print("average leafs visible: {}\n", avg);
+        logging::print(logging::flag::VERBOSE, "average leafs visible: {}\n", avg);
     }
 
     return stats;
@@ -592,7 +600,8 @@ static void LoadPortals(const fs::path &name, mbsp_t *bsp)
     portalleafs_real = prtfile.portalleafs_real;
 
     /* Allocate for worst case where RLE might grow the data (unlikely) */
-    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+    if (bsp->loadversion->game->id == GAME_QUAKE_II ||
+        bsp->loadversion->game->id == GAME_SIN) {
         compressed.reserve(std::max(1, (portalleafs * 2) / 8));
     } else {
         compressed.reserve(std::max(1, (portalleafs_real * 2) / 8));
@@ -600,16 +609,18 @@ static void LoadPortals(const fs::path &name, mbsp_t *bsp)
 
     numportals = prtfile.portals.size();
 
-    if (bsp->loadversion->game->id != GAME_QUAKE_II) {
+    if (bsp->loadversion->game->id != GAME_QUAKE_II &&
+        bsp->loadversion->game->id != GAME_SIN) {
         // since q2bsp has native cluster support, we shouldn't look at portalleafs_real at all.
-        logging::print("{:6} leafs\n", portalleafs_real);
+        logging::print(logging::flag::VERBOSE, "{:6} leafs\n", portalleafs_real);
     }
-    logging::print("{:6} clusters\n", portalleafs);
-    logging::print("{:6} portals\n", numportals);
+    logging::print(logging::flag::VERBOSE, "{:6} clusters\n", portalleafs);
+    logging::print(logging::flag::VERBOSE, "{:6} portals\n", numportals);
 
     leafbytes = ((portalleafs + 63) & ~63) >> 3;
     leaflongs = leafbytes / sizeof(long);
-    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+    if (bsp->loadversion->game->id == GAME_QUAKE_II ||
+        bsp->loadversion->game->id == GAME_SIN) {
         // not used in Q2
         leafbytes_real = 0;
     } else {
@@ -620,7 +631,8 @@ static void LoadPortals(const fs::path &name, mbsp_t *bsp)
     portals.resize(numportals * 2);
     leafs.resize(portalleafs);
 
-    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+    if (bsp->loadversion->game->id == GAME_QUAKE_II ||
+        bsp->loadversion->game->id == GAME_SIN) {
         originalvismapsize = portalleafs * ((portalleafs + 7) / 8);
     } else {
         originalvismapsize = portalleafs_real * ((portalleafs_real + 7) / 8);
@@ -668,7 +680,8 @@ static void LoadPortals(const fs::path &name, mbsp_t *bsp)
     }
 
     // Q2 doesn't need this, it's PRT1 has the data we need
-    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+    if (bsp->loadversion->game->id == GAME_QUAKE_II ||
+        bsp->loadversion->game->id == GAME_SIN) {
         return;
     }
 
@@ -752,7 +765,8 @@ int vis_main(int argc, const char **argv)
     vis::extended_texinfo_flags = LoadExtendedTexinfoFlags(vis_options.sourceMap, &bsp);
 
     if (vis_options.phsonly.value()) {
-        if (bsp.loadversion->game->id != GAME_QUAKE_II) {
+        if (bsp.loadversion->game->id != GAME_QUAKE_II &&
+            bsp.loadversion->game->id != GAME_SIN) {
             FError("need a Q2-esque BSP for -phsonly");
         }
 
@@ -760,7 +774,8 @@ int vis_main(int argc, const char **argv)
         leafbytes = ((portalleafs + 63) & ~63) >> 3;
         leaflongs = leafbytes / sizeof(long);
 
-        if (bsp.loadversion->game->id == GAME_QUAKE_II) {
+        if (bsp.loadversion->game->id == GAME_QUAKE_II ||
+            bsp.loadversion->game->id == GAME_SIN) {
             originalvismapsize = portalleafs * ((portalleafs + 7) / 8);
         }
     } else {
@@ -770,7 +785,8 @@ int vis_main(int argc, const char **argv)
         statefile = fs::path(vis_options.sourceMap).replace_extension("vis");
         statetmpfile = fs::path(vis_options.sourceMap).replace_extension("vi0");
 
-        if (bsp.loadversion->game->id != GAME_QUAKE_II) {
+        if (bsp.loadversion->game->id != GAME_QUAKE_II &&
+            bsp.loadversion->game->id != GAME_SIN) {
             uncompressed.resize(portalleafs * leafbytes_real);
         } else {
             uncompressed.resize(portalleafs * leafbytes);
@@ -778,12 +794,12 @@ int vis_main(int argc, const char **argv)
 
         auto stats = CalcVis(&bsp);
 
-        logging::print("c_noclip: {}\n", stats.c_noclip);
-        logging::print("c_chains: {}\n", stats.c_chains);
+        logging::print(logging::flag::VERBOSE, "c_noclip: {}\n", stats.c_noclip);
+        logging::print(logging::flag::VERBOSE, "c_chains: {}\n", stats.c_chains);
 
         bsp.dvis.bits = std::move(vismap);
         bsp.dvis.bits.shrink_to_fit();
-        logging::print("visdatasize:{}  compressed from {}\n", bsp.dvis.bits.size(), originalvismapsize);
+        logging::print(logging::flag::VERBOSE, "visdatasize:{}  compressed from {}\n", bsp.dvis.bits.size(), originalvismapsize);
     }
 
     // no ambient sounds for Q2
