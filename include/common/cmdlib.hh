@@ -76,25 +76,30 @@ bool natstrlt(const char *s1, const char *s2, bool case_sensitive = true);
  * @return true when natural s1 < s2
  */
 bool stlnatstrlt(const std::string &s1, const std::string &s2, bool case_sensitive = true);
+bool stlnatstrlt(const std::string_view &s1, const std::string_view &s2, bool case_sensitive = true);
 
 struct natural_equal
 {
     bool operator()(const std::string &l, const std::string &r) const noexcept;
+    bool operator()(const std::string_view &l, const std::string_view &r) const noexcept;
 };
 
 struct natural_less
 {
     bool operator()(const std::string &l, const std::string &r) const noexcept;
+    bool operator()(const std::string_view &l, const std::string_view &r) const noexcept;
 };
 
 struct natural_case_insensitive_equal
 {
     bool operator()(const std::string &l, const std::string &r) const noexcept;
+    bool operator()(const std::string_view &l, const std::string_view &r) const noexcept;
 };
 
 struct natural_case_insensitive_less
 {
     bool operator()(const std::string &l, const std::string &r) const noexcept;
+    bool operator()(const std::string_view &l, const std::string_view &r) const noexcept;
 };
 
 std::string_view::const_iterator string_ifind(std::string_view haystack, std::string_view needle);
