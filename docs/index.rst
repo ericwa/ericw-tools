@@ -15,6 +15,7 @@ Welcome to ericw-tools's documentation!
    bsputil
    maputil
    lightpreview
+   bspx
    changelog
 
 
