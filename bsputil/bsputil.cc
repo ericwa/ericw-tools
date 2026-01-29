@@ -35,6 +35,7 @@
 #include <common/fs.hh>
 #include <common/settings.hh>
 #include <common/ostream.hh>
+#include <common/mapfile.hh>
 
 #include <map>
 #include <set>
@@ -130,6 +131,11 @@ bsputil_settings::bsputil_settings()
               return this->load_setting(name, src);
           },
           nullptr, "Decompile to the given .map file"},
+      sin_anims{this, "sin_anims",
+          [&](const std::string &name, parser_base_t &parser, settings::source src) {
+              return this->load_setting(name, src);
+          },
+          nullptr, "Use for decompiling; creates a .srf file for a decompiled map for animations"},
       decompile_geomonly{this, "decompile-geomonly",
           [&](const std::string &name, parser_base_t &parser, settings::source src) {
               return this->load_setting(name, src);
@@ -145,6 +151,11 @@ bsputil_settings::bsputil_settings()
               return this->load_setting<settings::setting_int32>(name, parser, src, 0);
           },
           nullptr, "Decompile specific hull"},
+      reorder_entities{this, "resort-entities",
+          [&](const std::string &name, parser_base_t &parser, settings::source src) {
+              return this->load_setting(name, src);
+          },
+          nullptr, "Re-sort BSP entities in a deterministic way, for diffing"},
       extract_bspx_lump{this, "extract-bspx-lump",
           [&](const std::string &name, parser_base_t &parser, settings::source src) {
               auto lump = std::make_shared<settings::setting_string>(nullptr, name, "");
@@ -808,6 +819,30 @@ struct planelist_t
     }
 };
 
+#include "../3rdparty/stb_image_write.h"
+
+static void ExportTextures(const fs::path &source, const gamedef_t *game, const mbsp_t &bsp)
+{
+    for (auto &tex : bsp.texinfo) {
+        // temp, just for us
+        auto tex_name = (source.parent_path() / "textures" / tex.texturename).replace_extension(".tga");
+
+        if (tex_name.string().find_first_of(' ') != std::string::npos)
+            continue;
+
+        auto swl_meta = std::get<0>(img::load_texture(tex.texturename, false, game, bsputil_options));
+
+        if (!swl_meta)
+            continue;
+
+        fs::create_directories(tex_name.parent_path());
+
+        if (!fs::exists(tex_name)) {
+            stbi_write_tga(tex_name.string().c_str(), swl_meta->width, swl_meta->height, 4, swl_meta->pixels.data());
+        }
+    }
+}
+
 int bsputil_main(int _argc, const char **_argv)
 {
     logging::preinitialize();
@@ -1395,6 +1430,12 @@ int bsputil_main(int _argc, const char **_argv)
         } else if (operation->primary_name() == "extract-textures") {
             mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);
 
+            if (bspdata.loadversion->game->id == GAME_QUAKE_II ||
+                bspdata.loadversion->game->id == GAME_SIN) {
+                ExportTextures(source, bspdata.loadversion->game, bsp);
+                continue;
+            }
+
             source.replace_extension(".wad");
             logging::print("-> writing {}... ", source);
 
@@ -1421,6 +1462,34 @@ int bsputil_main(int _argc, const char **_argv)
             mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);
             CheckBSPFile(&bsp);
             CheckBSPFacesPlanar(&bsp);
+        } else if (operation->primary_name() == "resort-entities") {
+            mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);
+
+            mapfile::map_file_t map = mapfile::parse(bsp.dentdata, parser_source_location{});
+
+            // sort each entity pair
+            for (auto &ent : map.entities) {
+                std::sort(ent.epairs.begin(), ent.epairs.end(), [](const keyvalue_t &a, const keyvalue_t &b) {
+                    if (a.first == b.first) {
+                        return a.second < b.second;
+                    }
+
+                    return a.first < b.first;
+                });
+            }
+            
+            // sort pairs by length
+            std::sort(map.entities.begin(), map.entities.end(), [](const mapfile::map_entity_t &a, const mapfile::map_entity_t &b) {
+                return a.epairs.get_pairs().size() < b.epairs.get_pairs().size();
+            });
+
+            std::stringstream s;
+            map.write(s);
+
+            bsp.dentdata = s.str();
+            
+            ConvertBSPFormat(&bspdata, bspdata.loadversion);
+            WriteBSPFile(source.replace_filename(source.filename().generic_string() + "_sorted"), &bspdata);
         } else if (operation->primary_name() == "modelinfo") {
             mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);
             PrintModelInfo(&bsp);
@@ -1490,6 +1559,38 @@ int bsputil_main(int _argc, const char **_argv)
             options.hullnum = hullnum;
 
             DecompileBSP(&bsp, options, f);
+
+            f.close();
+
+            if (!f)
+                Error("{}", strerror(errno));
+        }else if (operation->primary_name() == "sin_anims") {
+            source.replace_extension(".srf");
+
+            logging::print("-> writing {}...\n", source);
+
+            std::ofstream f(source);
+
+            if (!f)
+                Error("couldn't open {} for writing\n", source);
+
+            mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);
+
+            std::set<std::string_view, natural_less> written;
+
+            for (auto &tex : bsp.texinfo) {
+                if (written.find(tex.texturename) != written.end()) {
+                    continue;
+                }
+
+                if (tex.nexttexinfo != -1) {
+                    auto &next = bsp.texinfo[tex.nexttexinfo];
+
+                    f << tex.texturename << " date 0 anim " << next.texturename << std::endl;
+                }
+
+                written.insert(tex.texturename);
+            }
 
             f.close();
 

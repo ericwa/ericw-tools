@@ -239,6 +239,18 @@ struct mtexinfo_t
     int32_t value; // light emission, etc
     std::string texturename; // texture name (textures/*.wal)
     int32_t nexttexinfo = -1; // for animations, -1 = end of chain
+
+    // SiN only
+    float trans_mag;
+    int trans_angle;
+    int base_angle;
+    float animtime;
+    float nonlit;
+    float translucence;
+    float friction;
+    float restitution;
+    qvec3f color;
+    std::array<char, 32> groupname;
 };
 
 constexpr uint16_t INVALID_LIGHTSTYLE_OLD = 0xffu;
@@ -256,6 +268,9 @@ struct mface_t
     std::array<uint8_t, MFACE_MAXLIGHTMAPS> styles;
     // start of [numstyles*surfsize] samples. byte offset into bsp.dlightdata.
     int32_t lightofs;
+
+    // SiN
+    int32_t lightinfo;
 };
 
 /*
@@ -364,6 +379,22 @@ struct mbrushside_t
 {
     uint32_t planenum; // facing out of the leaf
     int32_t texinfo;
+    // SiN
+    int32_t lightinfo;
+};
+
+struct sin_lightinfo_t
+{
+    int32_t value;
+    qvec3f color;
+    float direct;
+    float directangle;
+    float directstyle;
+    std::array<char, 32> directstylename;
+
+    // serialize for streams
+    void stream_write(std::ostream &s) const;
+    void stream_read(std::istream &s);
 };
 
 struct bspversion_t;
@@ -399,6 +430,7 @@ struct mbsp_t
     std::vector<mbrushside_t> dbrushsides;
 
     int lightsamples() const;
+    std::vector<sin_lightinfo_t> dlightinfo;
 };
 
 extern const bspversion_t bspver_generic;

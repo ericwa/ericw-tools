@@ -169,6 +169,7 @@ public:
     setting_bool qbism;
     setting_bool bsp2;
     setting_bool bsp2rmq;
+    setting_bool sinbsp;
     setting_func nosubdivide;
     setting_invertible_bool software;
     setting_int32 subdivide;

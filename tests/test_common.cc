@@ -10,6 +10,7 @@
 #include <common/bspfile.hh>
 #include <common/bspfile_q1.hh>
 #include <common/bspfile_q2.hh>
+#include <common/bspfile_sin.hh>
 #include <common/imglib.hh>
 #include <common/settings.hh>
 #include <testmaps.hh>
