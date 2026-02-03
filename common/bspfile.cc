@@ -893,7 +893,10 @@ public:
     inline void addArchive(const fs::path &path) const
     {
         fs::addArchive(path, true);
-        discoverArchives(path);
+
+        if (fs::is_directory(path)) {
+            discoverArchives(path);
+        }
     }
 
     void init_filesystem(const fs::path &source, const settings::common_settings &options) const override
