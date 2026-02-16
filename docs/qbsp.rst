@@ -933,7 +933,7 @@ Metadata formats
 ----------------
 
 .wal_json
-=========
+^^^^^^^^^
 
 For Q2 mapping, .wal textures contain metadata specifying the texture's content flags, surface flags, and "value",
 which are used if the mapper doesn't override them in the .map file. For example, a lava texture can default to
