@@ -2319,7 +2319,7 @@ void GLView::applyMouseMotion()
     mouseRotation.rotate(yawDegrees, QVector3D(0, 0, 1));
 
     // now rotate m_cameraFwd and m_cameraUp by mouseRotation
-    m_cameraFwd = mouseRotation * m_cameraFwd;
+    m_cameraFwd = mouseRotation.mapVector(m_cameraFwd);
 }
 
 static keys_t Qt_Key_To_keys_t(int key)
