@@ -1563,7 +1563,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
                     img::load_texture(fmt::format("env/{}up", skybox), false, bsp.loadversion->game, settings, true);
                 up_img = QImage((const uchar *)std::get<0>(up)->pixels.data(), std::get<0>(up)->width,
                     std::get<0>(up)->height, QImage::Format_RGB32);
-                up_img = std::move(up_img.transformed(QTransform().rotate(-90.0)).mirrored(false, true));
+                up_img = std::move(up_img.transformed(QTransform().rotate(-90.0)).flipped(Qt::Vertical));
             }
 
             skybox_texture->setSize(up_img.width(), up_img.height());
@@ -1586,7 +1586,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
                     img::load_texture(fmt::format("env/{}dn", skybox), false, bsp.loadversion->game, settings, true);
                 down_img = QImage((const uchar *)std::get<0>(down)->pixels.data(), std::get<0>(down)->width,
                     std::get<0>(down)->height, QImage::Format_RGB32);
-                down_img = std::move(down_img.transformed(QTransform().rotate(90.0)).mirrored(true, false));
+                down_img = std::move(down_img.transformed(QTransform().rotate(90.0)).flipped(Qt::Horizontal));
             }
 
             skybox_texture->setData(0, 0, QOpenGLTexture::CubeMapNegativeZ, QOpenGLTexture::RGBA, QOpenGLTexture::UInt8,
@@ -1599,7 +1599,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
                     img::load_texture(fmt::format("env/{}lf", skybox), false, bsp.loadversion->game, settings, true);
                 left_img = QImage((const uchar *)std::get<0>(left)->pixels.data(), std::get<0>(left)->width,
                     std::get<0>(left)->height, QImage::Format_RGB32);
-                left_img = std::move(left_img.transformed(QTransform().rotate(-90.0)).mirrored(true, false));
+                left_img = std::move(left_img.transformed(QTransform().rotate(-90.0)).flipped(Qt::Horizontal));
             }
             skybox_texture->setData(0, 0, QOpenGLTexture::CubeMapNegativeX, QOpenGLTexture::RGBA, QOpenGLTexture::UInt8,
                 left_img.constBits(), nullptr);
@@ -1611,7 +1611,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
                     img::load_texture(fmt::format("env/{}rt", skybox), false, bsp.loadversion->game, settings, true);
                 right_img = QImage((const uchar *)std::get<0>(right)->pixels.data(), std::get<0>(right)->width,
                     std::get<0>(right)->height, QImage::Format_RGB32);
-                right_img = std::move(right_img.transformed(QTransform().rotate(90.0)).mirrored(true, false));
+                right_img = std::move(right_img.transformed(QTransform().rotate(90.0)).flipped(Qt::Horizontal));
             }
             skybox_texture->setData(0, 0, QOpenGLTexture::CubeMapPositiveX, QOpenGLTexture::RGBA, QOpenGLTexture::UInt8,
                 right_img.constBits(), nullptr);
@@ -1635,7 +1635,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
                     img::load_texture(fmt::format("env/{}bk", skybox), false, bsp.loadversion->game, settings, true);
                 back_img = QImage((const uchar *)std::get<0>(back)->pixels.data(), std::get<0>(back)->width,
                     std::get<0>(back)->height, QImage::Format_RGB32);
-                back_img = std::move(back_img.transformed(QTransform().rotate(-180.0)).mirrored(true, false));
+                back_img = std::move(back_img.transformed(QTransform().rotate(-180.0)).flipped(Qt::Horizontal));
             }
             skybox_texture->setData(0, 0, QOpenGLTexture::CubeMapPositiveY, QOpenGLTexture::RGBA, QOpenGLTexture::UInt8,
                 back_img.constBits(), nullptr);
