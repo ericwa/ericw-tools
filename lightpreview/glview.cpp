@@ -1643,16 +1643,6 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
     }
 
     // populate the vertex/index buffers
-    struct vertex_t
-    {
-        qvec3f pos;
-        qvec2f uv;
-        qvec2f lightmap_uv;
-        qvec3f normal;
-        qvec3f flat_color;
-        uint32_t styles;
-        int32_t face_index;
-    };
     std::vector<vertex_t> verts;
     std::vector<uint32_t> indexBuffer;
 
@@ -1773,51 +1763,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
     }
     m_spatialindex->commit();
 
-    {
-        QOpenGLVertexArrayObject::Binder vaoBinder(&m_vao);
-
-        // upload index buffer
-        m_indexBuffer.create();
-        m_indexBuffer.bind();
-        m_indexBuffer.allocate(indexBuffer.data(), indexBuffer.size() * sizeof(indexBuffer[0]));
-
-        // upload vertex buffer
-        m_vbo.create();
-        m_vbo.bind();
-        m_vbo.allocate(verts.data(), verts.size() * sizeof(verts[0]));
-
-        // positions
-        glEnableVertexAttribArray(0 /* attrib */);
-        glVertexAttribPointer(0 /* attrib */, 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), (void *)offsetof(vertex_t, pos));
-
-        // texture uvs
-        glEnableVertexAttribArray(1 /* attrib */);
-        glVertexAttribPointer(1 /* attrib */, 2, GL_FLOAT, GL_FALSE, sizeof(vertex_t), (void *)offsetof(vertex_t, uv));
-
-        // lightmap uvs
-        glEnableVertexAttribArray(2 /* attrib */);
-        glVertexAttribPointer(
-            2 /* attrib */, 2, GL_FLOAT, GL_FALSE, sizeof(vertex_t), (void *)offsetof(vertex_t, lightmap_uv));
-
-        // normals
-        glEnableVertexAttribArray(3 /* attrib */);
-        glVertexAttribPointer(
-            3 /* attrib */, 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), (void *)offsetof(vertex_t, normal));
-
-        // flat shading color
-        glEnableVertexAttribArray(4 /* attrib */);
-        glVertexAttribPointer(
-            4 /* attrib */, 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), (void *)offsetof(vertex_t, flat_color));
-
-        // styles
-        glEnableVertexAttribArray(5 /* attrib */);
-        glVertexAttribIPointer(
-            5 /* attrib */, 1, GL_UNSIGNED_INT, sizeof(vertex_t), (void *)offsetof(vertex_t, styles));
-
-        // face indices
-        glEnableVertexAttribArray(6 /* attrib */);
-        glVertexAttribIPointer(6 /* attrib */, 1, GL_INT, sizeof(vertex_t), (void *)offsetof(vertex_t, face_index));
-    }
+    uploadFaceVAO(verts, indexBuffer);
 
     // initialize style values
     m_program->bind();
@@ -2208,6 +2154,51 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
 
     // schedule repaint
     update();
+}
+
+void GLView::uploadFaceVAO(const std::vector<vertex_t> &verts, const std::vector<uint32_t> &indexBuffer)
+{
+    QOpenGLVertexArrayObject::Binder vaoBinder(&m_vao);
+
+    // upload index buffer
+    m_indexBuffer.create();
+    m_indexBuffer.bind();
+    m_indexBuffer.allocate(indexBuffer.data(), indexBuffer.size() * sizeof(indexBuffer[0]));
+
+    // upload vertex buffer
+    m_vbo.create();
+    m_vbo.bind();
+    m_vbo.allocate(verts.data(), verts.size() * sizeof(verts[0]));
+
+    // positions
+    glEnableVertexAttribArray(0 /* attrib */);
+    glVertexAttribPointer(0 /* attrib */, 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), (void *)offsetof(vertex_t, pos));
+
+    // texture uvs
+    glEnableVertexAttribArray(1 /* attrib */);
+    glVertexAttribPointer(1 /* attrib */, 2, GL_FLOAT, GL_FALSE, sizeof(vertex_t), (void *)offsetof(vertex_t, uv));
+
+    // lightmap uvs
+    glEnableVertexAttribArray(2 /* attrib */);
+    glVertexAttribPointer(
+        2 /* attrib */, 2, GL_FLOAT, GL_FALSE, sizeof(vertex_t), (void *)offsetof(vertex_t, lightmap_uv));
+
+    // normals
+    glEnableVertexAttribArray(3 /* attrib */);
+    glVertexAttribPointer(3 /* attrib */, 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), (void *)offsetof(vertex_t, normal));
+
+    // flat shading color
+    glEnableVertexAttribArray(4 /* attrib */);
+    glVertexAttribPointer(
+        4 /* attrib */, 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), (void *)offsetof(vertex_t, flat_color));
+
+    // styles
+    glEnableVertexAttribArray(5 /* attrib */);
+    glVertexAttribIPointer(5 /* attrib */, 1, GL_UNSIGNED_INT, sizeof(vertex_t), (void *)offsetof(vertex_t, styles));
+
+    // face indices
+    glEnableVertexAttribArray(6 /* attrib */);
+    glVertexAttribIPointer(6 /* attrib */, 1, GL_INT, sizeof(vertex_t), (void *)offsetof(vertex_t, face_index));
 }
 
 void GLView::updateFrustumVBO()

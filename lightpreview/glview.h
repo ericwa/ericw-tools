@@ -251,6 +251,20 @@ public:
     void renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries_t &bspx,
         const std::vector<entdict_t> &entities, const full_atlas_t &lightmap, const settings::common_settings &settings,
         bool use_bspx_normals);
+private:
+    struct vertex_t
+    {
+        qvec3f pos;
+        qvec2f uv;
+        qvec2f lightmap_uv;
+        qvec3f normal;
+        qvec3f flat_color;
+        uint32_t styles;
+        int32_t face_index;
+    };
+
+    void uploadFaceVAO(const std::vector<vertex_t> &verts, const std::vector<uint32_t> &indexBuffer);
+public:
     void setCamera(const qvec3d &origin);
     void setCamera(const qvec3d &origin, const qvec3d &fwd);
     // FIXME: distinguish render modes from render options
