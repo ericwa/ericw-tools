@@ -884,6 +884,7 @@ static texdef_valve_t TexDef_BSPToValve(const texvecf &in_vecs)
         res.shift[i] = in_vecs.at(i, 3);
         res.axis.set_row(i, axis);
     }
+    res.rotate = 0.0;
 
     return res;
 }
