@@ -13,7 +13,8 @@ add_executable(tests
 		${CMAKE_CURRENT_BINARY_DIR}/../testmaps.hh
 		benchmark.cc
 		test_bsputil.cc
-		test_main.hh)
+		test_main.hh
+        test_maputil.cc)
 
 INCLUDE_DIRECTORIES(${EMBREE_INCLUDE_DIRS})
 

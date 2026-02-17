@@ -7,6 +7,19 @@
 namespace mapfile
 {
 
+std::ostream &operator<<(std::ostream &os, const texdef_quake_ed_t &v)
+{
+    os << fmt::format("{{shift: {}, rotate: {}, scale: {}}}", v.shift, v.rotate, v.scale);
+    return os;
+}
+
+std::ostream &operator<<(std::ostream &os, const texdef_valve_t &v)
+{
+    os << fmt::format("{{shift: {}, rotate: {}, scale: {}, axis.row(0): {}, axis.row(1): {}}}", v.shift, v.rotate,
+        v.scale, v.axis.row(0), v.axis.row(1));
+    return os;
+}
+
 /*static*/ bool brush_side_t::is_valid_texture_projection(const qvec3f &faceNormal, const texvecf &vecs)
 {
     // TODO: This doesn't match how light does it (TexSpaceToWorld)
@@ -132,7 +145,7 @@ parse_error:
     parser.parse_token(PARSE_SAMELINE);
     scale[1] = std::stod(parser.token);
 
-    return {{shift, rotate, scale}, {axis}};
+    return {shift, rotate, scale, axis};
 
 parse_error:
     FError("{}: couldn't parse Valve220 texture info", parser.location);
@@ -1214,6 +1227,15 @@ void map_file_t::convert_to(texcoord_style_t style, const gamedef_t *game, const
 map_file_t parse(std::string_view view, parser_source_location base_location)
 {
     parser_t parser(view, base_location);
+
+    map_file_t result;
+    result.parse(parser);
+    return result;
+}
+
+map_file_t parse(const fs::data &data, parser_source_location base_location)
+{
+    parser_t parser(data, base_location);
 
     map_file_t result;
     result.parse(parser);

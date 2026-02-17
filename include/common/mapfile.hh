@@ -56,10 +56,20 @@ struct texdef_quake_ed_t
     qvec2d shift;
     double rotate;
     qvec2d scale;
+
+    auto operator<=>(const texdef_quake_ed_t& other) const = default;
+    friend std::ostream &operator<<(std::ostream &os, const texdef_quake_ed_t &v);
 };
 
-struct texdef_valve_t : texdef_quake_ed_t, texdef_bp_t
+struct texdef_valve_t
 {
+    qvec2d shift;
+    double rotate;
+    qvec2d scale;
+    qmat<double, 2, 3> axis;
+
+    auto operator<=>(const texdef_valve_t& other) const = default;
+    friend std::ostream &operator<<(std::ostream &os, const texdef_valve_t &v);
 };
 
 struct texdef_etp_t : texdef_quake_ed_t
@@ -208,5 +218,6 @@ struct map_file_t
 };
 
 map_file_t parse(std::string_view view, parser_source_location base_location);
+map_file_t parse(const fs::data &data, parser_source_location base_location);
 
 } // namespace mapfile
