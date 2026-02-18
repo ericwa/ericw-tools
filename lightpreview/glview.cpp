@@ -1325,6 +1325,28 @@ std::vector<QVector3D> GLView::getFrustumCorners(float displayAspect)
     return corners;
 }
 
+static std::shared_ptr<QOpenGLTexture> makeQtTexture(const img::texture *texture, QOpenGLTexture::Filter filter)
+{
+    auto qtexture = std::make_shared<QOpenGLTexture>(QOpenGLTexture::Target2D);
+
+    int mipLevels = GetMipLevelsForDimensions(texture->width, texture->height);
+
+    qtexture->setFormat(QOpenGLTexture::TextureFormat::RGBA8_UNorm);
+    qtexture->setSize(texture->width, texture->height);
+    qtexture->setMipLevels(mipLevels);
+
+    qtexture->allocateStorage(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8);
+
+    qtexture->setMinificationFilter(QOpenGLTexture::LinearMipMapLinear);
+    qtexture->setMagnificationFilter(filter);
+    qtexture->setMaximumAnisotropy(16);
+
+    qtexture->setData(
+        QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, reinterpret_cast<const void *>(texture->pixels.data()));
+
+    return qtexture;
+}
+
 void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries_t &bspx,
     const std::vector<entdict_t> &entities, const full_atlas_t &lightmap, const settings::common_settings &settings,
     bool use_bspx_normals)
@@ -1649,7 +1671,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
     for (const auto &[k, faces] : faces_by_material_key) {
         // upload texture
         // FIXME: we should have a separate lightpreview_options
-        auto *texture = img::find(k.texname);
+        const img::texture *texture = img::find(k.texname);
         std::shared_ptr<QOpenGLTexture> qtexture;
 
         if (!texture) {
@@ -1727,22 +1749,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
         }
 
         if (!qtexture) {
-            qtexture = std::make_shared<QOpenGLTexture>(QOpenGLTexture::Target2D);
-
-            int mipLevels = GetMipLevelsForDimensions(texture->width, texture->height);
-
-            qtexture->setFormat(QOpenGLTexture::TextureFormat::RGBA8_UNorm);
-            qtexture->setSize(texture->width, texture->height);
-            qtexture->setMipLevels(mipLevels);
-
-            qtexture->allocateStorage(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8);
-
-            qtexture->setMinificationFilter(QOpenGLTexture::LinearMipMapLinear);
-            qtexture->setMagnificationFilter(m_filter);
-            qtexture->setMaximumAnisotropy(16);
-
-            qtexture->setData(
-                QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, reinterpret_cast<const void *>(texture->pixels.data()));
+            qtexture = makeQtTexture(texture, m_filter);
         }
 
         const size_t dc_index_count = indexBuffer.size() - dc_first_index;
