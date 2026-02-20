@@ -1347,6 +1347,15 @@ static std::shared_ptr<QOpenGLTexture> makeQtTexture(const img::texture *texture
     return qtexture;
 }
 
+static void writeTriangleFanIndices(std::vector<uint32_t> &indexBuffer, int first_vertex_of_face, int numedges)
+{
+    for (int j = 2; j < numedges; ++j) {
+        indexBuffer.push_back(first_vertex_of_face);
+        indexBuffer.push_back(first_vertex_of_face + j - 1);
+        indexBuffer.push_back(first_vertex_of_face + j);
+    }
+}
+
 void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries_t &bspx,
     const std::vector<entdict_t> &entities, const full_atlas_t &lightmap, const settings::common_settings &settings,
     bool use_bspx_normals)
@@ -1741,11 +1750,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
             }
 
             // output the vertex indices for this face
-            for (int j = 2; j < f->numedges; ++j) {
-                indexBuffer.push_back(first_vertex_of_face);
-                indexBuffer.push_back(first_vertex_of_face + j - 1);
-                indexBuffer.push_back(first_vertex_of_face + j);
-            }
+            writeTriangleFanIndices(indexBuffer, first_vertex_of_face, f->numedges);
         }
 
         if (!qtexture) {
