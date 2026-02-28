@@ -26,6 +26,8 @@ struct decomp_options
     bool ignoreBrushes = false;
 
     int hullnum = 0;
+
+    std::string sin_srfName = "";
 };
 
 void DecompileBSP(const mbsp_t *bsp, const decomp_options &options, std::ofstream &file);

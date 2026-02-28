@@ -63,6 +63,9 @@ public:
     inline keyvalues_t::iterator end() { return keyvalues.end(); }
 
     inline size_t size() { return keyvalues.size(); }
+    
+    inline keyvalues_t &get_pairs() { return keyvalues; }
+    inline const keyvalues_t &get_pairs() const { return keyvalues; }
 
     // parse dictionary out of the input parser.
     // the parser must be at a position where { is
@@ -74,6 +77,7 @@ public:
 };
 
 void EntData_ParseInto(parser_t &parser, std::vector<entdict_t> &vector);
+const entdict_t *EntData_Find(const std::vector<entdict_t> &vector, const std::string &key, const std::string &value);
 
 /*
  * ==================

@@ -397,14 +397,15 @@ static void maputil_make_brush_side(lua_State *state, const brush_side_t &side)
     lua_pushstring(state, side.texture.c_str());
     lua_setfield(state, -2, "texture");
 
-    if (side.extended_info) {
+    if (std::holds_alternative<texinfo_quake2_t>(side.extended_info)) {
+        auto &q2 = std::get<texinfo_quake2_t>(side.extended_info);
         // set info
         lua_createtable(state, 0, 3);
-        lua_pushnumber(state, side.extended_info->contents);
+        lua_pushnumber(state, q2.contents);
         lua_setfield(state, -2, "contents");
-        lua_pushnumber(state, side.extended_info->value);
+        lua_pushnumber(state, q2.value);
         lua_setfield(state, -2, "value");
-        lua_pushnumber(state, side.extended_info->flags);
+        lua_pushnumber(state, q2.flags);
         lua_setfield(state, -2, "flags");
 
         lua_setfield(state, -2, "info");
@@ -990,6 +991,8 @@ int maputil_main(int argc, const char **argv)
             logging::print("{}\n", source);
 
             map_file = LoadMapOrEntFile(source);
+            map_file.game = current_game;
+            map_file.filename = source;
         } else if (operation->primary_name() == "game") {
             const std::string &gamename = operation->string_value();
 
@@ -1015,7 +1018,7 @@ int maputil_main(int argc, const char **argv)
             for (auto &entity : map_file.entities) {
                 for (auto &brush : entity.brushes) {
                     for (auto &face : brush.faces) {
-                        face.extended_info = std::nullopt;
+                        face.extended_info = std::monostate{};
                     }
                 }
             }

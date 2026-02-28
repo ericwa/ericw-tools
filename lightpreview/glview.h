@@ -62,7 +62,7 @@ private:
     std::unordered_map<int, std::vector<uint8_t>> m_decompressedVis;
 
     std::unique_ptr<spatialindex_t> m_spatialindex;
-    uint32_t m_keysPressed;
+    uint32_t m_keysPressed, m_oldKeysPressed = 0;
     std::optional<qtime_point> m_lastFrame;
     std::optional<QPoint> m_lastMouseDownPos;
     /**
@@ -108,6 +108,7 @@ private:
     bool m_showTris = false;
     bool m_showTrisSeeThrough = false;
     bool m_drawFlat = false;
+    bool m_litTranslucency = true;
     bool m_keepOrigin = false;
     bool m_keepCullFrustum = true;
     bool m_keepCullOrigin = false;
@@ -159,6 +160,7 @@ private:
         std::string texname;
         float opacity = 1.f;
         bool alpha_test = false;
+        bool fullbright = false;
 
         auto operator<=>(const material_key &other) const = default;
     };
@@ -203,6 +205,7 @@ private:
     int m_program_fullbright_location = 0;
     int m_program_drawnormals_location = 0;
     int m_program_drawflat_location = 0;
+    int m_program_lit_translucency_location = 0;
     int m_program_style_scalars_location = 0;
     int m_program_brightness_location = 0;
     int m_program_lightmap_scale_location = 0;
@@ -259,7 +262,7 @@ private:
         qvec2f lightmap_uv;
         qvec3f normal;
         qvec3f flat_color;
-        uint32_t styles;
+        std::array<uint32_t, 4> styles;
         int32_t face_index;
     };
 
@@ -286,6 +289,7 @@ public:
     void setShowTrisSeeThrough(bool showtris);
     void setVisCulling(bool viscull);
     void setDrawFlat(bool drawflat);
+    void setLitTranslucency(bool v);
     void setKeepOrigin(bool keeporigin);
     void setKeepCullFrustum(bool keepfrustum);
     void setKeepCullOrigin(bool keeporigin);
@@ -301,6 +305,7 @@ public:
     void setBrightness(float brightness);
 
     void takeScreenshot(QString destPath, int w, int h);
+    int getSelectedFace() const { return m_selected_face; }
 
 private:
     void error(const QString &context, const QString &context2, const QString &log);
@@ -341,6 +346,8 @@ private:
 
 signals:
     void cameraMoved();
+    void stoppedMoving();
+    void selectedFaceChanged();
 
 public:
     qvec3f cameraPosition() const;

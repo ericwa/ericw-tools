@@ -184,7 +184,7 @@ in vec2 uv;
 in vec2 lightmap_uv;
 in vec3 normal;
 flat in vec3 flat_color;
-flat in uint styles;
+flat in uvec4 styles;
 flat in int is_selected;
 
 out vec4 color;
@@ -197,6 +197,7 @@ uniform bool lightmap_only;
 uniform bool fullbright;
 uniform bool drawnormals;
 uniform bool drawflat;
+uniform bool lit_translucency;
 uniform float style_scalars[256];
 uniform float brightness;
 uniform float lightmap_scale; // extra scale factor for remapping 0-1 SDR lightmaps to 0-2
@@ -216,16 +217,25 @@ void main() {
 
         vec3 lmcolor = fullbright ? vec3(0.5) : vec3(0);
 
-        if (!fullbright)
+        if (!lit_translucency && opacity != 1.0)
         {
-            for (uint i = 0u; i < 32u; i += 8u)
+            lmcolor = vec3(0.5);
+        }
+        else if (!fullbright)
+        {
+            uint style = 0u;
+
+            for (uint s = 0u; s < 4u && style != 0xFFu; s = s + 1u)
             {
-                uint style = (styles >> i) & 0xFFu;
+                for (uint i = 0u; i < 32u; i += 8u)
+                {
+                    style = (styles[s] >> i) & 0xFFu;
 
-                if (style == 0xFFu)
-                    break;
+                    if (style == 0xFFu)
+                        break;
 
-                lmcolor += texture(lightmap_sampler, vec3(lightmap_uv, float(style))).rgb * style_scalars[style];
+                    lmcolor += texture(lightmap_sampler, vec3(lightmap_uv, float(style))).rgb * style_scalars[style];
+                }
             }
         }
 
@@ -250,14 +260,14 @@ layout (location = 1) in vec2 vertex_uv;
 layout (location = 2) in vec2 vertex_lightmap_uv;
 layout (location = 3) in vec3 vertex_normal;
 layout (location = 4) in vec3 vertex_flat_color;
-layout (location = 5) in uint vertex_styles;
+layout (location = 5) in uvec4 vertex_styles;
 layout (location = 6) in int face_index;
 
 out vec2 uv;
 out vec2 lightmap_uv;
 out vec3 normal;
 flat out vec3 flat_color;
-flat out uint styles;
+flat out uvec4 styles;
 flat out int is_selected;
 
 uniform mat4 MVP;
@@ -296,7 +306,7 @@ in vec3 fragment_world_pos;
 in vec2 lightmap_uv;
 in vec3 normal;
 flat in vec3 flat_color;
-flat in uint styles;
+flat in uvec4 styles;
 flat in int is_selected;
 
 out vec4 color;
@@ -320,18 +330,24 @@ void main() {
     } else if (drawflat) {
         color = vec4(flat_color, 1.0);
     } else {
+        // TODO: why is this in skybox? skies are never lit?
         if (!fullbright && lightmap_only)
         {
             vec3 lmcolor = vec3(0.5);
 
-            for (uint i = 0u; i < 32u; i += 8u)
+            uint style = 0u;
+
+            for (uint s = 0u; s < 4u && style != 0xFFu; s = s + 1u)
             {
-                uint style = (styles >> i) & 0xFFu;
+                for (uint i = 0u; i < 32u; i += 8u)
+                {
+                    style = (styles[s] >> i) & 0xFFu;
 
-                if (style == 0xFFu)
-                    break;
+                    if (style == 0xFFu)
+                        break;
 
-                lmcolor += texture(lightmap_sampler, vec3(lightmap_uv, float(style))).rgb * style_scalars[style];
+                    lmcolor += texture(lightmap_sampler, vec3(lightmap_uv, float(style))).rgb * style_scalars[style];
+                }
             }
 
             // see lightmap_scale documentation above
@@ -360,14 +376,14 @@ layout (location = 1) in vec2 vertex_uv;
 layout (location = 2) in vec2 vertex_lightmap_uv;
 layout (location = 3) in vec3 vertex_normal;
 layout (location = 4) in vec3 vertex_flat_color;
-layout (location = 5) in uint vertex_styles;
+layout (location = 5) in uvec4 vertex_styles;
 layout (location = 6) in int face_index;
 
 out vec3 fragment_world_pos;
 out vec2 lightmap_uv;
 out vec3 normal;
 flat out vec3 flat_color;
-flat out uint styles;
+flat out uvec4 styles;
 flat out int is_selected;
 
 uniform mat4 MVP;
@@ -681,6 +697,7 @@ void GLView::initializeGL()
     m_program_fullbright_location = m_program->uniformLocation("fullbright");
     m_program_drawnormals_location = m_program->uniformLocation("drawnormals");
     m_program_drawflat_location = m_program->uniformLocation("drawflat");
+    m_program_lit_translucency_location = m_program->uniformLocation("lit_translucency");
     m_program_style_scalars_location = m_program->uniformLocation("style_scalars");
     m_program_brightness_location = m_program->uniformLocation("brightness");
     m_program_lightmap_scale_location = m_program->uniformLocation("lightmap_scale");
@@ -805,6 +822,7 @@ void GLView::paintGL()
     m_program->setUniformValue(m_program_fullbright_location, m_fullbright);
     m_program->setUniformValue(m_program_drawnormals_location, m_drawNormals);
     m_program->setUniformValue(m_program_drawflat_location, m_drawFlat);
+    m_program->setUniformValue(m_program_lit_translucency_location, m_litTranslucency);
     m_program->setUniformValue(m_program_brightness_location, m_brightness);
     m_program->setUniformValue(m_program_lightmap_scale_location, m_is_hdr_lightmap ? 1.0f : 2.0f);
     m_program->setUniformValue(m_program_selected_face_location, m_selected_face);
@@ -845,10 +863,12 @@ void GLView::paintGL()
             active_program->bind();
         }
 
-        if (draw.key.alpha_test) {
-            m_program->setUniformValue(m_program_alpha_test_location, true);
-        } else {
-            m_program->setUniformValue(m_program_alpha_test_location, false);
+        if (active_program == m_program) {
+            m_program->setUniformValue(m_program_alpha_test_location, draw.key.alpha_test);
+
+            if (!m_fullbright) {
+                m_program->setUniformValue(m_program_fullbright_location, draw.key.fullbright);
+            }
         }
 
         draw.texture->bind(0 /* texture unit */);
@@ -1175,6 +1195,12 @@ void GLView::setKeepCullOrigin(bool keepcullorigin)
 void GLView::setDrawFlat(bool drawflat)
 {
     m_drawFlat = drawflat;
+    update();
+}
+
+void GLView::setLitTranslucency(bool v)
+{
+    m_litTranslucency = v;
     update();
 }
 
@@ -1512,16 +1538,27 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
             // find matching entity
             std::string modelStr = fmt::format("*{}", mi);
             bool found = false;
+            bool remove = false;
 
             for (auto &ent : entities) {
                 if (ent.get("model") == modelStr) {
                     found = true;
+
+                    if (auto classname = ent.get("classname"); !classname.empty()) {
+                        if (bsp.loadversion->game->id == GAME_SIN) {
+                            if (classname == "func_remove") {
+                                remove = true;
+                                break;
+                            }
+                        }
+                    }
+
                     ent.get_vector("origin", origin);
                     break;
                 }
             }
 
-            if (!found)
+            if (!found || remove)
                 continue;
         }
 
@@ -1541,11 +1578,12 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
 
             // determine opacity
             float opacity = 1.0f;
-            bool alpha_test = false;
+            bool alpha_test = false, fullbright = false;
 
             if (bsp.loadversion->game->id == GAME_QUAKE_II) {
-
                 if (texinfo->flags.is_nodraw()) {
+                    continue;
+                } else if (t.ends_with("/trigger")) {
                     continue;
                 }
 
@@ -1564,13 +1602,36 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
                         alpha_test = true;
                     }
                 }
+            } else if (bsp.loadversion->game->id == GAME_SIN) {
+                if (texinfo->flags.native_q2 & SIN_SURF_NODRAW) {
+                    continue;
+                } else if (t.ends_with("/trigger")) {
+                    continue;
+                }
+
+                if (texinfo->flags.native_q2 & SIN_SURF_SKY) {
+                    program = m_skybox_program;
+                    needs_skybox = true;
+                } else {
+                    alpha_test = true;
+                }
+
+                if (texinfo->flags.native_q2 & SIN_SURF_NONLIT) {
+                    fullbright = true;
+                }
+
+                opacity = 1.0f - texinfo->translucence;
             } else if (bsp.loadversion->game->id == GAME_QUAKE) {
                 if (t.starts_with('{')) {
                     alpha_test = true;
                 }
             }
 
-            material_key k = {.program = program, .texname = t, .opacity = opacity, .alpha_test = alpha_test};
+            material_key k = {.program = program,
+                .texname = t,
+                .opacity = opacity,
+                .alpha_test = alpha_test,
+                .fullbright = fullbright};
             faces_by_material_key[k].push_back({.face = &f, .model_offset = origin});
         }
     }
@@ -1592,9 +1653,15 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
             {
                 auto up =
                     img::load_texture(fmt::format("env/{}up", skybox), false, bsp.loadversion->game, settings, true);
-                up_img = QImage((const uchar *)std::get<0>(up)->pixels.data(), std::get<0>(up)->width,
-                    std::get<0>(up)->height, QImage::Format_RGB32);
-                up_img = std::move(up_img.transformed(QTransform().rotate(-90.0)).mirrored(false, true));
+
+                if (std::get<0>(up)) {
+                    up_img = QImage((const uchar *)std::get<0>(up)->pixels.data(), std::get<0>(up)->width,
+                        std::get<0>(up)->height, QImage::Format_RGB32);
+                    up_img = std::move(up_img.transformed(QTransform().rotate(-90.0)).mirrored(false, true));
+                } else {
+                    up_img = QImage(1, 1, QImage::Format_RGB32);
+                    up_img.setPixel(0, 0, 0);
+                }
             }
 
             skybox_texture->setSize(up_img.width(), up_img.height());
@@ -1615,9 +1682,15 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
             {
                 auto down =
                     img::load_texture(fmt::format("env/{}dn", skybox), false, bsp.loadversion->game, settings, true);
-                down_img = QImage((const uchar *)std::get<0>(down)->pixels.data(), std::get<0>(down)->width,
-                    std::get<0>(down)->height, QImage::Format_RGB32);
-                down_img = std::move(down_img.transformed(QTransform().rotate(90.0)).mirrored(true, false));
+
+                if (std::get<0>(down)) {
+                    down_img = QImage((const uchar *)std::get<0>(down)->pixels.data(), std::get<0>(down)->width,
+                        std::get<0>(down)->height, QImage::Format_RGB32);
+                    down_img = std::move(down_img.transformed(QTransform().rotate(90.0)).mirrored(true, false));
+                } else {
+                    down_img = QImage(1, 1, QImage::Format_RGB32);
+                    down_img.setPixel(0, 0, 0);
+                }
             }
 
             skybox_texture->setData(0, 0, QOpenGLTexture::CubeMapNegativeZ, QOpenGLTexture::RGBA, QOpenGLTexture::UInt8,
@@ -1628,9 +1701,14 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
             {
                 auto left =
                     img::load_texture(fmt::format("env/{}lf", skybox), false, bsp.loadversion->game, settings, true);
-                left_img = QImage((const uchar *)std::get<0>(left)->pixels.data(), std::get<0>(left)->width,
-                    std::get<0>(left)->height, QImage::Format_RGB32);
-                left_img = std::move(left_img.transformed(QTransform().rotate(-90.0)).mirrored(true, false));
+                if (std::get<0>(left)) {
+                    left_img = QImage((const uchar *)std::get<0>(left)->pixels.data(), std::get<0>(left)->width,
+                        std::get<0>(left)->height, QImage::Format_RGB32);
+                    left_img = std::move(left_img.transformed(QTransform().rotate(-90.0)).mirrored(true, false));
+                } else {
+                    left_img = QImage(1, 1, QImage::Format_RGB32);
+                    left_img.setPixel(0, 0, 0);
+                }
             }
             skybox_texture->setData(0, 0, QOpenGLTexture::CubeMapNegativeX, QOpenGLTexture::RGBA, QOpenGLTexture::UInt8,
                 left_img.constBits(), nullptr);
@@ -1640,9 +1718,14 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
             {
                 auto right =
                     img::load_texture(fmt::format("env/{}rt", skybox), false, bsp.loadversion->game, settings, true);
-                right_img = QImage((const uchar *)std::get<0>(right)->pixels.data(), std::get<0>(right)->width,
-                    std::get<0>(right)->height, QImage::Format_RGB32);
-                right_img = std::move(right_img.transformed(QTransform().rotate(90.0)).mirrored(true, false));
+                if (std::get<0>(right)) {
+                    right_img = QImage((const uchar *)std::get<0>(right)->pixels.data(), std::get<0>(right)->width,
+                        std::get<0>(right)->height, QImage::Format_RGB32);
+                    right_img = std::move(right_img.transformed(QTransform().rotate(90.0)).mirrored(true, false));
+                } else {
+                    right_img = QImage(1, 1, QImage::Format_RGB32);
+                    right_img.setPixel(0, 0, 0);
+                }
             }
             skybox_texture->setData(0, 0, QOpenGLTexture::CubeMapPositiveX, QOpenGLTexture::RGBA, QOpenGLTexture::UInt8,
                 right_img.constBits(), nullptr);
@@ -1652,9 +1735,14 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
             {
                 auto front =
                     img::load_texture(fmt::format("env/{}ft", skybox), false, bsp.loadversion->game, settings, true);
-                front_img = QImage((const uchar *)std::get<0>(front)->pixels.data(), std::get<0>(front)->width,
-                    std::get<0>(front)->height, QImage::Format_RGB32);
-                front_img = front_img.mirrored(true, false);
+                if (std::get<0>(front)) {
+                    front_img = QImage((const uchar *)std::get<0>(front)->pixels.data(), std::get<0>(front)->width,
+                        std::get<0>(front)->height, QImage::Format_RGB32);
+                    front_img = front_img.mirrored(true, false);
+                } else {
+                    front_img = QImage(1, 1, QImage::Format_RGB32);
+                    front_img.setPixel(0, 0, 0);
+                }
             }
             skybox_texture->setData(0, 0, QOpenGLTexture::CubeMapNegativeY, QOpenGLTexture::RGBA, QOpenGLTexture::UInt8,
                 front_img.constBits(), nullptr);
@@ -1664,9 +1752,14 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
             {
                 auto back =
                     img::load_texture(fmt::format("env/{}bk", skybox), false, bsp.loadversion->game, settings, true);
-                back_img = QImage((const uchar *)std::get<0>(back)->pixels.data(), std::get<0>(back)->width,
-                    std::get<0>(back)->height, QImage::Format_RGB32);
-                back_img = std::move(back_img.transformed(QTransform().rotate(-180.0)).mirrored(true, false));
+                if (std::get<0>(back)) {
+                    back_img = QImage((const uchar *)std::get<0>(back)->pixels.data(), std::get<0>(back)->width,
+                        std::get<0>(back)->height, QImage::Format_RGB32);
+                    back_img = std::move(back_img.transformed(QTransform().rotate(-180.0)).mirrored(true, false));
+                } else {
+                    back_img = QImage(1, 1, QImage::Format_RGB32);
+                    back_img.setPixel(0, 0, 0);
+                }
             }
             skybox_texture->setData(0, 0, QOpenGLTexture::CubeMapPositiveY, QOpenGLTexture::RGBA, QOpenGLTexture::UInt8,
                 back_img.constBits(), nullptr);
@@ -1686,14 +1779,10 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
         if (!texture) {
             logging::print("warning, couldn't locate {}\n", k.texname);
             qtexture = placeholder_texture;
-        }
-
-        if (!texture->width || !texture->height) {
+        } else if (!texture->width || !texture->height) {
             logging::print("warning, empty texture {}\n", k.texname);
             qtexture = placeholder_texture;
-        }
-
-        if (texture->pixels.empty()) {
+        } else if (texture->pixels.empty()) {
             logging::print("warning, empty texture pixels {}\n", k.texname);
             qtexture = placeholder_texture;
         }
@@ -1714,7 +1803,9 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
 
             const size_t first_vertex_of_face = verts.size();
 
-            const auto lm_uvs = lightmap.facenum_to_lightmap_uvs.at(fnum);
+            const auto lm_uvs_it = lightmap.facenum_to_lightmap_uvs.find(fnum);
+            const auto lm_uvs =
+                lm_uvs_it != lightmap.facenum_to_lightmap_uvs.end() ? *lm_uvs_it : (decltype(*lm_uvs_it){});
 
             // output a vertex for each vertex of the face
             for (int j = 0; j < f->numedges; ++j) {
@@ -1729,7 +1820,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
                     uv[1] *= (1.0 / texture->height);
                 }
 
-                qvec2f lightmap_uv = lm_uvs.at(j);
+                qvec2f lightmap_uv = lm_uvs.second.empty() ? qvec2f{} : lm_uvs.second.at(j);
 
                 qvec3f vertex_normal;
                 if (facenormals) {
@@ -1739,13 +1830,30 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
                     vertex_normal = plane_normal;
                 }
 
+                std::array<uint8_t, MFACE_MAXLIGHTMAPS> styles;
+
+                if (lightmap.facenum_to_styles.contains(fnum)) {
+                    styles = lightmap.facenum_to_styles.at(fnum);
+                } else {
+                    styles.fill(0xFF);
+                }
+
                 verts.push_back({.pos = pos + model_offset,
                     .uv = uv,
                     .lightmap_uv = lightmap_uv,
                     .normal = vertex_normal,
                     .flat_color = flat_color,
-                    .styles = (uint32_t)(f->styles[0]) | (uint32_t)(f->styles[1] << 8) |
-                              (uint32_t)(f->styles[2] << 16) | (uint32_t)(f->styles[3] << 24),
+                    .styles =
+                        {
+                            (uint32_t)(styles[0]) | (uint32_t)(styles[1] << 8) | (uint32_t)(styles[2] << 16) |
+                                (uint32_t)(styles[3] << 24),
+                            (uint32_t)(styles[4]) | (uint32_t)(styles[5] << 8) | (uint32_t)(styles[6] << 16) |
+                                (uint32_t)(styles[7] << 24),
+                            (uint32_t)(styles[8]) | (uint32_t)(styles[9] << 8) | (uint32_t)(styles[10] << 16) |
+                                (uint32_t)(styles[11] << 24),
+                            (uint32_t)(styles[12]) | (uint32_t)(styles[13] << 8) | (uint32_t)(styles[14] << 16) |
+                                (uint32_t)(styles[15] << 24),
+                        },
                     .face_index = fnum});
             }
 
@@ -1769,8 +1877,9 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
         for (const face_payload &facePayload : faces) {
             int face_num = Face_GetNum(&bsp, facePayload.face);
 
-            // FIXME: face offset
-            m_spatialindex->add_poly(Face_Winding(&bsp, facePayload.face), std::make_any<int>(face_num));
+            auto w = Face_Winding(&bsp, facePayload.face);
+            w.translateInPlace(facePayload.model_offset);
+            m_spatialindex->add_poly(w, std::make_any<int>(face_num));
         }
     }
     m_spatialindex->commit();
@@ -2143,7 +2252,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
 
 void GLView::uploadPortalVAO(const std::vector<simple_vertex_t> &points, const std::vector<GLuint> &indices)
 {
-   QOpenGLVertexArrayObject::Binder portalVaoBinder(&m_portalVao);
+    QOpenGLVertexArrayObject::Binder portalVaoBinder(&m_portalVao);
 
     // upload index buffer
     m_portalIndexBuffer.create();
@@ -2201,7 +2310,7 @@ void GLView::uploadFaceVAO(const std::vector<vertex_t> &verts, const std::vector
 
     // styles
     glEnableVertexAttribArray(5 /* attrib */);
-    glVertexAttribIPointer(5 /* attrib */, 1, GL_UNSIGNED_INT, sizeof(vertex_t), (void *)offsetof(vertex_t, styles));
+    glVertexAttribIPointer(5 /* attrib */, 4, GL_UNSIGNED_INT, sizeof(vertex_t), (void *)offsetof(vertex_t, styles));
 
     // face indices
     glEnableVertexAttribArray(6 /* attrib */);
@@ -2262,9 +2371,12 @@ void GLView::clickFace(QMouseEvent *event)
 
     if (hit.hit) {
         m_selected_face = *std::any_cast<int>(hit.hitpayload);
+        emit selectedFaceChanged();
+
     } else {
         m_selected_face = -1;
         m_hasClick = false;
+        emit selectedFaceChanged();
         return;
     }
 
@@ -2394,8 +2506,19 @@ void GLView::applyFlyMovement(float duration_seconds)
     if (m_keysPressed & static_cast<uint32_t>(keys_t::fly_up))
         m_cameraOrigin += QVector3D(0, 0, 1) * distance;
 
+    uint32_t m_keyDiff = m_oldKeysPressed ^ m_keysPressed;
+    m_oldKeysPressed = m_keysPressed;
+
+    constexpr auto movementKeys = static_cast<uint32_t>(keys_t::up) | static_cast<uint32_t>(keys_t::down) |
+                                  static_cast<uint32_t>(keys_t::left) | static_cast<uint32_t>(keys_t::right) |
+                                  static_cast<uint32_t>(keys_t::fly_up) | static_cast<uint32_t>(keys_t::fly_down);
+
     if (prevOrigin != m_cameraOrigin) {
         emit cameraMoved();
+    }
+
+    if ((m_keyDiff & movementKeys) != 0 && (m_keysPressed & movementKeys) == 0) {
+        emit stoppedMoving();
     }
 }
 
