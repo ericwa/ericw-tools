@@ -946,7 +946,10 @@ static std::vector<compiled_brush_t> DecompileLeafTaskGeometryOnly(
     brush.source = task.brush;
     brush.brush_offset = brush_offset;
 
-    int native_contents = task.brush->contents;
+    int native_contents = 0;
+    if (task.brush) {
+        native_contents = task.brush->contents;
+    }
 
     if (bsp->loadversion->game->id == GAME_SIN) {
         // SiN cleanup
@@ -1020,7 +1023,10 @@ static std::vector<compiled_brush_t> DecompileLeafTask(const mbsp_t *bsp, const 
         brush.source = task.brush;
         brush.brush_offset = brush_offset;
 
-        int native_contents = task.brush->contents;
+        int native_contents = 0;
+        if (task.brush) {
+            native_contents = task.brush->contents;
+        }
 
         if (bsp->loadversion->game->id == GAME_SIN) {
             // SiN cleanup
