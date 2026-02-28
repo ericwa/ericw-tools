@@ -130,4 +130,8 @@ if (APPLE)
     apple_install_lib(Qt6::DBus "$<TARGET_FILE_DIR:lightpreview>/QtDBus.framework/Versions/A")
 endif ()
 
+if(ENABLE_PREFIX_INSTALL)
+install(TARGETS lightpreview RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} BUNDLE DESTINATION ${CMAKE_INSTALL_BINDIR})
+else()
 install(TARGETS lightpreview RUNTIME DESTINATION . BUNDLE DESTINATION .)
+endif()
