@@ -56,10 +56,20 @@ struct texdef_quake_ed_t
     qvec2d shift;
     double rotate;
     qvec2d scale;
+
+    auto operator<=>(const texdef_quake_ed_t& other) const = default;
+    friend std::ostream &operator<<(std::ostream &os, const texdef_quake_ed_t &v);
 };
 
-struct texdef_valve_t : texdef_quake_ed_t, texdef_bp_t
+struct texdef_valve_t
 {
+    qvec2d shift;
+    double rotate;
+    qvec2d scale;
+    qmat<double, 2, 3> axis;
+
+    auto operator<=>(const texdef_valve_t& other) const = default;
+    friend std::ostream &operator<<(std::ostream &os, const texdef_valve_t &v);
 };
 
 struct texdef_etp_t : texdef_quake_ed_t
@@ -297,13 +307,9 @@ struct brush_side_t
     qplane3d plane;
 
     // TODO move to qv? keep local?
-    static bool is_valid_texture_projection(const qvec3f &faceNormal, const qvec3f &s_vec, const qvec3f &t_vec);
+    static bool is_valid_texture_projection(const qvec3f &faceNormal, const texvecf &vecs);
 
-    inline bool is_valid_texture_projection() const
-    {
-        return is_valid_texture_projection(plane.normal, vecs.row(0).xyz(), vecs.row(1).xyz());
-    }
-
+    bool is_valid_texture_projection() const;
     void validate_texture_projection();
 
     // parsing
@@ -379,5 +385,6 @@ struct map_file_t
 };
 
 map_file_t parse(std::string_view view, parser_source_location base_location);
+map_file_t parse(const fs::data &data, parser_source_location base_location);
 
 } // namespace mapfile

@@ -99,3 +99,7 @@ def setup(app: Sphinx):
             rolename='texture',
             indextemplate='pair: %s; texture name',
         )
+    app.add_object_type(
+        directivename='bspx-lump',
+        rolename='bspx-lump',
+    )

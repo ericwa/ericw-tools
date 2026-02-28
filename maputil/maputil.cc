@@ -333,16 +333,16 @@ static void maputil_make_brush_side(lua_State *state, const brush_side_t &side)
     }
 
     if (std::holds_alternative<texdef_valve_t>(side.raw) || std::holds_alternative<texdef_bp_t>(side.raw)) {
-        const texdef_bp_t &raw_bp = std::holds_alternative<texdef_valve_t>(side.raw)
-                                        ? std::get<texdef_valve_t>(side.raw)
-                                        : std::get<texdef_bp_t>(side.raw);
+        const qmat<double, 2, 3> &axis = std::holds_alternative<texdef_valve_t>(side.raw)
+                                             ? std::get<texdef_valve_t>(side.raw).axis
+                                             : std::get<texdef_bp_t>(side.raw).axis;
 
         lua_createtable(state, 2, 0);
 
         for (size_t i = 0; i < 2; i++) {
             lua_createtable(state, 3, 0);
             for (size_t v = 0; v < 3; v++) {
-                lua_pushnumber(state, raw_bp.axis.at(i, v));
+                lua_pushnumber(state, axis.at(i, v));
                 lua_rawseti(state, -2, v + 1);
             }
             lua_rawseti(state, -2, i + 1);
@@ -551,7 +551,7 @@ static void maputil_copy_side(lua_State *state, brush_side_t &side)
         texdef_bp_t bp = maputil_load_bp(state);
         texdef_quake_ed_t qed = maputil_load_quaked(state);
 
-        side.raw = texdef_valve_t{qed, bp};
+        side.raw = texdef_valve_t{.shift = qed.shift, .rotate = qed.rotate, .scale = qed.scale, .axis = bp.axis};
     }
     lua_pop(state, 1);
 

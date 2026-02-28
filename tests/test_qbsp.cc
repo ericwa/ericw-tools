@@ -500,6 +500,47 @@ TEST(qbsp, InvalidTextureProjection3)
     ASSERT_EQ("*lava1", face->texture);
 
     EXPECT_TRUE(face->is_valid_texture_projection());
+    EXPECT_THAT(get_current_test_log(),
+        testing::Contains(
+            "WARNING: unknown/unset location[line 11]: repairing invalid texture projection (\"*lava1\" near 0 448 0)\n"));
+}
+
+/**
+ * *lava1 has a nan offset
+ */
+TEST(qbsp, InvalidTextureProjection4)
+{
+    const char *map = R"(
+// entity 0
+{
+"mapversion" "220"
+"classname" "worldspawn"
+"wad" "C:/Users/Eric/Downloads/test.wad"
+// brush 0
+{
+( 0 448 0 ) ( 0 512 0 ) ( 0 448 64 ) *04mwat1 [ 0 -1 0 0 ] [ -0 -0 -1 0 ] 0 1 1
+( 0 448 0 ) ( 0 448 64 ) ( 512 448 0 ) *lava1 [ 1 0 0 nan ] [ 0 0 -1 0 ] 0 1 1
+( 0 448 0 ) ( 512 448 0 ) ( 0 512 0 ) *04mwat1 [ -1 0 0 0 ] [ -0 -1 -0 0 ] 0 1 1
+( 512 512 64 ) ( 512 448 64 ) ( 0 512 64 ) *04mwat1 [ 1 0 0 0 ] [ 0 -1 0 0 ] 0 1 1
+( 512 512 64 ) ( 0 512 64 ) ( 512 512 0 ) *04mwat1 [ -1 0 0 0 ] [ 0 0 -1 0 ] 0 1 1
+( 512 512 64 ) ( 512 512 0 ) ( 512 448 64 ) *04mwat1 [ 0 1 0 0 ] [ 0 0 -1 0 ] 0 1 1
+}
+}
+    )";
+
+    mapfile::map_file_t m;
+    parser_t p(map, parser_source_location());
+    m.parse(p);
+
+    ASSERT_EQ(1, m.entities[0].brushes.size());
+
+    const auto *face = &m.entities[0].brushes.front().faces[1];
+    ASSERT_EQ("*lava1", face->texture);
+
+    EXPECT_TRUE(face->is_valid_texture_projection());
+    EXPECT_THAT(get_current_test_log(),
+        testing::Contains(
+            "WARNING: unknown/unset location[line 10]: repairing invalid texture projection (\"*lava1\" near 0 448 0)\n"));
 }
 
 TEST(winding, WindingArea)

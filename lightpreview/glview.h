@@ -254,6 +254,30 @@ public:
     void renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries_t &bspx,
         const std::vector<entdict_t> &entities, const full_atlas_t &lightmap, const settings::common_settings &settings,
         bool use_bspx_normals);
+private:
+    struct vertex_t
+    {
+        qvec3f pos;
+        qvec2f uv;
+        qvec2f lightmap_uv;
+        qvec3f normal;
+        qvec3f flat_color;
+        std::array<uint32_t, 4> styles;
+        int32_t face_index;
+    };
+
+    struct simple_vertex_t
+    {
+        qvec3f pos;
+    };
+
+    /**
+     * Provide 1 index per vertex - they're rendered as triangle fans - and insert ((GLuint)-1) in the indices
+     * vector between portals (primitive restart).
+     */
+    void uploadPortalVAO(const std::vector<simple_vertex_t> &points, const std::vector<GLuint> &indices);
+    void uploadFaceVAO(const std::vector<vertex_t> &verts, const std::vector<uint32_t> &indexBuffer);
+public:
     void setCamera(const qvec3d &origin);
     void setCamera(const qvec3d &origin, const qvec3d &fwd);
     // FIXME: distinguish render modes from render options

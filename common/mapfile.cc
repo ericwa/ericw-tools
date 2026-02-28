@@ -7,10 +7,33 @@
 namespace mapfile
 {
 
-/*static*/ bool brush_side_t::is_valid_texture_projection(
-    const qvec3f &faceNormal, const qvec3f &s_vec, const qvec3f &t_vec)
+std::ostream &operator<<(std::ostream &os, const texdef_quake_ed_t &v)
+{
+    os << fmt::format("{{shift: {}, rotate: {}, scale: {}}}", v.shift, v.rotate, v.scale);
+    return os;
+}
+
+std::ostream &operator<<(std::ostream &os, const texdef_valve_t &v)
+{
+    os << fmt::format("{{shift: {}, rotate: {}, scale: {}, axis.row(0): {}, axis.row(1): {}}}", v.shift, v.rotate,
+        v.scale, v.axis.row(0), v.axis.row(1));
+    return os;
+}
+
+/*static*/ bool brush_side_t::is_valid_texture_projection(const qvec3f &faceNormal, const texvecf &vecs)
 {
     // TODO: This doesn't match how light does it (TexSpaceToWorld)
+
+    for (int row = 0; row < 2; ++row) {
+        for (int col = 0; col < 4; ++col) {
+            if (std::isnan(vecs.row(row)[col])) {
+                return false;
+            }
+        }
+    }
+
+    qvec3f s_vec = vecs.row(0).xyz();
+    qvec3f t_vec = vecs.row(1).xyz();
 
     const qvec3f tex_normal = qv::normalize(qv::cross(s_vec, t_vec));
 
@@ -31,17 +54,16 @@ namespace mapfile
     return true;
 }
 
+bool brush_side_t::is_valid_texture_projection() const
+{
+    return is_valid_texture_projection(plane.normal, vecs);
+}
+
 void brush_side_t::validate_texture_projection()
 {
     if (!is_valid_texture_projection()) {
-        /*
-        if (qbsp_options.verbose.value()) {
-        logging::print("WARNING: {}: repairing invalid texture projection (\"{}\" near {} {} {})\n", mapface.line,
-        mapface.texname, (int)mapface.planepts[0][0], (int)mapface.planepts[0][1], (int)mapface.planepts[0][2]);
-        } else {
-        issue_stats.num_repaired++;
-        }
-        */
+        logging::print("WARNING: {}: repairing invalid texture projection (\"{}\" near {} {} {})\n", location,
+            texture, (int)planepts[0][0], (int)planepts[0][1], (int)planepts[0][2]);
 
         // Reset texturing to sensible defaults
         set_texinfo(texdef_quake_ed_t{{0.0, 0.0}, 0, {1.0, 1.0}});
@@ -123,7 +145,7 @@ parse_error:
     parser.parse_token(PARSE_SAMELINE);
     scale[1] = std::stod(parser.token);
 
-    return {{shift, rotate, scale}, {axis}};
+    return {shift, rotate, scale, axis};
 
 parse_error:
     FError("{}: couldn't parse Valve220 texture info", parser.location);
@@ -1021,6 +1043,7 @@ static texdef_valve_t TexDef_BSPToValve(const texvecf &in_vecs)
         res.shift[i] = in_vecs.at(i, 3);
         res.axis.set_row(i, axis);
     }
+    res.rotate = 0.0;
 
     return res;
 }
@@ -1433,6 +1456,15 @@ void map_file_t::convert_to(texcoord_style_t style, const gamedef_t *game, const
 map_file_t parse(std::string_view view, parser_source_location base_location)
 {
     parser_t parser(view, base_location);
+
+    map_file_t result;
+    result.parse(parser);
+    return result;
+}
+
+map_file_t parse(const fs::data &data, parser_source_location base_location)
+{
+    parser_t parser(data, base_location);
 
     map_file_t result;
     result.parse(parser);
