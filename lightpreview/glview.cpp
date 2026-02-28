@@ -1798,11 +1798,6 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
     }
 
     // populate the vertex/index buffers
-    struct simple_vertex_t
-    {
-        qvec3f pos;
-    };
-
     {
         QOpenGLVertexArrayObject::Binder vaoBinder(&m_frustumVao);
 
@@ -1886,20 +1881,13 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
     fs::path portalFile = fs::path(file.toStdString()).replace_extension(".prt");
 
     if (fs::exists(portalFile)) {
-        QOpenGLVertexArrayObject::Binder portalVaoBinder(&m_portalVao);
-
         auto prt = LoadPrtFile(portalFile, bsp.loadversion);
         std::vector<GLuint> indices;
         std::vector<simple_vertex_t> points;
 
-        [[maybe_unused]] size_t total_points = 0;
-        [[maybe_unused]] size_t total_indices = 0;
         size_t current_index = 0;
 
         for (auto &portal : prt.portals) {
-            total_points += portal.winding.size();
-            total_indices += portal.winding.size() + 1;
-
             for (auto &pt : portal.winding) {
                 indices.push_back(current_index++);
                 points.push_back(simple_vertex_t{qvec3f{pt}});
@@ -1908,22 +1896,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
             indices.push_back((GLuint)-1);
         }
 
-        // upload index buffer
-        m_portalIndexBuffer.create();
-        m_portalIndexBuffer.bind();
-        m_portalIndexBuffer.allocate(indices.data(), indices.size() * sizeof(indices[0]));
-
-        num_portal_indices = indices.size();
-
-        // upload vertex buffer
-        m_portalVbo.create();
-        m_portalVbo.bind();
-        m_portalVbo.allocate(points.data(), points.size() * sizeof(points[0]));
-
-        // positions
-        glEnableVertexAttribArray(0 /* attrib */);
-        glVertexAttribPointer(
-            0 /* attrib */, 3, GL_FLOAT, GL_FALSE, sizeof(simple_vertex_t), (void *)offsetof(simple_vertex_t, pos));
+        uploadPortalVAO(points, indices);
     }
 
     // load decompiled hulls
@@ -2166,6 +2139,28 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
 
     // schedule repaint
     update();
+}
+
+void GLView::uploadPortalVAO(const std::vector<simple_vertex_t> &points, const std::vector<GLuint> &indices)
+{
+   QOpenGLVertexArrayObject::Binder portalVaoBinder(&m_portalVao);
+
+    // upload index buffer
+    m_portalIndexBuffer.create();
+    m_portalIndexBuffer.bind();
+    m_portalIndexBuffer.allocate(indices.data(), indices.size() * sizeof(indices[0]));
+
+    num_portal_indices = indices.size();
+
+    // upload vertex buffer
+    m_portalVbo.create();
+    m_portalVbo.bind();
+    m_portalVbo.allocate(points.data(), points.size() * sizeof(points[0]));
+
+    // positions
+    glEnableVertexAttribArray(0 /* attrib */);
+    glVertexAttribPointer(
+        0 /* attrib */, 3, GL_FLOAT, GL_FALSE, sizeof(simple_vertex_t), (void *)offsetof(simple_vertex_t, pos));
 }
 
 void GLView::uploadFaceVAO(const std::vector<vertex_t> &verts, const std::vector<uint32_t> &indexBuffer)

@@ -263,6 +263,16 @@ private:
         int32_t face_index;
     };
 
+    struct simple_vertex_t
+    {
+        qvec3f pos;
+    };
+
+    /**
+     * Provide 1 index per vertex - they're rendered as triangle fans - and insert ((GLuint)-1) in the indices
+     * vector between portals (primitive restart).
+     */
+    void uploadPortalVAO(const std::vector<simple_vertex_t> &points, const std::vector<GLuint> &indices);
     void uploadFaceVAO(const std::vector<vertex_t> &verts, const std::vector<uint32_t> &indexBuffer);
 public:
     void setCamera(const qvec3d &origin);
