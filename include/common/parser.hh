@@ -121,6 +121,7 @@ struct parser_base_t
     std::string token; // the last token parsed by parse_token
     bool was_quoted = false; // whether the current token was from a quoted string or not
     parser_source_location location; // parse location, if any
+    bool ignore_escapes = false; // ignore invalid escape sequences
 
     inline parser_base_t(parser_source_location base_location)
         : location(base_location)

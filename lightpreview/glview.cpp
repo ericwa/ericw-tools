@@ -1877,8 +1877,9 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
         for (const face_payload &facePayload : faces) {
             int face_num = Face_GetNum(&bsp, facePayload.face);
 
-            // FIXME: face offset
-            m_spatialindex->add_poly(Face_Winding(&bsp, facePayload.face), std::make_any<int>(face_num));
+            auto w = Face_Winding(&bsp, facePayload.face);
+            w.translateInPlace(facePayload.model_offset);
+            m_spatialindex->add_poly(w, std::make_any<int>(face_num));
         }
     }
     m_spatialindex->commit();
