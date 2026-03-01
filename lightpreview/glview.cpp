@@ -2262,9 +2262,12 @@ void GLView::clickFace(QMouseEvent *event)
 
     if (hit.hit) {
         m_selected_face = *std::any_cast<int>(hit.hitpayload);
+        emit selectedFaceChanged();
+
     } else {
         m_selected_face = -1;
         m_hasClick = false;
+        emit selectedFaceChanged();
         return;
     }
 

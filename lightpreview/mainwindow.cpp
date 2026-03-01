@@ -64,6 +64,7 @@ See file, 'COPYING', for details.
 
 #include "glview.h"
 #include "stats.h"
+#include "face.h"
 
 // Recent files
 
@@ -218,6 +219,7 @@ MainWindow::MainWindow(QWidget *parent)
     createPropertiesSidebar();
     createOutputLog();
     createStatsSidebar();
+    createFaceSidebar();
 
     createStatusBar();
 
@@ -425,6 +427,7 @@ void MainWindow::createPropertiesSidebar()
     connect(draw_opaque, &QAbstractButton::toggled, this,
         [this](bool checked) { glView->setDrawTranslucencyAsOpaque(checked); });
     connect(glView, &GLView::cameraMoved, this, &MainWindow::displayCameraPositionInfo);
+    connect(glView, &GLView::selectedFaceChanged, this, &MainWindow::updateCameraFaceInfo);
     connect(show_bmodels, &QAbstractButton::toggled, this, [this](bool checked) { glView->setShowBmodels(checked); });
     connect(brightnessSlider, &QAbstractSlider::valueChanged, this, [this, brightnessLabel](int value) {
         float brightness = value / 10.0f;
@@ -449,6 +452,18 @@ void MainWindow::createStatsSidebar()
 
     // finish dock setup
     dock->setWidget(stats_panel);
+    addDockWidget(Qt::RightDockWidgetArea, dock);
+    viewMenu->addAction(dock->toggleViewAction());
+}
+
+void MainWindow::createFaceSidebar()
+{
+    QDockWidget *dock = new QDockWidget(tr("Face"), this);
+
+    face_panel = new FacePanel();
+
+    // finish dock setup
+    dock->setWidget(face_panel);
     addDockWidget(Qt::RightDockWidgetArea, dock);
     viewMenu->addAction(dock->toggleViewAction());
 }
@@ -1011,16 +1026,16 @@ void MainWindow::compileThreadExited()
     }
     const auto &bsp = std::get<mbsp_t>(m_bspdata.bsp);
 
-    auto ents = EntData_Parse(bsp);
+    m_entities = EntData_Parse(bsp);
 
     // build lightmap atlas
     auto atlas = build_lightmap_atlas(
         bsp, m_bspdata.bspx.entries, m_litdata, m_hdr_litdata, false, bspx_decoupled_lm->isChecked());
 
-    glView->renderBSP(m_mapFile, bsp, m_bspdata.bspx.entries, ents, atlas, render_settings, bspx_normals->isChecked());
+    glView->renderBSP(m_mapFile, bsp, m_bspdata.bspx.entries, m_entities, atlas, render_settings, bspx_normals->isChecked());
 
     if (!m_fileWasReload && !glView->getKeepOrigin()) {
-        for (auto &ent : ents) {
+        for (auto &ent : m_entities) {
             if (ent.get("classname") == "info_player_start") {
                 qvec3f origin;
                 ent.get_vector("origin", origin);
@@ -1109,4 +1124,9 @@ void MainWindow::displayCameraPositionInfo()
     std::string cpp_str = fmt::format("pos ({}) forward ({}) contents ({}) area ({})", point, forward, leaf_type, area);
 
     m_cameraStatus->setText(QString::fromStdString(cpp_str));
+}
+
+void MainWindow::updateCameraFaceInfo()
+{
+    face_panel->updateWithBSP(&std::get<mbsp_t>(m_bspdata.bsp), m_entities, m_bspdata.bspx.entries, glView->getSelectedFace());
 }

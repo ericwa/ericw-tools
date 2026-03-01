@@ -301,6 +301,7 @@ public:
     void setBrightness(float brightness);
 
     void takeScreenshot(QString destPath, int w, int h);
+    int getSelectedFace() const { return m_selected_face; }
 
 private:
     void error(const QString &context, const QString &context2, const QString &log);
@@ -341,6 +342,7 @@ private:
 
 signals:
     void cameraMoved();
+    void selectedFaceChanged();
 
 public:
     qvec3f cameraPosition() const;
