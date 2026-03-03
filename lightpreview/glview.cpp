@@ -1777,8 +1777,10 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
             bool is_world = (facePayload.modelindex == 0);
             uint32_t mask = is_world ? GEOM_MASK_WORLD : GEOM_MASK_BMODEL;
 
-            // FIXME: face offset
-            m_spatialindex->add_poly(Face_Winding(&bsp, facePayload.face), std::make_any<int>(face_num), mask);
+            auto w = Face_Winding(&bsp, facePayload.face);
+            w.translateInPlace(facePayload.model_offset);
+
+            m_spatialindex->add_poly(w, std::make_any<int>(face_num), mask);
         }
     }
     m_spatialindex->commit();
