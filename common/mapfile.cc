@@ -193,11 +193,108 @@ bool brush_side_t::parse_quark_comment(parser_t &parser)
     return true;
 }
 
+static bool is_sin_token(const std::string &s)
+{
+    return s.length() >= 2 && (
+        isalpha(s[0]) ||
+        ((s[0] == '-' || s[0] == '+') && isalpha(s[1]))
+    );
+}
+
+static texinfo_sin_t parse_sin_texinfo(parser_t &parser, bool parse_first_token = false)
+{
+    texinfo_sin_t sin_info;
+
+    if (parse_first_token) {
+        if (!parser.parse_token()) {
+            return sin_info;
+        }
+    }
+
+    // name parsed already
+    while (true) {
+        if (parser.token[0] == '-' || parser.token[0] == '+') {
+            // flag, easy!
+            sin_modify_flag_t flag { .add = parser.token[0] == '+' };
+            std::string_view flag_name = std::string_view(parser.token).substr(1);
+            bool found = false;
+                    
+            for (auto &content : sin_contents_names) {
+                if (string_iequals(content.name, flag_name)) {
+                    flag.flag = content.flag;
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found) {
+                for (auto &surfflag : sin_surfflag_names) {
+                    if (string_iequals(surfflag.name, flag_name)) {
+                        flag.flag = surfflag.flag;
+                        found = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!found) {
+                FError("{}: dunno what to do with flag {}", parser.location, parser.token);
+            }
+
+            sin_info.objects.push_back(flag);
+                    
+            if (!parser.parse_token(PARSE_OPTIONAL)) {
+                break;
+            }
+
+            continue;
+        }
+
+        // key value pair
+        keyvalue_t kvp { std::move(parser.token), "" };
+                
+        for (int i = 0; ; i++) {
+            if (!parser.parse_token(PARSE_OPTIONAL)) {
+                if (i == 0) {
+                    FError("{}: missing value(s) for key {}", parser.location, kvp.first);
+                }
+
+                break;
+            }
+
+            // finished kvp
+            if (i >= 1 && is_sin_token(parser.token)) {
+                break;
+            }
+
+            if (i != 0) {
+                kvp.second += ' ';
+            }
+
+            kvp.second += parser.token;
+        }
+
+        sin_info.objects.push_back(kvp);
+
+        if (parser.token.empty()) {
+            break;
+        }
+    }
+
+    return sin_info;
+}
+
 void brush_side_t::parse_extended_texinfo(parser_t &parser)
 {
     if (!parse_quark_comment(parser)) {
         // Parse extra Quake 2 surface info
-        if (parser.parse_token(PARSE_OPTIONAL)) {
+        if (!parser.parse_token(PARSE_OPTIONAL)) {
+            return;
+        }
+
+        if (is_sin_token(parser.token)) {
+            extended_info = parse_sin_texinfo(parser);
+        } else {
             texinfo_quake2_t q2_info;
 
             q2_info.contents = std::stoi(parser.token);
@@ -210,9 +307,9 @@ void brush_side_t::parse_extended_texinfo(parser_t &parser)
             }
 
             extended_info = q2_info;
-
-            parse_quark_comment(parser);
         }
+
+        parse_quark_comment(parser);
     }
 }
 
@@ -506,8 +603,57 @@ parse_error:
 
 void brush_side_t::write_extended_info(std::ostream &stream)
 {
-    if (extended_info) {
-        ewt::print(stream, " {} {} {}", extended_info->contents, extended_info->flags, extended_info->value);
+    if (std::holds_alternative<mapfile::texinfo_quake2_t>(extended_info)) {
+        auto &q2 = std::get<mapfile::texinfo_quake2_t>(extended_info);
+        ewt::print(stream, " {} {} {}", q2.contents, q2.flags, q2.value);
+    } else if (std::holds_alternative<mapfile::texinfo_sin_t>(extended_info)) {
+        auto &sin = std::get<mapfile::texinfo_sin_t>(extended_info);
+
+        for (auto &object : sin.objects) {
+            ewt::print(stream, " ");
+
+            if (std::holds_alternative<sin_modify_flag_t>(object)) {
+                auto &flag = std::get<sin_modify_flag_t>(object);
+                
+                ewt::print(stream, "{}", flag.add ? "+" : "-");
+                bool found = false;
+
+                if (std::holds_alternative<sin_contents_t>(flag.flag)) {
+                    auto &contents = std::get<sin_contents_t>(flag.flag);
+
+                    for (auto &kf : sin_contents_names) {
+                        if (kf.flag == contents) {
+                            ewt::print(stream, "{}", kf.name);
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    if (!found) {
+                        ewt::print(stream, "unknown");
+                        logging::print("WARNING: dunno what contents {}\n", (uint32_t) contents);
+                    }
+                } else {
+                    auto &surfflags = std::get<sin_surfflags_t>(flag.flag);
+
+                    for (auto &kf : sin_surfflag_names) {
+                        if (kf.flag == surfflags) {
+                            ewt::print(stream, "{}", kf.name);
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    if (!found) {
+                        ewt::print(stream, "unknown");
+                        logging::print("WARNING: dunno what surfflag {}\n", (uint32_t) surfflags);
+                    }
+                }
+            } else {
+                auto &kvp = std::get<keyvalue_t>(object);
+                ewt::print(stream, "{} {}", kvp.first, kvp.second);
+            }
+        }
     }
 }
 
@@ -1215,8 +1361,91 @@ void map_file_t::write(std::ostream &stream)
     }
 }
 
+static void load_sin_srf_file(const fs::path &path, std::unordered_map<std::string, texinfo_sin_t> &srf)
+{
+    fs::data srf_data = fs::load(path);
+
+    parser_t parser { srf_data, path.string().c_str() };
+
+    while (parser.parse_token()) {
+        std::string name = std::move(parser.token);
+        texinfo_sin_t info = parse_sin_texinfo(parser, true);
+
+        srf.emplace(std::move(name), std::move(info));
+    }
+}
+
+static void convert_sin_to_q2(map_file_t &map, const gamedef_t *game, const settings::common_settings &options)
+{
+    // load the SRF file if we have one
+    std::unordered_map<std::string, texinfo_sin_t> srf {};
+
+    if (auto surfacefile = map.entities[0].epairs.find("surfacefile");
+        surfacefile != map.entities[0].epairs.end()) {
+
+        fs::path surfacepath = map.filename.parent_path() / fs::path((*surfacefile).second).filename();
+
+        if (fs::exists(surfacepath)) {
+            load_sin_srf_file(surfacepath, srf);
+        } else {
+            FError("{} is missing, needed for this to work properly", surfacepath);
+        }
+    }
+
+    auto merge_sin_object = [](texinfo_quake2_t &q2, const texinfo_sin_t &sin) {
+        for (auto &obj : sin.objects) {
+            if (std::holds_alternative<sin_modify_flag_t>(obj)) {
+                auto &flag = std::get<sin_modify_flag_t>(obj);
+                            
+                if (std::holds_alternative<sin_contents_t>(flag.flag)) {
+                    auto &contents = std::get<sin_contents_t>(flag.flag);
+                    q2.contents = flag.add ? (q2.contents | (int32_t) contents) : (q2.contents & ~(int32_t) contents);
+                } else {
+                    auto &flags = std::get<sin_surfflags_t>(flag.flag);
+                    q2.flags = flag.add ? (q2.flags | (int32_t) flags) : (q2.flags & ~(int32_t) flags);
+                }
+            }
+        }
+    };
+
+    for (auto &entity : map.entities) {
+        for (auto &brush : entity.brushes) {
+            for (auto &face : brush.faces) {
+                texinfo_quake2_t q2 {};
+
+                // use swl as a base
+                if (auto swl_meta = std::get<0>(img::load_texture(face.texture, false, game, options))) {
+                    q2.contents = swl_meta->meta.contents_native;
+                    q2.flags = swl_meta->meta.flags.native_q2;
+                    q2.value = swl_meta->meta.value;
+                } else {
+                    FError("{} is missing, needed for this to work properly", face.texture);
+                }
+
+                // merge in surface file
+                if (auto s = srf.find(face.texture); s != srf.end()) {
+                    merge_sin_object(q2, s->second);
+                }
+
+                if (std::holds_alternative<texinfo_sin_t>(face.extended_info)) {
+                    // merge in flags
+                    auto &sin = std::get<texinfo_sin_t>(face.extended_info);
+                    merge_sin_object(q2, sin);
+                }
+
+                face.extended_info = q2;
+            }
+        }
+    }
+}
+
 void map_file_t::convert_to(texcoord_style_t style, const gamedef_t *game, const settings::common_settings &options)
 {
+    // only supporting SiN -> Q2 for now
+    if (this->game && this->game->id == GAME_SIN && game->id == GAME_QUAKE_II) {
+        convert_sin_to_q2(*this, game, options);
+    }
+
     for (auto &entity : entities) {
         for (auto &brush : entity.brushes) {
             brush.convert_to(style, game, options);

@@ -1051,16 +1051,396 @@ public:
     }
 };
 
+struct gamedef_sin_t : public gamedef_t
+{
+    gamedef_sin_t()
+        : gamedef_t("sin", "base")
+    {
+        this->id = GAME_SIN;
+        has_rgb_lightmap = true;
+        has_phs = true;
+        has_cluster_support = true;
+        has_brushes = true;
+        allow_contented_bmodels = true;
+        max_entity_key = 1024;
+    }
+
+    bool surf_is_lightmapped(
+        const surfflags_t &flags, const char *texname, bool light_nodraw, bool lightgrid_enabled) const override
+    {
+        return false;
+    }
+
+    bool surf_is_emissive(const surfflags_t &flags, const char *texname) const override { return true; }
+
+    bool surf_is_subdivided(const surfflags_t &flags) const override { return true; }
+
+    bool surfflags_are_valid(const surfflags_t &flags) const override
+    {
+        return true;
+    }
+
+    bool surfflags_may_phong(const surfflags_t &a, const surfflags_t &b) const override
+    {
+        return false;
+    }
+
+    int32_t surfflags_from_string(std::string_view str) const override
+    {
+        return 0;
+    }
+
+    contentflags_t create_contents_from_native(int32_t native) const override
+    {
+        contents_int_t result = 0;
+
+        // visible contents
+        if (native & SIN_CONTENTS_SOLID)
+            result |= EWT_VISCONTENTS_SOLID;
+        if (native & SIN_CONTENTS_WINDOW)
+            result |= EWT_VISCONTENTS_WINDOW;
+        if (native & SIN_CONTENTS_FENCE)
+            result |= EWT_VISCONTENTS_AUX;
+        if (native & SIN_CONTENTS_LAVA)
+            result |= EWT_VISCONTENTS_LAVA;
+        if (native & SIN_CONTENTS_SLIME)
+            result |= EWT_VISCONTENTS_SLIME;
+        if (native & SIN_CONTENTS_WATER)
+            result |= EWT_VISCONTENTS_WATER;
+        if (native & SIN_CONTENTS_MIST)
+            result |= EWT_VISCONTENTS_MIST;
+
+        // invisible contents
+        if (native & SIN_CONTENTS_AREAPORTAL)
+            result |= EWT_INVISCONTENTS_AREAPORTAL;
+        if (native & SIN_CONTENTS_PLAYERCLIP)
+            result |= EWT_INVISCONTENTS_PLAYERCLIP;
+        if (native & SIN_CONTENTS_MONSTERCLIP)
+            result |= EWT_INVISCONTENTS_MONSTERCLIP;
+        if (native & SIN_CONTENTS_UNUSED_14)
+            result |= EWT_INVISCONTENTS_PROJECTILECLIP;
+        if (native & SIN_CONTENTS_ORIGIN)
+            result |= EWT_INVISCONTENTS_ORIGIN;
+        if (native & SIN_CONTENTS_UNUSED_10)
+            result |= EWT_INVISCONTENTS_NO_WATERJUMP;
+
+        // contents flags
+        if (native & SIN_CONTENTS_CURRENT_0)
+            result |= EWT_CFLAG_CURRENT_0;
+        if (native & SIN_CONTENTS_CURRENT_90)
+            result |= EWT_CFLAG_CURRENT_90;
+        if (native & SIN_CONTENTS_CURRENT_180)
+            result |= EWT_CFLAG_CURRENT_180;
+        if (native & SIN_CONTENTS_CURRENT_270)
+            result |= EWT_CFLAG_CURRENT_270;
+        if (native & SIN_CONTENTS_CURRENT_UP)
+            result |= EWT_CFLAG_CURRENT_UP;
+        if (native & SIN_CONTENTS_CURRENT_DOWN)
+            result |= EWT_CFLAG_CURRENT_DOWN;
+        if (native & SIN_CONTENTS_DETAIL)
+            result |= EWT_CFLAG_DETAIL;
+        if (native & SIN_CONTENTS_TRANSLUCENT)
+            result |= EWT_CFLAG_TRANSLUCENT;
+        if (native & SIN_CONTENTS_LADDER)
+            result |= EWT_CFLAG_LADDER;
+
+        // disallowed flags
+        if (native & SIN_CONTENTS_MONSTER)
+            result |= EWT_CFLAG_MONSTER;
+        if (native & SIN_CONTENTS_DEADMONSTER)
+            result |= EWT_CFLAG_DEADMONSTER;
+
+        // other unused flags which are illegal
+        if (native & SIN_CONTENTS_UNUSED_7)
+            result |= EWT_CFLAG_Q2_UNUSED_7;
+        if (native & SIN_CONTENTS_UNUSED_8)
+            result |= EWT_CFLAG_Q2_UNUSED_8;
+        if (native & SIN_CONTENTS_UNUSED_9)
+            result |= EWT_CFLAG_Q2_UNUSED_9;
+        if (native & SIN_CONTENTS_UNUSED_10)
+            result |= EWT_CFLAG_Q2_UNUSED_10;
+        if (native & SIN_CONTENTS_UNUSED_11)
+            result |= EWT_CFLAG_Q2_UNUSED_11;
+        if (native & SIN_CONTENTS_UNUSED_13)
+            result |= EWT_CFLAG_Q2_UNUSED_12;
+        if (native & SIN_CONTENTS_UNUSED_30)
+            result |= EWT_CFLAG_Q2_UNUSED_30;
+        if (native & SIN_CONTENTS_UNUSED_31)
+            result |= EWT_CFLAG_Q2_UNUSED_31;
+
+        return contentflags_t::make(result);
+    }
+
+    int32_t contents_to_native(contentflags_t contents) const override
+    {
+        int32_t result = 0;
+
+        if (contents.flags & EWT_VISCONTENTS_SOLID)
+            result |= SIN_CONTENTS_SOLID;
+        if (contents.flags & EWT_VISCONTENTS_SKY)
+            throw std::invalid_argument("sky not a contents in Q2");
+        if (contents.flags & EWT_VISCONTENTS_DETAIL_WALL)
+            throw std::invalid_argument("detail wall not a contents in Q2");
+        if (contents.flags & EWT_VISCONTENTS_WINDOW)
+            result |= SIN_CONTENTS_WINDOW;
+        if (contents.flags & EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER)
+            throw std::invalid_argument("illusionary visblocker not a contents in Q2");
+        if (contents.flags & EWT_VISCONTENTS_AUX)
+            result |= SIN_CONTENTS_FENCE;
+        if (contents.flags & EWT_VISCONTENTS_LAVA)
+            result |= SIN_CONTENTS_LAVA;
+        if (contents.flags & EWT_VISCONTENTS_SLIME)
+            result |= SIN_CONTENTS_SLIME;
+        if (contents.flags & EWT_VISCONTENTS_WATER)
+            result |= SIN_CONTENTS_WATER;
+        if (contents.flags & EWT_VISCONTENTS_MIST)
+            result |= SIN_CONTENTS_MIST;
+        if (contents.flags & EWT_INVISCONTENTS_ORIGIN)
+            result |= SIN_CONTENTS_ORIGIN;
+        if (contents.flags & EWT_INVISCONTENTS_NO_WATERJUMP)
+            result |= SIN_CONTENTS_UNUSED_10;
+        if (contents.flags & EWT_INVISCONTENTS_PLAYERCLIP)
+            result |= SIN_CONTENTS_PLAYERCLIP;
+        if (contents.flags & EWT_INVISCONTENTS_MONSTERCLIP)
+            result |= SIN_CONTENTS_MONSTERCLIP;
+        if (contents.flags & EWT_INVISCONTENTS_PROJECTILECLIP)
+            result |= SIN_CONTENTS_UNUSED_14;
+        if (contents.flags & EWT_INVISCONTENTS_AREAPORTAL)
+            result |= SIN_CONTENTS_AREAPORTAL;
+        if (contents.flags & EWT_CFLAG_DETAIL)
+            result |= SIN_CONTENTS_DETAIL;
+
+        // cflags
+        if (contents.flags & EWT_CFLAG_CURRENT_0)
+            result |= SIN_CONTENTS_CURRENT_0;
+        if (contents.flags & EWT_CFLAG_CURRENT_90)
+            result |= SIN_CONTENTS_CURRENT_90;
+        if (contents.flags & EWT_CFLAG_CURRENT_180)
+            result |= SIN_CONTENTS_CURRENT_180;
+        if (contents.flags & EWT_CFLAG_CURRENT_270)
+            result |= SIN_CONTENTS_CURRENT_270;
+        if (contents.flags & EWT_CFLAG_CURRENT_UP)
+            result |= SIN_CONTENTS_CURRENT_UP;
+        if (contents.flags & EWT_CFLAG_CURRENT_DOWN)
+            result |= SIN_CONTENTS_CURRENT_DOWN;
+        if (contents.flags & EWT_CFLAG_TRANSLUCENT)
+            result |= SIN_CONTENTS_TRANSLUCENT;
+        if (contents.flags & EWT_CFLAG_LADDER)
+            result |= SIN_CONTENTS_LADDER;
+        if (contents.flags & EWT_CFLAG_MONSTER)
+            result |= SIN_CONTENTS_MONSTER;
+        if (contents.flags & EWT_CFLAG_DEADMONSTER)
+            result |= SIN_CONTENTS_DEADMONSTER;
+        if (contents.flags & EWT_CFLAG_Q2_UNUSED_7)
+            result |= SIN_CONTENTS_UNUSED_7;
+        if (contents.flags & EWT_CFLAG_Q2_UNUSED_8)
+            result |= SIN_CONTENTS_UNUSED_8;
+        if (contents.flags & EWT_CFLAG_Q2_UNUSED_9)
+            result |= SIN_CONTENTS_UNUSED_9;
+        if (contents.flags & EWT_CFLAG_Q2_UNUSED_10)
+            result |= SIN_CONTENTS_UNUSED_10;
+        if (contents.flags & EWT_CFLAG_Q2_UNUSED_11)
+            result |= SIN_CONTENTS_UNUSED_11;
+        if (contents.flags & EWT_CFLAG_Q2_UNUSED_12)
+            result |= SIN_CONTENTS_UNUSED_13;
+        if (contents.flags & EWT_CFLAG_Q2_UNUSED_30)
+            result |= SIN_CONTENTS_UNUSED_30;
+        if (contents.flags & EWT_CFLAG_Q2_UNUSED_31)
+            result |= SIN_CONTENTS_UNUSED_31;
+
+        return result;
+    }
+
+    inline int32_t get_content_type(contentflags_t contents) const
+    {
+        return contents.flags & (EWT_ALL_VISIBLE_CONTENTS | EWT_ALL_INVISCONTENTS);
+    }
+
+    int32_t contents_from_string(std::string_view str) const override
+    {
+        return 0;
+    }
+
+    contentflags_t contents_remap_for_export(contentflags_t contents, remap_type_t type) const override
+    {
+        // TODO: logic from gamedef_q2_t?
+        return contents;
+    }
+
+    std::span<const aabb3d> get_hull_sizes() const override { return {}; }
+
+    contentflags_t face_get_contents(
+        const std::string &texname, const surfflags_t &flags, contentflags_t contents, bool transwater) const override
+    {
+        contents_int_t surf_contents = contents.flags;
+
+        // if we don't have a declared content type, assume solid.
+        if (!get_content_type(contents)) {
+            surf_contents |= EWT_VISCONTENTS_SOLID;
+        }
+
+        // TODO: logic from gamedef_q2_t?
+
+        return contentflags_t::make(surf_contents);
+    }
+
+private:
+    void discoverArchives(const fs::path &base) const
+    {
+        fs::directory_iterator it(base);
+
+        std::set<std::string, natural_case_insensitive_less> packs;
+
+        for (auto &entry : it) {
+            if (string_iequals(entry.path().extension().generic_string(), ".sin")) {
+                packs.insert(entry.path().generic_string());
+            }
+        }
+
+        for (auto &pak : packs) {
+            fs::addArchive(pak);
+        }
+    }
+
+public:
+    inline void addArchive(const fs::path &path) const
+    {
+        fs::addArchive(path, true);
+
+        if (fs::is_directory(path)) {
+            discoverArchives(path);
+        }
+    }
+
+    void init_filesystem(const fs::path &source, const settings::common_settings &options) const override
+    {
+        img::clear();
+        fs::clear();
+
+        if (options.defaultpaths.value()) {
+            constexpr const char *MAPS_FOLDER = "maps";
+
+            // detect gamedir (mod directory path)
+            fs::path gamedir, basedir;
+
+            // pull in from settings
+            if (options.gamedir.is_changed()) {
+                gamedir = options.gamedir.value();
+            }
+            if (options.basedir.is_changed()) {
+                basedir = options.basedir.value();
+            }
+
+            // figure out the gamedir first
+            if (!gamedir.is_absolute()) {
+                if (!gamedir.empty() && basedir.is_absolute()) {
+                    // we passed in a relative gamedir. probably meant to
+                    // be derived from basedir.
+                    gamedir = basedir.parent_path() / gamedir;
+                }
+
+                // no gamedir, so calculate it from the input
+                if (gamedir.empty()) {
+                    // expand canonicals, and fetch parent of source file
+                    if (auto paths = fs::splitArchivePath(source)) {
+                        // if the source is an archive, use the parent
+                        // of that folder as the mod directory
+                        // pak0.pak/maps/source.map -> C:/Quake/ID1
+                        gamedir = fs::canonical(paths.archive).parent_path();
+                    } else {
+                        // maps/*/source.map -> C:/Quake/ID1/maps
+                        // this is weak because the source may not exist yet
+                        bool found_maps_folder = false;
+                        fs::path olddir = gamedir = source;
+
+                        // NOTE: parent_path() of C:/ is C:/ and this is considered non-empty
+                        // its relative_path() (the part after the drive letter) is empty, though
+                        while (!gamedir.relative_path().empty()) {
+                            gamedir = fs::weakly_canonical(gamedir).parent_path();
+
+                            if (string_iequals(gamedir.filename().generic_string(), MAPS_FOLDER)) {
+                                found_maps_folder = true;
+                                break;
+                            }
+                        }
+
+                        if (!found_maps_folder) {
+                            logging::print(
+                                "WARNING: '{}' is not a child of '{}'; gamedir can't be automatically determined.\n",
+                                source, MAPS_FOLDER);
+
+                            gamedir = olddir;
+                        }
+
+                        // C:/Quake/ID1/maps -> C:/Quake/ID1
+                        gamedir = gamedir.parent_path();
+                    }
+                }
+            }
+
+            if (!exists(gamedir)) {
+                logging::print("WARNING: failed to find gamedir '{}'\n", gamedir);
+            } else {
+                logging::print("using gamedir: '{}'\n", gamedir);
+            }
+
+            // now find base dir, if we haven't set it yet
+            if (!basedir.is_absolute()) {
+                if (!basedir.empty() && gamedir.is_absolute()) {
+                    // we passed in a relative basedir. probably meant to
+                    // be derived from gamedir.
+                    basedir = gamedir.parent_path() / basedir;
+                }
+
+                // no basedir, so calculate it from gamedir
+                if (basedir.empty()) {
+                    basedir = gamedir.parent_path() / default_base_dir;
+                }
+            }
+            
+            std::error_code ec;
+            if (!exists(basedir)) {
+                logging::print("WARNING: failed to find basedir '{}'\n", basedir);
+            } else if (!exists(gamedir) || !equivalent(gamedir, basedir, ec)) {
+                addArchive(basedir);
+                logging::print("using basedir: '{}'\n", basedir);
+            }
+
+            if (exists(gamedir)) {
+                addArchive(gamedir);
+            }
+        }
+
+        // add secondary paths
+        for (auto &path : options.paths.values()) {
+            addArchive(path);
+        }
+    }
+
+    const std::vector<qvec3b> &get_default_palette() const override
+    {
+        static const std::vector<qvec3b> palette;
+        return palette;
+    }
+
+    size_t max_lightmaps() const override
+    {
+        static constexpr size_t n = sin_dface_t().styles.size();
+        return n;
+    }
+};
+
 // Game definitions, used for the bsp versions below
 static const gamedef_q1_like_t<GAME_QUAKE> gamedef_q1;
 static const gamedef_h2_t gamedef_h2;
 static const gamedef_hl_t gamedef_hl;
 static const gamedef_q2_t gamedef_q2;
+static const gamedef_sin_t gamedef_sin;
 
 const std::initializer_list<const gamedef_t *> &gamedef_list()
 {
     static constexpr std::initializer_list<const gamedef_t *> gamedefs{
-        &gamedef_q1, &gamedef_h2, &gamedef_hl, &gamedef_q2};
+        &gamedef_q1, &gamedef_h2, &gamedef_hl, &gamedef_q2, &gamedef_sin};
     return gamedefs;
 }
 
@@ -1227,6 +1607,30 @@ const bspversion_t bspver_qbism{Q2_QBISMIDENT, Q2_BSPVERSION, "qbism", "Quake II
         {"areaportals", sizeof(dareaportal_t)},
     },
     &gamedef_q2};
+const bspversion_t bspver_sin{SIN_BSPIDENT, SIN_BSPVERSION, "sinbsp", "SiN BSP",
+    {
+        {"entities", sizeof(char)},
+        {"planes", sizeof(dplane_t)},
+        {"vertexes", sizeof(qvec3f)},
+        {"visibility", sizeof(uint8_t)},
+        {"nodes", sizeof(q2_dnode_t)},
+        {"texinfos", sizeof(sin_texinfo_t)},
+        {"faces", sizeof(sin_dface_t)},
+        {"lighting", sizeof(uint8_t)},
+        {"leafs", sizeof(q2_dleaf_t)},
+        {"leaffaces", sizeof(uint16_t)},
+        {"leafbrushes", sizeof(uint16_t)},
+        {"edges", sizeof(bsp29_dedge_t)},
+        {"surfedges", sizeof(int32_t)},
+        {"models", sizeof(q2_dmodel_t)},
+        {"brushes", sizeof(dbrush_t)},
+        {"brushsides", sizeof(sin_dbrushside_t)},
+        {"pop", sizeof(uint8_t)},
+        {"areas", sizeof(darea_t)},
+        {"areaportals", sizeof(dareaportal_t)},
+        {"lightinfo", sizeof(sin_lightinfo_t)},
+    },
+    &gamedef_sin};
 
 static bool BSPVersionSupported(int32_t ident, std::optional<int32_t> version, const bspversion_t **out_version)
 {
@@ -1346,6 +1750,31 @@ inline void ConvertQ2BSPToGeneric(T &bsp, mbsp_t &mbsp)
     CopyArray(bsp.dareaportals, mbsp.dareaportals);
 }
 
+// Convert from a SiN format to Generic
+template<typename T>
+inline void ConvertSiNBSPToGeneric(T &bsp, mbsp_t &mbsp)
+{
+    CopyArray(bsp.dentdata, mbsp.dentdata);
+    CopyArray(bsp.dplanes, mbsp.dplanes);
+    CopyArray(bsp.dvertexes, mbsp.dvertexes);
+    CopyArray(bsp.dvis, mbsp.dvis);
+    CopyArray(bsp.dnodes, mbsp.dnodes);
+    CopyArray(bsp.texinfo, mbsp.texinfo);
+    CopyArray(bsp.dfaces, mbsp.dfaces);
+    CopyArray(bsp.dlightdata, mbsp.dlightdata);
+    CopyArray(bsp.dleafs, mbsp.dleafs);
+    CopyArray(bsp.dleaffaces, mbsp.dleaffaces);
+    CopyArray(bsp.dleafbrushes, mbsp.dleafbrushes);
+    CopyArray(bsp.dedges, mbsp.dedges);
+    CopyArray(bsp.dsurfedges, mbsp.dsurfedges);
+    CopyArray(bsp.dmodels, mbsp.dmodels);
+    CopyArray(bsp.dbrushes, mbsp.dbrushes);
+    CopyArray(bsp.dbrushsides, mbsp.dbrushsides);
+    CopyArray(bsp.dareas, mbsp.dareas);
+    CopyArray(bsp.dareaportals, mbsp.dareaportals);
+    CopyArray(bsp.dlightinfo, mbsp.dlightinfo);
+}
+
 // Convert from a Q1-esque format to Generic
 template<typename T>
 inline T ConvertGenericToQ1BSP(mbsp_t &mbsp, const bspversion_t *to_version)
@@ -1405,6 +1834,36 @@ inline T ConvertGenericToQ2BSP(mbsp_t &mbsp, const bspversion_t *to_version)
     return bsp;
 }
 
+// Convert from a SiN format to Generic
+template<typename T>
+inline T ConvertGenericToSiNBSP(mbsp_t &mbsp, const bspversion_t *to_version)
+{
+    T bsp{};
+
+    // copy or convert data
+    CopyArray(mbsp.dentdata, bsp.dentdata);
+    CopyArray(mbsp.dplanes, bsp.dplanes);
+    CopyArray(mbsp.dvertexes, bsp.dvertexes);
+    CopyArray(mbsp.dvis, bsp.dvis);
+    CopyArray(mbsp.dnodes, bsp.dnodes);
+    CopyArray(mbsp.texinfo, bsp.texinfo);
+    CopyArray(mbsp.dfaces, bsp.dfaces);
+    CopyArray(mbsp.dlightdata, bsp.dlightdata);
+    CopyArray(mbsp.dleafs, bsp.dleafs);
+    CopyArray(mbsp.dleaffaces, bsp.dleaffaces);
+    CopyArray(mbsp.dleafbrushes, bsp.dleafbrushes);
+    CopyArray(mbsp.dedges, bsp.dedges);
+    CopyArray(mbsp.dsurfedges, bsp.dsurfedges);
+    CopyArray(mbsp.dmodels, bsp.dmodels);
+    CopyArray(mbsp.dbrushes, bsp.dbrushes);
+    CopyArray(mbsp.dbrushsides, bsp.dbrushsides);
+    CopyArray(mbsp.dareas, bsp.dareas);
+    CopyArray(mbsp.dareaportals, bsp.dareaportals);
+    CopyArray(mbsp.dlightinfo, bsp.dlightinfo);
+
+    return bsp;
+}
+
 /*
  * =========================================================================
  * ConvertBSPFormat
@@ -1429,6 +1888,8 @@ bool ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             ConvertQ2BSPToGeneric(std::get<q2bsp_t>(bspdata->bsp), mbsp);
         } else if (std::holds_alternative<q2bsp_qbism_t>(bspdata->bsp)) {
             ConvertQ2BSPToGeneric(std::get<q2bsp_qbism_t>(bspdata->bsp), mbsp);
+        } else if (std::holds_alternative<sinbsp_t>(bspdata->bsp)) {
+            ConvertSiNBSPToGeneric(std::get<sinbsp_t>(bspdata->bsp), mbsp);
         } else if (std::holds_alternative<bsp2rmq_t>(bspdata->bsp)) {
             ConvertQ1BSPToGeneric(std::get<bsp2rmq_t>(bspdata->bsp), mbsp);
         } else if (std::holds_alternative<bsp2_t>(bspdata->bsp)) {
@@ -1453,6 +1914,8 @@ bool ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
                 bspdata->bsp = ConvertGenericToQ2BSP<q2bsp_t>(mbsp, to_version);
             } else if (to_version == &bspver_qbism) {
                 bspdata->bsp = ConvertGenericToQ2BSP<q2bsp_qbism_t>(mbsp, to_version);
+            } else if (to_version == &bspver_sin) {
+                bspdata->bsp = ConvertGenericToSiNBSP<sinbsp_t>(mbsp, to_version);
             } else if (to_version == &bspver_bsp2rmq || to_version == &bspver_h2bsp2rmq) {
                 bspdata->bsp = ConvertGenericToQ1BSP<bsp2rmq_t>(mbsp, to_version);
             } else if (to_version == &bspver_bsp2 || to_version == &bspver_h2bsp2) {
@@ -1674,6 +2137,30 @@ inline void ReadQ2BSP(lump_reader &reader, T &bsp)
     reader.read(Q2_LUMP_AREAPORTALS, bsp.dareaportals);
 }
 
+template<typename T>
+inline void ReadSiNBSP(lump_reader &reader, T &bsp)
+{
+    reader.read(SIN_LUMP_ENTITIES, bsp.dentdata);
+    reader.read(SIN_LUMP_PLANES, bsp.dplanes);
+    reader.read(SIN_LUMP_VERTEXES, bsp.dvertexes);
+    reader.read(SIN_LUMP_VISIBILITY, bsp.dvis);
+    reader.read(SIN_LUMP_NODES, bsp.dnodes);
+    reader.read(SIN_LUMP_TEXINFO, bsp.texinfo);
+    reader.read(SIN_LUMP_FACES, bsp.dfaces);
+    reader.read(SIN_LUMP_LIGHTING, bsp.dlightdata);
+    reader.read(SIN_LUMP_LEAFS, bsp.dleafs);
+    reader.read(SIN_LUMP_LEAFFACES, bsp.dleaffaces);
+    reader.read(SIN_LUMP_LEAFBRUSHES, bsp.dleafbrushes);
+    reader.read(SIN_LUMP_EDGES, bsp.dedges);
+    reader.read(SIN_LUMP_SURFEDGES, bsp.dsurfedges);
+    reader.read(SIN_LUMP_MODELS, bsp.dmodels);
+    reader.read(SIN_LUMP_BRUSHES, bsp.dbrushes);
+    reader.read(SIN_LUMP_BRUSHSIDES, bsp.dbrushsides);
+    reader.read(SIN_LUMP_AREAS, bsp.dareas);
+    reader.read(SIN_LUMP_AREAPORTALS, bsp.dareaportals);
+    reader.read(SIN_LUMP_LIGHTINFO, bsp.dlightinfo);
+}
+
 void bspdata_t::bspxentries::transfer(const char *xname, std::vector<uint8_t> &xdata)
 {
     entries.insert_or_assign(xname, std::move(xdata));
@@ -1718,7 +2205,14 @@ void LoadBSPFile(fs::path &filename, bspdata_t *bspdata)
     stream >= temp_version.ident;
     stream.seekg(0);
 
-    if (temp_version.ident == Q2_BSPIDENT || temp_version.ident == Q2_QBISMIDENT) {
+    if (temp_version.ident == SIN_BSPIDENT) {
+        sin_dheader_t sinheader;
+        stream >= sinheader;
+
+        temp_version.version = sinheader.version;
+        std::copy(sinheader.lumps.begin(), sinheader.lumps.end(), std::back_inserter(lumps));
+    } else if (temp_version.ident == Q2_BSPIDENT ||
+               temp_version.ident == Q2_QBISMIDENT) {
         q2_dheader_t q2header;
         stream >= q2header;
 
@@ -1764,6 +2258,8 @@ void LoadBSPFile(fs::path &filename, bspdata_t *bspdata)
         ReadQ1BSP(reader, bspdata->bsp.emplace<bsp2rmq_t>());
     } else if (bspdata->version == &bspver_bsp2 || bspdata->version == &bspver_h2bsp2) {
         ReadQ1BSP(reader, bspdata->bsp.emplace<bsp2_t>());
+    } else if (bspdata->version == &bspver_sin) {
+        ReadSiNBSP(reader, bspdata->bsp.emplace<sinbsp_t>());
     } else {
         FError("Unknown format");
     }
@@ -1821,6 +2317,7 @@ struct bspfile_t
     {
         dheader_t q1header;
         q2_dheader_t q2header;
+        sin_dheader_t sinheader;
     };
 
     std::ofstream stream;
@@ -1835,7 +2332,11 @@ private:
         lump_t *lumps;
 
         if (version->version.has_value()) {
-            lumps = q2header.lumps.data();
+            if (version->game->id == GAME_QUAKE_II) {
+                lumps = q2header.lumps.data();
+            } else {
+                lumps = sinheader.lumps.data();
+            }
         } else {
             lumps = q1header.lumps.data();
         }
@@ -1871,7 +2372,11 @@ private:
         Q_assert(lumpspec.size == 1);
 
         if (version->version.has_value()) {
-            lumps = q2header.lumps.data();
+            if (version->game->id == GAME_SIN) {
+                lumps = sinheader.lumps.data();
+            } else {
+                lumps = q2header.lumps.data();
+            }
         } else {
             lumps = q1header.lumps.data();
         }
@@ -1902,7 +2407,11 @@ private:
         Q_assert(lumpspec.size == 1);
 
         if (version->version.has_value()) {
-            lumps = q2header.lumps.data();
+            if (version->game->id == GAME_SIN) {
+                lumps = sinheader.lumps.data();
+            } else {
+                lumps = q2header.lumps.data();
+            }
         } else {
             lumps = q1header.lumps.data();
         }
@@ -1970,6 +2479,31 @@ public:
         write_lump(Q2_LUMP_ENTITIES, bsp.dentdata);
     }
 
+    template<typename T, typename std::enable_if_t<std::is_base_of_v<sinbsp_tag_t, T>, int> = 0>
+    inline void write_bsp(const T &bsp)
+    {
+        write_lump(SIN_LUMP_PLANES, bsp.dplanes);
+        write_lump(SIN_LUMP_LEAFS, bsp.dleafs);
+        write_lump(SIN_LUMP_VERTEXES, bsp.dvertexes);
+        write_lump(SIN_LUMP_NODES, bsp.dnodes);
+        write_lump(SIN_LUMP_TEXINFO, bsp.texinfo);
+        write_lump(SIN_LUMP_FACES, bsp.dfaces);
+        write_lump(SIN_LUMP_LEAFFACES, bsp.dleaffaces);
+        write_lump(SIN_LUMP_SURFEDGES, bsp.dsurfedges);
+        write_lump(SIN_LUMP_EDGES, bsp.dedges);
+        write_lump(SIN_LUMP_MODELS, bsp.dmodels);
+        write_lump(SIN_LUMP_LEAFBRUSHES, bsp.dleafbrushes);
+        write_lump(SIN_LUMP_BRUSHES, bsp.dbrushes);
+        write_lump(SIN_LUMP_BRUSHSIDES, bsp.dbrushsides);
+        write_lump(SIN_LUMP_AREAS, bsp.dareas);
+        write_lump(SIN_LUMP_AREAPORTALS, bsp.dareaportals);
+        write_lump(SIN_LUMP_LIGHTINFO, bsp.dlightinfo);
+
+        write_lump(SIN_LUMP_LIGHTING, bsp.dlightdata);
+        write_lump(SIN_LUMP_VISIBILITY, bsp.dvis);
+        write_lump(SIN_LUMP_ENTITIES, bsp.dentdata);
+    }
+
     inline void write_bspx(const bspdata_t &bspdata)
     {
         if (!bspdata.bspx.entries.size())
@@ -2030,7 +2564,7 @@ void WriteBSPFile(const fs::path &filename, bspdata_t *bspdata)
 
     logging::print("Writing {} as {}\n", filename, *bspdata->version);
     bspfile.stream.open(filename, std::ios_base::out | std::ios_base::trunc | std::ios_base::binary);
-
+    
     if (!bspfile.stream)
         FError("unable to open {} for writing", filename);
 
@@ -2038,7 +2572,11 @@ void WriteBSPFile(const fs::path &filename, bspdata_t *bspdata)
 
     /* Save header space, updated after adding the lumps */
     if (bspfile.version->version.has_value()) {
-        bspfile.stream <= bspfile.q2header;
+        if (bspfile.version->game->id == GAME_SIN) {
+            bspfile.stream <= bspfile.sinheader;
+        } else {
+            bspfile.stream <= bspfile.q2header;
+        }
     } else {
         bspfile.stream <= bspfile.q1header;
     }
@@ -2052,7 +2590,11 @@ void WriteBSPFile(const fs::path &filename, bspdata_t *bspdata)
 
     // write the real header
     if (bspfile.version->version.has_value()) {
-        bspfile.stream <= bspfile.q2header;
+        if (bspfile.version->game->id == GAME_SIN) {
+            bspfile.stream <= bspfile.sinheader;
+        } else {
+            bspfile.stream <= bspfile.q2header;
+        }
     } else {
         bspfile.stream <= bspfile.q1header;
     }
@@ -2114,6 +2656,32 @@ inline void PrintQ2BSPLumps(const std::initializer_list<lumpspec_t> &lumpspec, c
     logging::print("{:7} {:<12} {:10}\n", "", "entdata", bsp.dentdata.size() + 1); // include the null terminator
 }
 
+
+template<typename T>
+inline void PrintSiNBSPLumps(const std::initializer_list<lumpspec_t> &lumpspec, const T &bsp)
+{
+    PrintLumpSize(lumpspec.begin()[SIN_LUMP_MODELS], bsp.dmodels.size());
+    PrintLumpSize(lumpspec.begin()[SIN_LUMP_PLANES], bsp.dplanes.size());
+    PrintLumpSize(lumpspec.begin()[SIN_LUMP_VERTEXES], bsp.dvertexes.size());
+    PrintLumpSize(lumpspec.begin()[SIN_LUMP_NODES], bsp.dnodes.size());
+    PrintLumpSize(lumpspec.begin()[SIN_LUMP_TEXINFO], bsp.texinfo.size());
+    PrintLumpSize(lumpspec.begin()[SIN_LUMP_FACES], bsp.dfaces.size());
+    PrintLumpSize(lumpspec.begin()[SIN_LUMP_LEAFS], bsp.dleafs.size());
+    PrintLumpSize(lumpspec.begin()[SIN_LUMP_LEAFFACES], bsp.dleaffaces.size());
+    PrintLumpSize(lumpspec.begin()[SIN_LUMP_LEAFBRUSHES], bsp.dleafbrushes.size());
+    PrintLumpSize(lumpspec.begin()[SIN_LUMP_EDGES], bsp.dedges.size());
+    PrintLumpSize(lumpspec.begin()[SIN_LUMP_SURFEDGES], bsp.dsurfedges.size());
+    PrintLumpSize(lumpspec.begin()[SIN_LUMP_BRUSHES], bsp.dbrushes.size());
+    PrintLumpSize(lumpspec.begin()[SIN_LUMP_BRUSHSIDES], bsp.dbrushsides.size());
+    PrintLumpSize(lumpspec.begin()[SIN_LUMP_AREAS], bsp.dareas.size());
+    PrintLumpSize(lumpspec.begin()[SIN_LUMP_AREAPORTALS], bsp.dareaportals.size());
+    PrintLumpSize(lumpspec.begin()[SIN_LUMP_LIGHTINFO], bsp.dlightinfo.size());
+
+    logging::print("{:7} {:<12} {:10}\n", "", "lightdata", bsp.dlightdata.size());
+    logging::print("{:7} {:<12} {:10}\n", "", "visdata", bsp.dvis.bits.size());
+    logging::print("{:7} {:<12} {:10}\n", "", "entdata", bsp.dentdata.size() + 1); // include the null terminator
+}
+
 /*
  * =============
  * PrintBSPFileSizes
@@ -2136,6 +2704,8 @@ void PrintBSPFileSizes(const bspdata_t *bspdata)
         PrintQ1BSPLumps(lumpspec, std::get<bsp2rmq_t>(bspdata->bsp));
     } else if (std::holds_alternative<bsp2_t>(bspdata->bsp)) {
         PrintQ1BSPLumps(lumpspec, std::get<bsp2_t>(bspdata->bsp));
+    } else if (std::holds_alternative<sinbsp_t>(bspdata->bsp)) {
+        PrintSiNBSPLumps(lumpspec, std::get<sinbsp_t>(bspdata->bsp));
     } else {
         Error("Unsupported BSP version: {}", *bspdata->version);
     }

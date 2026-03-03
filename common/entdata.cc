@@ -161,6 +161,11 @@ void entdict_t::parse(parser_base_t &parser)
 
         std::string keystr = parser.token;
 
+        if (keystr == "surfacefile" ||
+            keystr == "menufile") {
+            parser.ignore_escapes = true;
+        }
+
         /* parse value */
         if (!parser.parse_token())
             FError("EOF without closing brace");
@@ -177,6 +182,7 @@ void entdict_t::parse(parser_base_t &parser)
         }
 
         set(keystr, parser.token);
+        parser.ignore_escapes = false;
     }
 }
 void EntData_ParseInto(parser_t &parser, std::vector<entdict_t> &vector)
