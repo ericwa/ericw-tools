@@ -1082,7 +1082,7 @@ void MainWindow::compileThreadExited()
         auto *style = new QLightStyleSlider(style_entry.first, glView);
         lightstyles->addWidget(style);
     }
-    
+
     stats_panel->updateWithBSP(&bsp, m_bspdata.bspx.entries);
 }
 

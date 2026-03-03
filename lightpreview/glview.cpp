@@ -1523,6 +1523,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
     {
         const mface_t *face;
         qvec3d model_offset;
+        int modelindex;
     };
 
     // collect faces grouped by material_key
@@ -1632,7 +1633,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
                 .opacity = opacity,
                 .alpha_test = alpha_test,
                 .fullbright = fullbright};
-            faces_by_material_key[k].push_back({.face = &f, .model_offset = origin});
+            faces_by_material_key[k].push_back({.face = &f, .model_offset = origin, .modelindex = mi});
         }
     }
 
@@ -1793,7 +1794,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
             qtexture = skybox_texture;
         }
 
-        for (const auto &[f, model_offset] : faces) {
+        for (const auto &[f, model_offset, modelindex] : faces) {
             const int fnum = Face_GetNum(&bsp, f);
             const auto plane_normal = Face_Normal(&bsp, f);
             qvec3f flat_color = qvec3f{Random(), Random(), Random()};
@@ -1873,13 +1874,21 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
     }
 
     // populate spatial index
+
+    int worldfaces_begin = bsp.dmodels[0].firstface;
+    int worldfaces_end = worldfaces_begin + bsp.dmodels[0].numfaces;
+
     for (const auto &[k, faces] : faces_by_material_key) {
         for (const face_payload &facePayload : faces) {
             int face_num = Face_GetNum(&bsp, facePayload.face);
 
+            bool is_world = (facePayload.modelindex == 0);
+            uint32_t mask = is_world ? GEOM_MASK_WORLD : GEOM_MASK_BMODEL;
+
             auto w = Face_Winding(&bsp, facePayload.face);
             w.translateInPlace(facePayload.model_offset);
-            m_spatialindex->add_poly(w, std::make_any<int>(face_num));
+
+            m_spatialindex->add_poly(w, std::make_any<int>(face_num), mask);
         }
     }
     m_spatialindex->commit();
@@ -2367,7 +2376,11 @@ void GLView::clickFace(QMouseEvent *event)
     QVector3D ray_dir = (ws2_a - ws_a).normalized();
 
     // trace a ray
-    auto hit = m_spatialindex->trace_ray(qvec3f(ws_a[0], ws_a[1], ws_a[2]), qvec3f(ray_dir[0], ray_dir[1], ray_dir[2]));
+    uint32_t ray_mask = GEOM_MASK_WORLD;
+    if (m_showBmodels)
+        ray_mask |= GEOM_MASK_BMODEL;
+
+    auto hit = m_spatialindex->trace_ray(qvec3f(ws_a[0], ws_a[1], ws_a[2]), qvec3f(ray_dir[0], ray_dir[1], ray_dir[2]), ray_mask);
 
     if (hit.hit) {
         m_selected_face = *std::any_cast<int>(hit.hitpayload);

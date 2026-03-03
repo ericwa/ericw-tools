@@ -53,6 +53,9 @@ private:
     std::vector<qvec4f> vertices;
     std::vector<tri_t> indices;
     std::vector<std::any> payloads_per_tri;
+    std::vector<uint32_t> geom_masks_per_tri;
+
+    static void FilterFunc(const RTCFilterFunctionNArguments *args);
 
 public:
     ~spatialindex_t();
@@ -61,11 +64,11 @@ public:
     spatialindex_t &operator=(const spatialindex_t &other) = delete;
 
     void clear();
-    void add_poly(const polylib::winding_t &winding, std::any payload);
+    void add_poly(const polylib::winding_t &winding, std::any payload, uint32_t geom_mask = 0x1);
     void commit();
 
     state_t get_state() const { return state; }
 
 public:
-    hitresult_t trace_ray(const qvec3f &origin, const qvec3f &direction);
+    hitresult_t trace_ray(const qvec3f &origin, const qvec3f &direction, uint32_t ray_mask = 0xff'ff'ff'ff);
 };

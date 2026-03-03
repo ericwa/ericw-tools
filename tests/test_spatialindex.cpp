@@ -80,3 +80,39 @@ TEST(lightpreview, basicSpatial)
         EXPECT_EQ(*std::any_cast<std::string>(res.hitpayload), std::string("at 500 0 0"));
     }
 }
+
+TEST(lightpreview, geomMask)
+{
+    constexpr float epsilon = 0.001;
+
+    spatialindex_t si;
+
+    si.add_poly(make_winding(qvec3d(0,0,0)), std::string("at 0 0 0"), 0x1);
+    si.add_poly(make_winding(qvec3d(0,0,100)), std::string("at 0 0 100"), 0x2);
+
+    si.commit();
+
+    {
+        SCOPED_TRACE("rays default to hitting all geom masks");
+
+        hitresult_t res = si.trace_ray(qvec3f(0, 0, 200), qvec3f(0, 0, -1));
+
+        EXPECT_NEAR(res.hitpos[0], 0, epsilon);
+        EXPECT_NEAR(res.hitpos[1], 0, epsilon);
+        EXPECT_NEAR(res.hitpos[2], 100, epsilon);
+        EXPECT_EQ(res.hit, true);
+        EXPECT_EQ(*std::any_cast<std::string>(res.hitpayload), std::string("at 0 0 100"));
+    }
+
+    {
+        SCOPED_TRACE("this ray only hits 0x1");
+
+        hitresult_t res = si.trace_ray(qvec3f(0, 0, 200), qvec3f(0, 0, -1), 0x1);
+
+        EXPECT_NEAR(res.hitpos[0], 0, epsilon);
+        EXPECT_NEAR(res.hitpos[1], 0, epsilon);
+        EXPECT_NEAR(res.hitpos[2], 0, epsilon);
+        EXPECT_EQ(res.hit, true);
+        EXPECT_EQ(*std::any_cast<std::string>(res.hitpayload), std::string("at 0 0 0"));
+    }
+}
