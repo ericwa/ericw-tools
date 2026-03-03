@@ -61,6 +61,9 @@ private:
     std::optional<mbsp_t> m_bsp;
     std::unordered_map<int, std::vector<uint8_t>> m_decompressedVis;
 
+    static constexpr uint32_t GEOM_MASK_WORLD = 0x1;
+    static constexpr uint32_t GEOM_MASK_BMODEL = 0x2;
+
     std::unique_ptr<spatialindex_t> m_spatialindex;
     uint32_t m_keysPressed;
     std::optional<qtime_point> m_lastFrame;
