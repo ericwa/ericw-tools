@@ -254,6 +254,7 @@ public:
     void renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries_t &bspx,
         const std::vector<entdict_t> &entities, const full_atlas_t &lightmap, const settings::common_settings &settings,
         bool use_bspx_normals);
+
 private:
     struct vertex_t
     {
@@ -277,6 +278,7 @@ private:
      */
     void uploadPortalVAO(const std::vector<simple_vertex_t> &points, const std::vector<GLuint> &indices);
     void uploadFaceVAO(const std::vector<vertex_t> &verts, const std::vector<uint32_t> &indexBuffer);
+
 public:
     void setCamera(const qvec3d &origin);
     void setCamera(const qvec3d &origin, const qvec3d &fwd);

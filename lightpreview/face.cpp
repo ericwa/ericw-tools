@@ -53,7 +53,8 @@ void FacePanel::addStat(const QString &str, int value)
     addStat(str, locale.toString(value));
 }
 
-void FacePanel::updateWithBSP(const mbsp_t *bsp, const std::vector<entdict_t> &ents, const bspxentries_t &entries, int face_id)
+void FacePanel::updateWithBSP(
+    const mbsp_t *bsp, const std::vector<entdict_t> &ents, const bspxentries_t &entries, int face_id)
 {
     if (bsp == nullptr || face_id == -1) {
         m_lastFace = nullptr;
@@ -65,7 +66,7 @@ void FacePanel::updateWithBSP(const mbsp_t *bsp, const std::vector<entdict_t> &e
     const dmodelh2_t *bestModel = nullptr;
 
     for (size_t m = 0; m < bsp->dmodels.size(); m++) {
-        qvec3f offset {};
+        qvec3f offset{};
         /* Find the entity for the model */
         std::string modelname = fmt::format("*{}", m);
         const entdict_t *entdict = EntData_Find(ents, "model", modelname);
@@ -88,18 +89,21 @@ void FacePanel::updateWithBSP(const mbsp_t *bsp, const std::vector<entdict_t> &e
     if (!bestFace || !bestModel || bestFace == m_lastFace) {
         return;
     }
-    
+
     m_table->setRowCount(0);
     m_lastFace = bestFace;
-    
+
     addStat(QStringLiteral("model id"), bestModel - bsp->dmodels.data());
     addStat(QStringLiteral("face id"), bestFace - bsp->dfaces.data());
     addStat(QStringLiteral("plane id"), bestFace->planenum);
     addStat(QStringLiteral("texinfo id"), bestFace->texinfo);
-    addStat(QStringLiteral("plane"), QString::fromStdString(fmt::format("{} {}", bsp->dplanes[bestFace->planenum].normal, bsp->dplanes[bestFace->planenum].dist)));
+    addStat(QStringLiteral("plane"),
+        QString::fromStdString(
+            fmt::format("{} {}", bsp->dplanes[bestFace->planenum].normal, bsp->dplanes[bestFace->planenum].dist)));
     addStat(QStringLiteral("texture"), QString::fromStdString(bsp->texinfo[bestFace->texinfo].texturename));
     addStat(QStringLiteral("lightofs"), bestFace->lightofs);
-    addStat(QStringLiteral("flags"), QString::fromStdString(fmt::format("{}", static_cast<int32_t>(bsp->texinfo[bestFace->texinfo].flags.native_q2))));
+    addStat(QStringLiteral("flags"), QString::fromStdString(fmt::format(
+                                         "{}", static_cast<int32_t>(bsp->texinfo[bestFace->texinfo].flags.native_q2))));
     // TODO: restore when SiN support is merged
 #if 0
     addStat(QStringLiteral("translucence"), QString::fromStdString(fmt::format("{}", bsp->texinfo[bestFace->texinfo].translucence)));
@@ -107,18 +111,15 @@ void FacePanel::updateWithBSP(const mbsp_t *bsp, const std::vector<entdict_t> &e
 
     std::string leaves, clusters;
 
-    for (auto &leaf : bsp->dleafs)
-    {
-        for (size_t f = leaf.firstmarksurface; f < leaf.firstmarksurface + leaf.nummarksurfaces; f++)
-        {
-            if (bsp->dleaffaces[f] == (bestFace - bsp->dfaces.data()))
-            {
+    for (auto &leaf : bsp->dleafs) {
+        for (size_t f = leaf.firstmarksurface; f < leaf.firstmarksurface + leaf.nummarksurfaces; f++) {
+            if (bsp->dleaffaces[f] == (bestFace - bsp->dfaces.data())) {
                 if (!leaves.empty())
                     leaves += ", ";
                 if (!clusters.empty())
                     clusters += ",";
 
-                leaves += fmt::format("{}", (intptr_t) (&leaf - bsp->dleafs.data()));
+                leaves += fmt::format("{}", (intptr_t)(&leaf - bsp->dleafs.data()));
                 clusters += fmt::format("{}", leaf.cluster);
             }
         }

@@ -164,56 +164,56 @@ size_t lua_count_array(lua_State *state)
 static void json_to_lua(lua_State *state, const Json::Value &value)
 {
     switch (value.type()) {
-    case Json::ValueType::objectValue: {
-        lua_newtable(state);
+        case Json::ValueType::objectValue: {
+            lua_newtable(state);
 
-        for (auto &key : value.getMemberNames()) {
-            const Json::Value &val = value[key];
-            lua_pushstring(state, key.c_str());
-            json_to_lua(state, val);
-            lua_settable(state, -3);
+            for (auto &key : value.getMemberNames()) {
+                const Json::Value &val = value[key];
+                lua_pushstring(state, key.c_str());
+                json_to_lua(state, val);
+                lua_settable(state, -3);
+            }
+            return;
         }
-        return;
-    }
-    case Json::ValueType::arrayValue: {
-        lua_newtable(state);
+        case Json::ValueType::arrayValue: {
+            lua_newtable(state);
 
             size_t i = 1;
 
-        for (auto &v : value) {
-            json_to_lua(state, v);
-            lua_rawseti(state, -2, i++);
+            for (auto &v : value) {
+                json_to_lua(state, v);
+                lua_rawseti(state, -2, i++);
+            }
+            return;
         }
-        return;
-    }
-    case Json::ValueType::stringValue: {
-        lua_pushstring(state, value.asCString());
-        return;
-    }
-    case Json::ValueType::uintValue: {
-        lua_pushnumber(state, value.asUInt64());
-        return;
-    }
-    case Json::ValueType::intValue: {
-        lua_pushnumber(state, value.asInt64());
-        return;
-    }
-    case Json::ValueType::realValue: {
-        lua_pushnumber(state, value.asDouble());
-        return;
-    }
-    case Json::ValueType::booleanValue: {
-        lua_pushboolean(state, value.asBool());
-        return;
-    }
-    case Json::ValueType::nullValue: {
-        lua_pushnil(state);
-        return;
-    }
-    default: {
-        luaL_error(state, "invalid JSON object type\n");
-        return;
-    }
+        case Json::ValueType::stringValue: {
+            lua_pushstring(state, value.asCString());
+            return;
+        }
+        case Json::ValueType::uintValue: {
+            lua_pushnumber(state, value.asUInt64());
+            return;
+        }
+        case Json::ValueType::intValue: {
+            lua_pushnumber(state, value.asInt64());
+            return;
+        }
+        case Json::ValueType::realValue: {
+            lua_pushnumber(state, value.asDouble());
+            return;
+        }
+        case Json::ValueType::booleanValue: {
+            lua_pushboolean(state, value.asBool());
+            return;
+        }
+        case Json::ValueType::nullValue: {
+            lua_pushnil(state);
+            return;
+        }
+        default: {
+            luaL_error(state, "invalid JSON object type\n");
+            return;
+        }
     }
 }
 
@@ -228,8 +228,7 @@ static int l_load_json(lua_State *state)
         return luaL_error(state, "can't load JSON file: %s\n", path);
     }
 
-    try
-    {
+    try {
         Json::Value json = parse_json(result->data(), result->data() + result->size());
 
         json_to_lua(state, json);

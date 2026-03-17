@@ -1032,7 +1032,8 @@ void MainWindow::compileThreadExited()
     auto atlas = build_lightmap_atlas(
         bsp, m_bspdata.bspx.entries, m_litdata, m_hdr_litdata, false, bspx_decoupled_lm->isChecked());
 
-    glView->renderBSP(m_mapFile, bsp, m_bspdata.bspx.entries, m_entities, atlas, render_settings, bspx_normals->isChecked());
+    glView->renderBSP(
+        m_mapFile, bsp, m_bspdata.bspx.entries, m_entities, atlas, render_settings, bspx_normals->isChecked());
 
     if (!m_fileWasReload && !glView->getKeepOrigin()) {
         for (auto &ent : m_entities) {
@@ -1128,5 +1129,6 @@ void MainWindow::displayCameraPositionInfo()
 
 void MainWindow::updateCameraFaceInfo()
 {
-    face_panel->updateWithBSP(&std::get<mbsp_t>(m_bspdata.bsp), m_entities, m_bspdata.bspx.entries, glView->getSelectedFace());
+    face_panel->updateWithBSP(
+        &std::get<mbsp_t>(m_bspdata.bsp), m_entities, m_bspdata.bspx.entries, glView->getSelectedFace());
 }

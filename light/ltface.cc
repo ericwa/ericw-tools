@@ -1830,8 +1830,7 @@ static void LightFace_AutoMin(const mbsp_t *bsp, const mface_t *face, lightsurf_
             // apply the minlight
             for (int i = 0; i < lightsurf->samples.size(); i++) {
                 if (apply_to_all || lightsurf->samples[i].occluded) {
-                    lightmap->samples[i].color =
-                        qv::max(grid_sample.undirectional_color, lightmap->samples[i].color);
+                    lightmap->samples[i].color = qv::max(grid_sample.undirectional_color, lightmap->samples[i].color);
                 }
             }
 

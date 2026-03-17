@@ -541,7 +541,7 @@ TEST(string, string_copy_from_array_z)
     {
         SCOPED_TRACE("source array is all zeroes");
 
-        const std::array<char, 2> src {'\0', '\0'};
+        const std::array<char, 2> src{'\0', '\0'};
         bool ok;
 
         EXPECT_EQ(string_copy_from_array_z(src, &ok), "");
@@ -551,7 +551,7 @@ TEST(string, string_copy_from_array_z)
     {
         SCOPED_TRACE("common case");
 
-        const std::array<char, 2> src {'x', '\0'};
+        const std::array<char, 2> src{'x', '\0'};
         bool ok;
 
         EXPECT_EQ(string_copy_from_array_z(src, &ok), "x");
@@ -561,7 +561,7 @@ TEST(string, string_copy_from_array_z)
     {
         SCOPED_TRACE("warning case: source array is unterminated");
 
-        const std::array<char, 2> src {'x', 'y'};
+        const std::array<char, 2> src{'x', 'y'};
         bool ok;
 
         EXPECT_EQ(string_copy_from_array_z(src, &ok), "xy");
@@ -650,13 +650,13 @@ TEST(surfflags, jsonAllFalse)
 
 TEST(numericCast, arrayCastPadTruncate)
 {
-    std::array src{1,2,3};
+    std::array src{1, 2, 3};
 
     // extend with zeros
-    EXPECT_EQ((std::array{1,2,3,0,0}), (array_cast<std::array<int,5>>(src, "something")));
+    EXPECT_EQ((std::array{1, 2, 3, 0, 0}), (array_cast<std::array<int, 5>>(src, "something")));
 
     // truncate
-    EXPECT_EQ((std::array{1,2}), (array_cast<std::array<int,2>>(src, "something")));
+    EXPECT_EQ((std::array{1, 2}), (array_cast<std::array<int, 2>>(src, "something")));
 }
 
 TEST(numericCast, arrayCastUnsignedToSignedOverflow)

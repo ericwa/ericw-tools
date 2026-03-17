@@ -2153,7 +2153,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
 
 void GLView::uploadPortalVAO(const std::vector<simple_vertex_t> &points, const std::vector<GLuint> &indices)
 {
-   QOpenGLVertexArrayObject::Binder portalVaoBinder(&m_portalVao);
+    QOpenGLVertexArrayObject::Binder portalVaoBinder(&m_portalVao);
 
     // upload index buffer
     m_portalIndexBuffer.create();
@@ -2272,7 +2272,8 @@ void GLView::clickFace(QMouseEvent *event)
     if (m_showBmodels)
         ray_mask |= GEOM_MASK_BMODEL;
 
-    auto hit = m_spatialindex->trace_ray(qvec3f(ws_a[0], ws_a[1], ws_a[2]), qvec3f(ray_dir[0], ray_dir[1], ray_dir[2]), ray_mask);
+    auto hit = m_spatialindex->trace_ray(
+        qvec3f(ws_a[0], ws_a[1], ws_a[2]), qvec3f(ray_dir[0], ray_dir[1], ray_dir[2]), ray_mask);
 
     if (hit.hit) {
         m_selected_face = *std::any_cast<int>(hit.hitpayload);

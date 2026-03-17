@@ -9,7 +9,6 @@
 #include <common/log.hh>
 #include <common/fs.hh>
 
-
 TEST(maputil, convertQ2QuakeEdToValve)
 {
     std::filesystem::path path = std::filesystem::path(testmaps_dir) / "q2_light_sun_mangle.map";

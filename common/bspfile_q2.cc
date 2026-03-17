@@ -101,8 +101,8 @@ q2_texinfo_t::q2_texinfo_t(const mtexinfo_t &model)
       nexttexinfo(model.nexttexinfo)
 {
     if (!string_copy_to_array_z(model.texturename, texture)) {
-        logging::print("WARNING: texture name '{}' was truncated to fit in q2_texinfo_t ({} bytes)\n", model.texturename,
-            texture.size());
+        logging::print("WARNING: texture name '{}' was truncated to fit in q2_texinfo_t ({} bytes)\n",
+            model.texturename, texture.size());
     }
 }
 

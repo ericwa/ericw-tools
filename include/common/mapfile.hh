@@ -57,7 +57,7 @@ struct texdef_quake_ed_t
     double rotate;
     qvec2d scale;
 
-    auto operator<=>(const texdef_quake_ed_t& other) const = default;
+    auto operator<=>(const texdef_quake_ed_t &other) const = default;
     friend std::ostream &operator<<(std::ostream &os, const texdef_quake_ed_t &v);
 };
 
@@ -68,7 +68,7 @@ struct texdef_valve_t
     qvec2d scale;
     qmat<double, 2, 3> axis;
 
-    auto operator<=>(const texdef_valve_t& other) const = default;
+    auto operator<=>(const texdef_valve_t &other) const = default;
     friend std::ostream &operator<<(std::ostream &os, const texdef_valve_t &v);
 };
 

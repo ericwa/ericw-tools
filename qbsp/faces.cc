@@ -446,7 +446,7 @@ static void FixupMarkFaces_AddFacesToLeaf(node_t *node, const std::set<face_t *>
     // This does mean we "lie" about the node bounds. Alternative to this would be adding the marfaces to _every_
     // eligible leaf in the storage clusters, which would potentially waste a ton of marksurfaces
     aabb3d added_bounds = BoundFaces(marfaces_to_add);
-    //logging::print("old storage node bounds: {}, want to add faces bounds: {}\n", node->bounds, added_bounds);
+    // logging::print("old storage node bounds: {}, want to add faces bounds: {}\n", node->bounds, added_bounds);
 
     AddBoundsToNode(node, added_bounds);
 }

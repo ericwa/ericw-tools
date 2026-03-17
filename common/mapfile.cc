@@ -62,8 +62,8 @@ bool brush_side_t::is_valid_texture_projection() const
 void brush_side_t::validate_texture_projection()
 {
     if (!is_valid_texture_projection()) {
-        logging::print("WARNING: {}: repairing invalid texture projection (\"{}\" near {} {} {})\n", location,
-            texture, (int)planepts[0][0], (int)planepts[0][1], (int)planepts[0][2]);
+        logging::print("WARNING: {}: repairing invalid texture projection (\"{}\" near {} {} {})\n", location, texture,
+            (int)planepts[0][0], (int)planepts[0][1], (int)planepts[0][2]);
 
         // Reset texturing to sensible defaults
         set_texinfo(texdef_quake_ed_t{{0.0, 0.0}, 0, {1.0, 1.0}});

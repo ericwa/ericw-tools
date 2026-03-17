@@ -63,7 +63,7 @@ public:
     inline keyvalues_t::iterator end() { return keyvalues.end(); }
 
     inline size_t size() { return keyvalues.size(); }
-    
+
     inline keyvalues_t &get_pairs() { return keyvalues; }
     inline const keyvalues_t &get_pairs() const { return keyvalues; }
 

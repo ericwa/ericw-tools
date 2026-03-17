@@ -7,7 +7,7 @@ static polylib::winding_t make_winding(const qvec3d &origin)
 {
     polylib::winding_t w(4);
 
-    //128x128 at (0,0,0), +Z normal
+    // 128x128 at (0,0,0), +Z normal
     w[0] = {-64, 64, 0};
     w[1] = {64, 64, 0};
     w[2] = {64, -64, 0};
@@ -24,8 +24,8 @@ TEST(lightpreview, basicSpatial)
 
     spatialindex_t si;
 
-    si.add_poly(make_winding(qvec3d(0,0,0)), std::string("at 0 0 0"));
-    si.add_poly(make_winding(qvec3d(1000,0,0)), std::string("at 1000 0 0"));
+    si.add_poly(make_winding(qvec3d(0, 0, 0)), std::string("at 0 0 0"));
+    si.add_poly(make_winding(qvec3d(1000, 0, 0)), std::string("at 1000 0 0"));
 
     si.commit();
 
@@ -67,7 +67,7 @@ TEST(lightpreview, basicSpatial)
     }
 
     si.clear();
-    si.add_poly(make_winding(qvec3d(500,0,0)), std::string("at 500 0 0"));
+    si.add_poly(make_winding(qvec3d(500, 0, 0)), std::string("at 500 0 0"));
     si.commit();
 
     {
@@ -87,8 +87,8 @@ TEST(lightpreview, geomMask)
 
     spatialindex_t si;
 
-    si.add_poly(make_winding(qvec3d(0,0,0)), std::string("at 0 0 0"), 0x1);
-    si.add_poly(make_winding(qvec3d(0,0,100)), std::string("at 0 0 100"), 0x2);
+    si.add_poly(make_winding(qvec3d(0, 0, 0)), std::string("at 0 0 0"), 0x1);
+    si.add_poly(make_winding(qvec3d(0, 0, 100)), std::string("at 0 0 100"), 0x2);
 
     si.commit();
 
