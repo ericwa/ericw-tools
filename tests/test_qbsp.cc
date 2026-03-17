@@ -698,6 +698,15 @@ TEST(testmapsQ1, q1FuncIllusionaryVisblockerInteractions)
         EXPECT_THAT(BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], {424, 16, 104}).size(),
             testing::AllOf(testing::Ge(1), testing::Le(2)));
     }
+
+    {
+        SCOPED_TRACE("func_illusionary_visblocker with a func_detail_fence block inside");
+        SCOPED_TRACE("the fence should compile out as CONTENTS_SOLID");
+
+        auto *fence_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], {552, -8, 24});
+
+        EXPECT_EQ(fence_leaf->contents, CONTENTS_SOLID);
+    }
 }
 
 TEST(testmapsQ1, simpleWorldspawnWorldspawn)

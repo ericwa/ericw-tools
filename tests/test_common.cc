@@ -356,6 +356,22 @@ TEST(common, q2Contents)
     }
 }
 
+TEST(common, q1ContentsRemap)
+{
+    auto *game_q1 = bspver_q1.game;
+    {
+        SCOPED_TRACE("all content types combined (should make a combination of all q1 types)");
+        auto all = contentflags_t::make(EWT_VISCONTENTS_SOLID | EWT_VISCONTENTS_SKY | EWT_VISCONTENTS_DETAIL_WALL |
+                                        EWT_VISCONTENTS_WINDOW | EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER |
+                                        EWT_VISCONTENTS_AUX | EWT_VISCONTENTS_LAVA | EWT_VISCONTENTS_SLIME |
+                                        EWT_VISCONTENTS_WATER | EWT_VISCONTENTS_MIST);
+
+        EXPECT_EQ(contentflags_t::make(EWT_VISCONTENTS_SOLID | EWT_VISCONTENTS_SKY | EWT_VISCONTENTS_LAVA |
+                                       EWT_VISCONTENTS_SLIME | EWT_VISCONTENTS_WATER),
+            game_q1->contents_remap_for_export(all, gamedef_t::remap_type_t::leaf));
+    }
+}
+
 TEST(common, q1ContentsRoundtrip)
 {
     auto *game_q1 = bspver_q1.game;

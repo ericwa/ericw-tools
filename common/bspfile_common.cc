@@ -330,6 +330,12 @@ std::ostream &operator<<(std::ostream &os, contents_t flags)
     return os;
 }
 
+std::ostream &operator<<(std::ostream &os, contentflags_t flags)
+{
+    os << get_contents_display(flags.flags);
+    return os;
+}
+
 // surfflags_t
 
 bool surfflags_t::is_nodraw() const

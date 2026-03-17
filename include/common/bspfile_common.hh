@@ -288,6 +288,7 @@ struct contentflags_t
 
 // gtest support
 std::ostream &operator<<(std::ostream &os, contents_t flags);
+std::ostream &operator<<(std::ostream &os, contentflags_t flags);
 
 enum q1_surf_flags_t : int32_t;
 enum q2_surf_flags_t : int32_t;

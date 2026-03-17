@@ -320,14 +320,19 @@ public:
          *
          * Normally solid leafs are not written and just referenced as leaf 0.
          */
-        if (contents.is_detail_fence() || contents.is_detail_wall()) {
-            return contentflags_t::make(EWT_VISCONTENTS_SOLID);
+        if (contents.flags & EWT_VISCONTENTS_WINDOW) {
+            // clear WINDOW and add SOLID
+            contents = contentflags_t::make((contents.flags & ~EWT_VISCONTENTS_WINDOW) | EWT_VISCONTENTS_SOLID);
+        }
+        if (contents.flags & EWT_VISCONTENTS_DETAIL_WALL) {
+            // clear DETAIL_WALL and add SOLID
+            contents = contentflags_t::make((contents.flags & ~EWT_VISCONTENTS_DETAIL_WALL) | EWT_VISCONTENTS_SOLID);
         }
 
-        if (contents.flags & EWT_VISCONTENTS_MIST) {
-            // clear mist. detail_illusionary on its own becomes CONTENTS_EMPTY,
+        if (contents.flags & (EWT_VISCONTENTS_MIST | EWT_VISCONTENTS_AUX)) {
+            // clear mist and aux. detail_illusionary on its own becomes CONTENTS_EMPTY,
             // detail_illusionary in water becomes CONTENTS_WATER, etc.
-            contents = contentflags_t::make(contents.flags & ~EWT_VISCONTENTS_MIST);
+            contents = contentflags_t::make(contents.flags & ~(EWT_VISCONTENTS_MIST | EWT_VISCONTENTS_AUX));
         }
         if (contents.flags & EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER) {
             // this exports as empty
