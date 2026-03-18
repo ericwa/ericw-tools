@@ -309,6 +309,10 @@ void MainWindow::createPropertiesSidebar()
     auto *show_bmodels = new QCheckBox(tr("Show Bmodels"));
     show_bmodels->setChecked(true);
 
+    m_littransucency = new QCheckBox(tr("Lit Translucency"));
+    m_littransucency->setChecked(true);
+    m_littransucency->setToolTip("Lit Translucency");
+
     formLayout->addRow(tr("common"), common_options);
     formLayout->addRow(tr("qbsp"), qbsp_options);
     formLayout->addRow(vis_checkbox, vis_options);
@@ -328,6 +332,7 @@ void MainWindow::createPropertiesSidebar()
     formLayout->addRow(bspx_decoupled_lm);
     formLayout->addRow(bspx_normals);
     formLayout->addRow(draw_opaque);
+    formLayout->addRow(m_littransucency);
     formLayout->addRow(show_bmodels);
 
     lightstyles = new QVBoxLayout();
@@ -426,6 +431,7 @@ void MainWindow::createPropertiesSidebar()
         [this](bool checked) { glView->setMagFilter(checked ? QOpenGLTexture::Nearest : QOpenGLTexture::Linear); });
     connect(draw_opaque, &QAbstractButton::toggled, this,
         [this](bool checked) { glView->setDrawTranslucencyAsOpaque(checked); });
+    connect(m_littransucency, &QAbstractButton::toggled, this, [this](bool checked) { glView->setLitTranslucency(checked); });
     connect(glView, &GLView::cameraMoved, this, &MainWindow::displayCameraPositionInfo);
     connect(glView, &GLView::selectedFaceChanged, this, &MainWindow::updateCameraFaceInfo);
     connect(show_bmodels, &QAbstractButton::toggled, this, [this](bool checked) { glView->setShowBmodels(checked); });
@@ -568,6 +574,16 @@ void MainWindow::updateRecentsSubmenu(const QStringList &recents)
         ClearRecents();
         this->updateRecentsSubmenu(GetRecents());
     });
+    auto quickSwitch = openRecentMenu->addAction(tr("&Quick Switch"), this, &MainWindow::quickSwitch);
+    quickSwitch->setShortcut(QKeySequence("Ctrl+R"));
+}
+
+void MainWindow::quickSwitch()
+{
+    bool keepOrigin = glView->getKeepOrigin();
+    auto recents = GetRecents();
+    if (recents.size() >= 2)
+        loadFile(recents[1]);
 }
 
 void MainWindow::updateCameraBookmarksSubmenu()
@@ -627,10 +643,10 @@ void MainWindow::setupMenu()
     // edit menu
 
     auto *editMenu = menuBar()->addMenu(tr("&Edit"));
-    editMenu->addAction(tr("&Copy Camera Position"), this, [this]() {
+    editMenu->addAction(tr("&Copy Camera Position + Angle"), this, [this]() {
         qvec3f pos = this->glView->cameraPosition();
 
-        std::string cpp_str = fmt::format("{}", pos);
+        std::string cpp_str = fmt::format("{} {}", pos, this->glView->cameraForward());
 
         QClipboard *clipboard = QGuiApplication::clipboard();
         clipboard->setText(QString::fromStdString(cpp_str));
@@ -644,11 +660,13 @@ void MainWindow::setupMenu()
     viewMenu->addAction(tr("&Move camera to..."), this, [this]() {
         bool ok = false;
         QString text = QInputDialog::getText(
-            this, tr("Move camera to"), tr("Enter X Y Z coords, space-separated"), QLineEdit::Normal, QString(), &ok);
+            this, tr("Move camera to"), tr("Enter X Y Z coords (optionally fwd X Y Z vector too), space-separated"), QLineEdit::Normal, QString(), &ok);
 
         QStringList comps = text.split(QString::fromLatin1(" "), Qt::SkipEmptyParts);
 
-        if (comps.length() >= 3) {
+        if (comps.length() >= 6) {
+            this->glView->setCamera(qvec3d{comps[0].toDouble(), comps[1].toDouble(), comps[2].toDouble()}, qvec3d{comps[3].toDouble(), comps[4].toDouble(), comps[5].toDouble()});
+        } else if (comps.length() >= 3) {
             this->glView->setCamera(qvec3d{comps[0].toDouble(), comps[1].toDouble(), comps[2].toDouble()});
         }
     });
@@ -1032,6 +1050,8 @@ void MainWindow::compileThreadExited()
     auto atlas = build_lightmap_atlas(
         bsp, m_bspdata.bspx.entries, m_litdata, m_hdr_litdata, false, bspx_decoupled_lm->isChecked());
 
+    m_littransucency->setChecked(bspx_decoupled_lm->isChecked() && m_bspdata.bspx.entries.contains("DECOUPLED_LM"));
+
     glView->renderBSP(m_mapFile, bsp, m_bspdata.bspx.entries, m_entities, atlas, render_settings, bspx_normals->isChecked());
 
     if (!m_fileWasReload && !glView->getKeepOrigin()) {
@@ -1107,21 +1127,21 @@ void MainWindow::displayCameraPositionInfo()
 
     std::string leaf_type;
     int32_t area = -1;
-    {
-        const auto *bsp = std::get_if<mbsp_t>(&m_bspdata.bsp);
-        if (!bsp)
-            return;
+    const mleaf_t *leaf = nullptr;
+    const auto *bsp = std::get_if<mbsp_t>(&m_bspdata.bsp);
 
-        const mleaf_t *leaf = BSP_FindLeafAtPoint(bsp, &bsp->dmodels[0], point);
-        if (leaf) {
-            auto *game = bsp->loadversion->game;
-            leaf_type = game->create_contents_from_native(leaf->contents).to_string();
+    if (!bsp)
+        return;
 
-            area = leaf->area;
-        }
+    leaf = BSP_FindLeafAtPoint(bsp, &bsp->dmodels[0], point);
+    if (leaf) {
+        auto *game = bsp->loadversion->game;
+        leaf_type = game->create_contents_from_native(leaf->contents).to_string();
+
+        area = leaf->area;
     }
 
-    std::string cpp_str = fmt::format("pos ({}) forward ({}) contents ({}) area ({})", point, forward, leaf_type, area);
+    std::string cpp_str = fmt::format("pos ({}) forward ({}) leaf ({}) contents ({}) area ({})", point, forward, leaf ? (leaf - bsp->dleafs.data()) : -1, leaf_type, area);
 
     m_cameraStatus->setText(QString::fromStdString(cpp_str));
 }

@@ -424,6 +424,7 @@ enum gameid_t
     GAME_HEXEN_II,
     GAME_HALF_LIFE,
     GAME_QUAKE_II,
+    GAME_SIN,
 
     GAME_TOTAL
 };

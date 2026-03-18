@@ -35,6 +35,7 @@
 #include <common/fs.hh>
 #include <common/settings.hh>
 #include <common/ostream.hh>
+#include <common/mapfile.hh>
 
 #include <map>
 #include <set>
@@ -73,7 +74,7 @@ bsputil_settings::bsputil_settings()
           [&](const std::string &name, parser_base_t &parser, settings::source src) {
               return this->load_setting<settings::setting_bool>(name, parser, src, "");
           },
-          nullptr, "Extract BSP texutres to the given wad file"},
+          nullptr, "Extract BSP textures to the given wad file"},
       replace_textures{this, "replace-textures",
           [&](const std::string &name, parser_base_t &parser, settings::source src) {
               return this->load_setting<settings::setting_string>(name, parser, src, "");
@@ -130,6 +131,7 @@ bsputil_settings::bsputil_settings()
               return this->load_setting(name, src);
           },
           nullptr, "Decompile to the given .map file"},
+      decompile_suffix{this, "decompile-suffix", ".decompile", "\"str\"", nullptr, "Suffix to add to decompiled map name"},
       decompile_geomonly{this, "decompile-geomonly",
           [&](const std::string &name, parser_base_t &parser, settings::source src) {
               return this->load_setting(name, src);
@@ -145,6 +147,11 @@ bsputil_settings::bsputil_settings()
               return this->load_setting<settings::setting_int32>(name, parser, src, 0);
           },
           nullptr, "Decompile specific hull"},
+      reorder_entities{this, "resort-entities",
+          [&](const std::string &name, parser_base_t &parser, settings::source src) {
+              return this->load_setting(name, src);
+          },
+          nullptr, "Re-sort BSP entities in a deterministic way, for diffing"},
       extract_bspx_lump{this, "extract-bspx-lump",
           [&](const std::string &name, parser_base_t &parser, settings::source src) {
               auto lump = std::make_shared<settings::setting_string>(nullptr, name, "");
@@ -808,6 +815,30 @@ struct planelist_t
     }
 };
 
+#include "../3rdparty/stb_image_write.h"
+
+static void ExportTextures(const fs::path &source, const gamedef_t *game, const mbsp_t &bsp)
+{
+    for (auto &tex : bsp.texinfo) {
+        // temp, just for us
+        auto tex_name = (source.parent_path() / "textures" / tex.texturename).replace_extension(".tga");
+
+        if (tex_name.string().find_first_of(' ') != std::string::npos)
+            continue;
+
+        auto swl_meta = std::get<0>(img::load_texture(tex.texturename, false, game, bsputil_options));
+
+        if (!swl_meta)
+            continue;
+
+        fs::create_directories(tex_name.parent_path());
+
+        if (!fs::exists(tex_name)) {
+            stbi_write_tga(tex_name.string().c_str(), swl_meta->width, swl_meta->height, 4, swl_meta->pixels.data());
+        }
+    }
+}
+
 int bsputil_main(int _argc, const char **_argv)
 {
     logging::preinitialize();
@@ -1395,6 +1426,12 @@ int bsputil_main(int _argc, const char **_argv)
         } else if (operation->primary_name() == "extract-textures") {
             mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);
 
+            if (bspdata.loadversion->game->id == GAME_QUAKE_II ||
+                bspdata.loadversion->game->id == GAME_SIN) {
+                ExportTextures(source, bspdata.loadversion->game, bsp);
+                continue;
+            }
+
             source.replace_extension(".wad");
             logging::print("-> writing {}... ", source);
 
@@ -1421,6 +1458,34 @@ int bsputil_main(int _argc, const char **_argv)
             mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);
             CheckBSPFile(&bsp);
             CheckBSPFacesPlanar(&bsp);
+        } else if (operation->primary_name() == "resort-entities") {
+            mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);
+
+            mapfile::map_file_t map = mapfile::parse(bsp.dentdata, parser_source_location{});
+
+            // sort each entity pair
+            for (auto &ent : map.entities) {
+                std::sort(ent.epairs.begin(), ent.epairs.end(), [](const keyvalue_t &a, const keyvalue_t &b) {
+                    if (a.first == b.first) {
+                        return a.second < b.second;
+                    }
+
+                    return a.first < b.first;
+                });
+            }
+            
+            // sort pairs by length
+            std::sort(map.entities.begin(), map.entities.end(), [](const mapfile::map_entity_t &a, const mapfile::map_entity_t &b) {
+                return a.epairs.get_pairs().size() < b.epairs.get_pairs().size();
+            });
+
+            std::stringstream s;
+            map.write(s);
+
+            bsp.dentdata = s.str();
+            
+            ConvertBSPFormat(&bspdata, bspdata.loadversion);
+            WriteBSPFile(source.replace_filename(source.filename().generic_string() + "_sorted"), &bspdata);
         } else if (operation->primary_name() == "modelinfo") {
             mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);
             PrintModelInfo(&bsp);
@@ -1470,9 +1535,62 @@ int bsputil_main(int _argc, const char **_argv)
 
             // generate output filename
             if (hull) {
-                source.replace_extension(fmt::format(".decompile.hull{}.map", hullnum));
+                source.replace_extension(fmt::format("{}.hull{}.map", bsputil_options.decompile_suffix.value(), hullnum));
             } else {
-                source.replace_extension(".decompile.map");
+                source.replace_extension(fmt::format("{}.map", bsputil_options.decompile_suffix.value()));
+            }
+
+            decomp_options options;
+            options.geometryOnly = geomOnly;
+            options.ignoreBrushes = ignoreBrushes;
+            options.hullnum = hullnum;
+
+            if (bspdata.loadversion->game->id == GAME_SIN) {
+                source.replace_extension(".srf");
+
+                logging::print("-> writing surface file {}...\n", source);
+
+                std::ofstream f;
+
+                mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);
+
+                std::map<std::string_view, std::string_view, natural_case_insensitive_less> written;
+
+                for (auto &tex : bsp.texinfo) {
+                    if (tex.nexttexinfo != -1) {
+                        auto &next = bsp.texinfo[tex.nexttexinfo];
+
+                        if (auto exists = written.find(tex.texturename); exists != written.end()) {
+                            if (!string_iequals(next.texturename, exists->second)) {
+                                logging::print("WARNING: animation for {} is specified twice but doesn't lead to {}, leads to {} instead\n", tex.texturename, exists->second, next.texturename);
+                                continue;
+                            } else {
+                                // already written
+                                continue;
+                            }
+                        }
+
+                        if (options.sin_srfName.empty()) {
+                            options.sin_srfName = fs::path(source.filename()).generic_string();
+                            f.open(source);
+
+                            if (!f)
+                                Error("couldn't open {} for writing\n", source);
+                        }
+
+                        f << tex.texturename << " date 0 anim " << next.texturename << std::endl;
+                        written.insert(std::make_pair(tex.texturename, next.texturename));
+                    }
+                }
+
+                if (!options.sin_srfName.empty()) {
+                    f.close();
+
+                    if (!f)
+                        Error("{}", strerror(errno));
+                }
+
+                source.replace_extension(".map");
             }
 
             logging::print("-> writing {}...\n", source);
@@ -1483,11 +1601,6 @@ int bsputil_main(int _argc, const char **_argv)
                 Error("couldn't open {} for writing\n", source);
 
             mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);
-
-            decomp_options options;
-            options.geometryOnly = geomOnly;
-            options.ignoreBrushes = ignoreBrushes;
-            options.hullnum = hullnum;
 
             DecompileBSP(&bsp, options, f);
 

@@ -100,10 +100,7 @@ void FacePanel::updateWithBSP(const mbsp_t *bsp, const std::vector<entdict_t> &e
     addStat(QStringLiteral("texture"), QString::fromStdString(bsp->texinfo[bestFace->texinfo].texturename));
     addStat(QStringLiteral("lightofs"), bestFace->lightofs);
     addStat(QStringLiteral("flags"), QString::fromStdString(fmt::format("{}", static_cast<int32_t>(bsp->texinfo[bestFace->texinfo].flags.native_q2))));
-    // TODO: restore when SiN support is merged
-#if 0
     addStat(QStringLiteral("translucence"), QString::fromStdString(fmt::format("{}", bsp->texinfo[bestFace->texinfo].translucence)));
-#endif
 
     std::string leaves, clusters;
 

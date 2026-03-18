@@ -453,6 +453,7 @@ qbsp_settings::qbsp_settings()
       qbism{this, "qbism", false, &game_target_group, "target Qbism's extended Quake II BSP format"},
       bsp2{this, "bsp2", false, &game_target_group, "target Quake's extended BSP2 format"},
       bsp2rmq{this, "2psb", false, &game_target_group, "target Quake's extended 2PSB format (RMQ compatible)"},
+      sinbsp{this, "sinbsp", false, &game_target_group, "target SiN's BSP format"},
       nosubdivide{this, "nosubdivide",
           [&](const std::string &, parser_base_t &, source src) {
               subdivide.set_value(0, src);
@@ -706,6 +707,10 @@ void qbsp_settings::postinitialize(int argc, const char **argv)
 
     if (bsp2rmq.value()) {
         set_target_version(&bspver_bsp2rmq);
+    }
+
+    if (sinbsp.value()) {
+        set_target_version(&bspver_sin);
     }
 
     if (!qbsp_options.target_version) {

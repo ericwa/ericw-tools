@@ -184,7 +184,9 @@ skipspace:
                         }
                         break;
                     default:
-                        logging::print("WARNING: {}: Unrecognised string escape - \\{}\n", location, pos[1]);
+                        if (!ignore_escapes) {
+                            logging::print("WARNING: {}: Unrecognised string escape - \\{}\n", location, pos[1]);
+                        }
                         break;
                 }
             }

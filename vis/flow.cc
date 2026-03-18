@@ -366,9 +366,11 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t &prevs
      */
     if (CheckStack(leaf, thread)) {
         logging::funcprint("WARNING: recursion on leaf {}\n", leafnum);
+        logging::print("- see around {}\n", leaf->portals[0]->winding->origin);
+
         return;
     }
-
+    
     // mark the leaf as visible
     if (!thread->leafvis[leafnum]) {
         thread->leafvis[leafnum] = true;

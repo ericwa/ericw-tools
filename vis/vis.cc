@@ -412,7 +412,10 @@ static void ClusterFlow(int clusternum, leafbits_t &buffer, mbsp_t *bsp)
     }
 
     if (buffer[clusternum])
+    {
         logging::print("WARNING: Leaf portals saw into cluster ({})\n", clusternum);
+        logging::print("- see around {}\n", leaf->portals[0]->winding->origin);
+    }
 
     buffer[clusternum] = true;
 
@@ -552,7 +555,7 @@ visstats_t CalcVis(mbsp_t *bsp)
     //
     // assemble the leaf vis lists by oring and compressing the portal lists
     //
-    logging::print("Expanding clusters...\n");
+    logging::print(logging::flag::VERBOSE, "Expanding clusters...\n");
     leafbits_t buffer(portalleafs);
     for (int i = 0; i < portalleafs; i++) {
         ClusterFlow(i, buffer, bsp);
@@ -564,11 +567,11 @@ visstats_t CalcVis(mbsp_t *bsp)
     if (bsp->loadversion->game->has_cluster_support) {
         avg /= static_cast<int64_t>(portalleafs);
 
-        logging::print("average clusters visible: {}\n", avg);
+        logging::print(logging::flag::VERBOSE, "average clusters visible: {}\n", avg);
     } else {
         avg /= static_cast<int64_t>(portalleafs_real);
 
-        logging::print("average leafs visible: {}\n", avg);
+        logging::print(logging::flag::VERBOSE, "average leafs visible: {}\n", avg);
     }
 
     return stats;
@@ -602,10 +605,10 @@ static void LoadPortals(const fs::path &name, mbsp_t *bsp)
 
     if (!bsp->loadversion->game->has_cluster_support) {
         // since q2bsp has native cluster support, we shouldn't look at portalleafs_real at all.
-        logging::print("{:6} leafs\n", portalleafs_real);
+        logging::print(logging::flag::VERBOSE, "{:6} leafs\n", portalleafs_real);
     }
-    logging::print("{:6} clusters\n", portalleafs);
-    logging::print("{:6} portals\n", numportals);
+    logging::print(logging::flag::VERBOSE, "{:6} clusters\n", portalleafs);
+    logging::print(logging::flag::VERBOSE, "{:6} portals\n", numportals);
 
     leafbytes = ((portalleafs + 63) & ~63) >> 3;
     leaflongs = leafbytes / sizeof(long);
@@ -778,12 +781,12 @@ int vis_main(int argc, const char **argv)
 
         auto stats = CalcVis(&bsp);
 
-        logging::print("c_noclip: {}\n", stats.c_noclip);
-        logging::print("c_chains: {}\n", stats.c_chains);
+        logging::print(logging::flag::VERBOSE, "c_noclip: {}\n", stats.c_noclip);
+        logging::print(logging::flag::VERBOSE, "c_chains: {}\n", stats.c_chains);
 
         bsp.dvis.bits = std::move(vismap);
         bsp.dvis.bits.shrink_to_fit();
-        logging::print("visdatasize:{}  compressed from {}\n", bsp.dvis.bits.size(), originalvismapsize);
+        logging::print(logging::flag::VERBOSE, "visdatasize:{}  compressed from {}\n", bsp.dvis.bits.size(), originalvismapsize);
     }
 
     // no ambient sounds for Q2

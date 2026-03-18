@@ -81,6 +81,7 @@ private:
     ETLogTab m_activeLogTab = ETLogTab::TAB_LIGHTPREVIEW;
     QThread *m_compileThread = nullptr;
     QLabel *m_cameraStatus = nullptr;
+    QCheckBox *m_littransucency = nullptr;
 
 public:
     explicit MainWindow(QWidget *parent = nullptr);
@@ -96,6 +97,7 @@ private:
     void logWidgetSetText(ETLogTab tab, const std::string &str);
     void createStatusBar();
     void updateRecentsSubmenu(const QStringList &recents);
+    void quickSwitch();
     void updateCameraBookmarksSubmenu();
     void setupMenu();
     void fileOpen();
