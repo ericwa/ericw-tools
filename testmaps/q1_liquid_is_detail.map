@@ -273,3 +273,23 @@
 "origin" "-96 -304 -24"
 "angle" "90"
 }
+// entity 2
+{
+"classname" "air_bubbles"
+"origin" "40 -232 104"
+}
+// entity 3
+{
+"classname" "air_bubbles"
+"origin" "40 -232 -24"
+}
+// entity 4
+{
+"classname" "air_bubbles"
+"origin" "-216 -360 8"
+}
+// entity 5
+{
+"classname" "air_bubbles"
+"origin" "-232 -40 136"
+}

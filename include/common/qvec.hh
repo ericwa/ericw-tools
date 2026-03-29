@@ -1218,7 +1218,16 @@ struct twosided
     // std::array compat
     using value_type = T;
     constexpr size_t size() const { return 2; }
+
+    auto operator<=>(const twosided &) const = default;
 };
+
+// for Catch2
+template<typename T>
+std::ostream &operator<<(std::ostream &os, const twosided<T> &v)
+{
+    return os << "{front:" << v.front << ", back:" << v.back << "}";
+}
 
 namespace qv
 {

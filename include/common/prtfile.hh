@@ -32,7 +32,7 @@ using prtfile_winding_t = polylib::winding_base_t<prtfile_winding_storage_t>;
 struct prtfile_portal_t
 {
     prtfile_winding_t winding;
-    int leafnums[2];
+    twosided<int> leafnums;
 };
 
 struct prtfile_dleafinfo_t

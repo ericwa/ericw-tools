@@ -2858,9 +2858,20 @@ TEST(qbspQ1, tjuncMatrix)
 
 TEST(testmapsQ1, liquidIsDetail)
 {
+    // this is the portal between the underwater corridor and the main room
     const auto portal_underwater =
         prtfile_winding_t{{-168, -384, 32}, {-168, -320, 32}, {-168, -320, -32}, {-168, -384, -32}};
+    EXPECT_EQ(qvec3d(1, 0, 0), portal_underwater.plane().normal); // normal is facing into the room
+
+    // portal betweenn the upper corridor and the main room
     const auto portal_above = portal_underwater.translate({0, 320, 128});
+    EXPECT_EQ(qvec3d(1, 0, 0), portal_above.plane().normal); // normal is facing into the room
+
+    const qvec3d above_water_pos{40, -232, 104};
+    const qvec3d below_water_pos{40, -232, -24};
+    const qvec3d lower_corridor_pos{-216, -360, 8};
+    const qvec3d upper_corridor_pos{-232, -40, 136};
+    const qvec3d solid_pos{1024, 1024, 1024};
 
     {
         SCOPED_TRACE("transparent water");
@@ -2869,41 +2880,109 @@ TEST(testmapsQ1, liquidIsDetail)
         // this implies water is detail
 
         const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_liquid_is_detail.map");
-
         ASSERT_TRUE(prt.has_value());
-        ASSERT_EQ(2, prt->portals.size());
 
-        EXPECT_TRUE(((PortalMatcher(prt->portals[0].winding, portal_underwater) &&
-                         PortalMatcher(prt->portals[1].winding, portal_above)) ||
-                     (PortalMatcher(prt->portals[0].winding, portal_above) &&
-                         PortalMatcher(prt->portals[1].winding, portal_underwater))));
+        // look up some leafs
+        const mleaf_t *solid = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], solid_pos);
+        const mleaf_t *above_water = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], above_water_pos);
+        const mleaf_t *below_water = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], below_water_pos);
+        const mleaf_t *lower_corridor = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], lower_corridor_pos);
+        const mleaf_t *upper_corridor = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], upper_corridor_pos);
+
+        // check solid leaf
+        ASSERT_EQ(solid->visofs, 0); // this is meant to be ignored
+        ASSERT_EQ(solid->contents, CONTENTS_SOLID);
+
+        // check leafs count
+        ASSERT_EQ(bsp.dleafs.size(), 5);
+
+        // look up cluster nums from dleafinfos array
+        ASSERT_EQ(prt->dleafinfos.size(), 5);
+        int cluster_solid = prt->dleafinfos.at(BSP_GetLeafNum(&bsp, solid)).cluster;
+        int cluster_above_water = prt->dleafinfos.at(BSP_GetLeafNum(&bsp, above_water)).cluster;
+        int cluster_below_water = prt->dleafinfos.at(BSP_GetLeafNum(&bsp, below_water)).cluster;
+        int cluster_lower_corridor = prt->dleafinfos.at(BSP_GetLeafNum(&bsp, lower_corridor)).cluster;
+        int cluster_upper_corridor = prt->dleafinfos.at(BSP_GetLeafNum(&bsp, upper_corridor)).cluster;
+
+        // check cluster values
+        EXPECT_EQ(cluster_solid, 0); // this is meant to be ignored
+
+        std::set<int> cluster_set{
+            cluster_above_water, cluster_below_water, cluster_lower_corridor, cluster_upper_corridor};
+        ASSERT_EQ(cluster_set, (std::set<int>{0, 1, 2}));
+        ASSERT_EQ(cluster_above_water, cluster_below_water); // importantly, this shows the water is detail
 
         // only 3 clusters: room with water, side corridors
         EXPECT_EQ(prt->portalleafs, 3);
+        EXPECT_EQ(prt->portalleafs_real, 4); // above water, in water, plus 2 side rooms.
 
-        // above water, in water, plus 2 side rooms.
-        // note
-        EXPECT_EQ(prt->portalleafs_real, 4);
+        // check portal front / back clusters
+        ASSERT_EQ(2, prt->portals.size());
+        auto underwater_it = std::ranges::find_if(prt->portals, [&](const prtfile_portal_t &portal) -> bool {
+            return portal.winding.directional_equal(portal_underwater);
+        });
+        auto above_it = std::ranges::find_if(prt->portals,
+            [&](const prtfile_portal_t &portal) -> bool { return portal.winding.directional_equal(portal_above); });
+
+        ASSERT_NE(underwater_it, prt->portals.end());
+        ASSERT_NE(above_it, prt->portals.end());
+
+        EXPECT_EQ(underwater_it->leafnums, twosided<int>(cluster_below_water, cluster_lower_corridor));
+        EXPECT_EQ(above_it->leafnums, twosided<int>(cluster_above_water, cluster_upper_corridor));
     }
 
     {
         SCOPED_TRACE("opaque water");
 
         const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_liquid_is_detail.map", {"-notranswater"});
-
         ASSERT_TRUE(prt.has_value());
-        ASSERT_EQ(2, prt->portals.size());
 
-        // same portals as transparent water case
-        // (since the water is opqaue, it doesn't get a portal)
-        EXPECT_TRUE(((PortalMatcher(prt->portals[0].winding, portal_underwater) &&
-                         PortalMatcher(prt->portals[1].winding, portal_above)) ||
-                     (PortalMatcher(prt->portals[0].winding, portal_above) &&
-                         PortalMatcher(prt->portals[1].winding, portal_underwater))));
+        // look up some leafs
+        const mleaf_t *solid = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], solid_pos);
+        const mleaf_t *above_water = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], above_water_pos);
+        const mleaf_t *below_water = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], below_water_pos);
+        const mleaf_t *lower_corridor = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], lower_corridor_pos);
+        const mleaf_t *upper_corridor = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], upper_corridor_pos);
+
+        // check solid leaf
+        ASSERT_EQ(solid->visofs, 0); // this is meant to be ignored
+        ASSERT_EQ(solid->contents, CONTENTS_SOLID);
+
+        // check leafs count
+        ASSERT_EQ(bsp.dleafs.size(), 5);
+
+        // look up cluster nums from dleafinfos array
+        ASSERT_EQ(prt->dleafinfos.size(), 5);
+        int cluster_solid = prt->dleafinfos.at(BSP_GetLeafNum(&bsp, solid)).cluster;
+        int cluster_above_water = prt->dleafinfos.at(BSP_GetLeafNum(&bsp, above_water)).cluster;
+        int cluster_below_water = prt->dleafinfos.at(BSP_GetLeafNum(&bsp, below_water)).cluster;
+        int cluster_lower_corridor = prt->dleafinfos.at(BSP_GetLeafNum(&bsp, lower_corridor)).cluster;
+        int cluster_upper_corridor = prt->dleafinfos.at(BSP_GetLeafNum(&bsp, upper_corridor)).cluster;
+
+        // check cluster values
+        EXPECT_EQ(cluster_solid, 0); // this is meant to be ignored
+        std::set<int> cluster_set{
+            cluster_above_water, cluster_below_water, cluster_lower_corridor, cluster_upper_corridor};
+        ASSERT_EQ(cluster_set, (std::set<int>{0, 1, 2, 3})); // shows all 4 clusters are distinct
 
         // 4 clusters this time:
         // above water, in water, plus 2 side rooms.
         EXPECT_EQ(prt->portalleafs, 4);
         EXPECT_EQ(prt->portalleafs_real, 4);
+
+        // same portals as transparent water case
+        // (since the water is opqaue, it doesn't get a portal)
+        ASSERT_EQ(2, prt->portals.size());
+        auto underwater_it = std::ranges::find_if(prt->portals, [&](const prtfile_portal_t &portal) -> bool {
+            return portal.winding.directional_equal(portal_underwater);
+        });
+        auto above_it = std::ranges::find_if(prt->portals,
+            [&](const prtfile_portal_t &portal) -> bool { return portal.winding.directional_equal(portal_above); });
+
+        ASSERT_NE(underwater_it, prt->portals.end());
+        ASSERT_NE(above_it, prt->portals.end());
+
+        EXPECT_EQ(underwater_it->leafnums, twosided<int>(cluster_below_water, cluster_lower_corridor));
+        EXPECT_EQ(above_it->leafnums, twosided<int>(cluster_above_water, cluster_upper_corridor));
     }
 }
