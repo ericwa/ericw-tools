@@ -2927,8 +2927,8 @@ TEST(testmapsQ1, liquidIsDetail)
         ASSERT_NE(underwater_it, prt->portals.end());
         ASSERT_NE(above_it, prt->portals.end());
 
-        EXPECT_EQ(underwater_it->leafnums, twosided<int>(cluster_below_water, cluster_lower_corridor));
-        EXPECT_EQ(above_it->leafnums, twosided<int>(cluster_above_water, cluster_upper_corridor));
+        EXPECT_EQ(underwater_it->leafnums, (twosided<int>{cluster_below_water, cluster_lower_corridor}));
+        EXPECT_EQ(above_it->leafnums, (twosided<int>{cluster_above_water, cluster_upper_corridor}));
     }
 
     {
@@ -2982,7 +2982,7 @@ TEST(testmapsQ1, liquidIsDetail)
         ASSERT_NE(underwater_it, prt->portals.end());
         ASSERT_NE(above_it, prt->portals.end());
 
-        EXPECT_EQ(underwater_it->leafnums, twosided<int>(cluster_below_water, cluster_lower_corridor));
-        EXPECT_EQ(above_it->leafnums, twosided<int>(cluster_above_water, cluster_upper_corridor));
+        EXPECT_EQ(underwater_it->leafnums, (twosided<int>{cluster_below_water, cluster_lower_corridor}));
+        EXPECT_EQ(above_it->leafnums, (twosided<int>{cluster_above_water, cluster_upper_corridor}));
     }
 }
