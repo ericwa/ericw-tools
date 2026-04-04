@@ -117,6 +117,31 @@ TEST(testmapsQ2, detail)
     EXPECT_EQ(prt->portalleafs, 4);
 }
 
+TEST(testmapsQ2, qbism)
+{
+    const auto [bsp, bspx, prt] = LoadTestmap("q2_detail.map", {"-qbism"});
+
+    EXPECT_EQ(GAME_QUAKE_II, bsp.loadversion->game->id);
+    EXPECT_EQ(bsp.loadversion, &bspver_qbism);
+}
+
+TEST(testmapsQ2, qbismAndQ2bsp)
+{
+    {
+        SCOPED_TRACE("don't specify multiple BSP formats");
+
+        auto l = [] { LoadTestmap("q2_detail.map", {"-qbism", "-q2bsp"}); };
+        EXPECT_THAT(l, testing::ThrowsMessage<std::exception>(testing::HasSubstr("BSP version was set by multiple flags")));
+    }
+
+    {
+        SCOPED_TRACE("don't specify multiple BSP formats");
+
+        auto l = [] { LoadTestmap("q2_detail.map", {"-q2bsp", "-qbism"}); };
+        EXPECT_THAT(l, testing::ThrowsMessage<std::exception>(testing::HasSubstr("BSP version was set by multiple flags")));
+    }
+}
+
 TEST(testmapsQ2, Q2DetailWithNodetail)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_detail.map", {"-nodetail"});
