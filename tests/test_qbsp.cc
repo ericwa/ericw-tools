@@ -841,6 +841,18 @@ TEST(testmapsQ1, simpleWorldspawnSky)
     EXPECT_EQ(12, bsp.dclipnodes.size());
 }
 
+TEST(testmapsQ1, bsp2)
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple_worldspawn_sky.map", {"-bsp2"});
+    EXPECT_EQ(&bspver_bsp2, bsp.loadversion);
+}
+
+TEST(testmapsQ1, bsp2rmq)
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple_worldspawn_sky.map", {"-2psb"});
+    EXPECT_EQ(&bspver_bsp2rmq, bsp.loadversion);
+}
+
 TEST(testmapsQ1, waterDetailIllusionary)
 {
     static const std::string basic_mapname = "qbsp_water_detail_illusionary.map";
