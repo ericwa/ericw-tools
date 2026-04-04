@@ -2986,3 +2986,42 @@ TEST(testmapsQ1, liquidIsDetail)
         EXPECT_EQ(above_it->leafnums, (twosided<int>{cluster_above_water, cluster_upper_corridor}));
     }
 }
+
+TEST(testmapsQ1, faceCrossingInteriorFill)
+{
+    const qvec3d in_pocket{-20, -20, 3};
+    const qvec3d in_void{1024, 1024, 1024};
+
+    const qvec3d face_above_pocket{-16, -20, 12};
+    const qvec3d face_in_pocket{-16, -20, 4};
+
+    {
+        const auto [bsp, bspx, prt] = LoadTestmapQ1("deprecated/missing_face_simple.map");
+
+        {
+            SCOPED_TRACE("the pocket gets filled to solid by default");
+            EXPECT_EQ(CONTENTS_SOLID, BSP_FindContentsAtPoint(&bsp, 0, &bsp.dmodels[0], in_void));
+            EXPECT_EQ(CONTENTS_SOLID, BSP_FindContentsAtPoint(&bsp, 0, &bsp.dmodels[0], in_pocket));
+        }
+        {
+            SCOPED_TRACE("the faces in the pocket get deleted");
+            EXPECT_FALSE(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], face_in_pocket));
+            EXPECT_TRUE(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], face_above_pocket));
+        }
+    }
+
+    {
+        const auto [bsp, bspx, prt] = LoadTestmapQ1("deprecated/missing_face_simple.map", {"-nofill"});
+
+        {
+            SCOPED_TRACE("with -nofill, the pocket stays CONTENTS_EMPTY");
+            EXPECT_EQ(CONTENTS_EMPTY, BSP_FindContentsAtPoint(&bsp, 0, &bsp.dmodels[0], in_pocket));
+            EXPECT_EQ(CONTENTS_EMPTY, BSP_FindContentsAtPoint(&bsp, 0, &bsp.dmodels[0], in_void));
+        }
+        {
+            SCOPED_TRACE("the faces in the pocket get kept");
+            EXPECT_TRUE(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], face_in_pocket));
+            EXPECT_TRUE(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], face_above_pocket));
+        }
+    }
+}
