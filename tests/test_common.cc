@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include <filesystem>
+#include <string_view>
 #include <common/bspfile.hh>
 #include <common/bspfile_q1.hh>
 #include <common/bspfile_q2.hh>
@@ -31,6 +32,25 @@ TEST(common, stringIStartsWith)
     // false cases
     EXPECT_FALSE(string_istarts_with("asdf", "ASt"));
     EXPECT_FALSE(string_istarts_with("asdf", "ASDFX"));
+}
+
+TEST(common, caseInsensitiveLess)
+{
+    using namespace std::string_view_literals;
+
+    std::map<std::string, int, case_insensitive_less> testmap;
+
+    testmap["abc"] = 1;
+    testmap["def"] = 2;
+    testmap["ghi"] = 3;
+
+    EXPECT_EQ(3, testmap.size());
+
+    EXPECT_EQ(1, testmap.find("ABC"sv)->second);
+    EXPECT_EQ(2, testmap.find("DEF"sv)->second);
+    EXPECT_EQ(3, testmap.find("GHI"sv)->second);
+
+    EXPECT_EQ(testmap.end(), testmap.find("A"));
 }
 
 TEST(common, q1Contents)

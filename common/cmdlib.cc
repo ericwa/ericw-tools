@@ -126,11 +126,6 @@ bool case_insensitive_equal::operator()(const std::string &l, const std::string 
     return Q_strcasecmp(l.c_str(), r.c_str()) == 0;
 }
 
-bool case_insensitive_less::operator()(const std::string &l, const std::string &r) const noexcept
-{
-    return Q_strcasecmp(l.c_str(), r.c_str()) < 0;
-}
-
 // membuf
 
 membuf::membuf(void *base, size_t size, std::ios_base::openmode which)

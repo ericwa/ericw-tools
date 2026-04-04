@@ -50,7 +50,9 @@ struct case_insensitive_equal
 
 struct case_insensitive_less
 {
-    bool operator()(const std::string &l, const std::string &r) const noexcept;
+    using is_transparent = void;
+
+    bool operator()(std::string_view a, std::string_view b) const noexcept { return Q_strcasecmp(a, b) < 0; }
 };
 
 /**
