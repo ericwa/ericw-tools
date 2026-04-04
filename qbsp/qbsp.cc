@@ -447,13 +447,14 @@ inline void set_target_version(const bspversion_t *version)
 }
 
 qbsp_settings::qbsp_settings()
-    : hexen2{this, "hexen2", false, &game_target_group, "target Hexen II's BSP format"},
-      hlbsp{this, "hlbsp", false, &game_target_group, "target Half Life's BSP format"},
-      q2bsp{this, "q2bsp", false, &game_target_group, "target Quake II's BSP format"},
-      qbism{this, "qbism", false, &game_target_group, "target Qbism's extended Quake II BSP format"},
-      bsp2{this, "bsp2", false, &game_target_group, "target Quake's extended BSP2 format"},
-      bsp2rmq{this, "2psb", false, &game_target_group, "target Quake's extended 2PSB format (RMQ compatible)"},
-      nosubdivide{this, "nosubdivide",
+    : hexen2{this, "hexen2", false, &game_target_group, "target Hexen II's BSP format"}, // tests, docs
+      hlbsp{this, "hlbsp", false, &game_target_group, "target Half Life's BSP format"}, // tests, docs
+      q2bsp{this, "q2bsp", false, &game_target_group, "target Quake II's BSP format"}, // tests, docs
+      qbism{this, "qbism", false, &game_target_group, "target Qbism's extended Quake II BSP format"}, // tests, docs
+      bsp2{this, "bsp2", false, &game_target_group, "target Quake's extended BSP2 format"}, // tests, docs
+      bsp2rmq{this, "2psb", false, &game_target_group, // tests, docs
+          "target Quake's extended 2PSB format (RMQ compatible)"},
+      nosubdivide{this, "nosubdivide", // tests, docs
           [&](const std::string &, parser_base_t &, source src) {
               subdivide.set_value(0, src);
               return true;
@@ -463,13 +464,13 @@ qbsp_settings::qbsp_settings()
           "change settings to allow for (or make adjustments to optimize for the lack of) software support"},
       subdivide{this, "subdivide", 240, &common_format_group,
           "change the subdivide threshold, in luxels. 0 will disable subdivision entirely"},
-      nofill{this, "nofill", false, &debugging_group, "don't perform outside filling"},
+      nofill{this, "nofill", false, &debugging_group, "don't perform outside filling"}, // tests, docs
       nomerge{this, "nomerge", false, &debugging_group, "don't perform face merging"},
       nomergeacrossliquids{this, "nomergeacrossliquids", false, &common_format_group, "deprecated, no effect"},
       noedgereuse{this, "noedgereuse", false, &debugging_group, "don't reuse edges (for debugging software rendering)"},
       noclip{this, "noclip", false, &common_format_group, "don't write clip nodes (Q1-like BSP formats)"},
       noskip{this, "noskip", false, &debugging_group, "don't remove faces with the 'skip' texture"},
-      nodetail{this, "nodetail", false, &debugging_group, "treat all detail brushes to structural"},
+      nodetail{this, "nodetail", false, &debugging_group, "treat all detail brushes to structural"}, // tests, docs
       chop{this, "chop", false, &debugging_group, "adjust brushes to remove intersections if possible"},
       chopfragment{this, "chopfragment", false, &debugging_group, "always do full fragmentation for chop"},
       onlyents{this, "onlyents", false, &map_development_group, "only updates .MAP entities"},
@@ -478,7 +479,8 @@ qbsp_settings::qbsp_settings()
           "doesn't combine water faces into one large face"},
       splitspecial{this, "splitspecial", {&splitsky, &splitturb}, &debugging_group,
           "doesn't combine sky and water faces into one large face (splitturb + splitsky)"},
-      transwater{this, "transwater", true, &common_format_group, "compute portal information for transparent water"},
+      transwater{this, "transwater", true, &common_format_group, // tests, docs
+          "compute portal information for transparent water"},
       notextures{this, "notex", false, &common_format_group,
           "write only placeholder textures to depend upon replacements, keep file sizes down, or to skirt copyrights"},
       missing_textures_as_zero_size{
