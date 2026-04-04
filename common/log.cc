@@ -57,6 +57,7 @@ namespace logging
 {
 bitflags<flag> mask = bitflags<flag>(flag::ALL) & ~bitflags<flag>(flag::VERBOSE);
 bool enable_color_codes = false;
+bool break_on_error = true;
 
 static bool is_terminal()
 {
@@ -473,7 +474,9 @@ ericwtools_error::ericwtools_error(const char *what)
 [[noreturn]] void Error(const char *error)
 {
 #ifdef _DEBUG
-    __debugbreak();
+    if (logging::break_on_error) {
+        __debugbreak();
+    }
 #endif
     throw ericwtools_error(error);
 }

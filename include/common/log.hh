@@ -60,6 +60,9 @@ enum class flag : uint8_t
 
 extern bitflags<flag> mask;
 extern bool enable_color_codes;
+// the test runner sometimes wants to cause errors intentionally, so it's annoying to break inside Error() when
+// running tests in debug mode. So the test executable sets this to false.
+extern bool break_on_error;
 
 // Windows: calls SetConsoleMode for ANSI escape sequence processing (so colors work)
 void preinitialize();

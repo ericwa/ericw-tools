@@ -51,6 +51,7 @@ int main(int argc, char **argv)
 
     // writing console colors within test case output breaks doctest/CLion integration
     logging::enable_color_codes = false;
+    logging::break_on_error = false;
 
     logging::set_print_callback(log_print_callback);
 
