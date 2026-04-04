@@ -2238,11 +2238,8 @@ TEST(qbsp, BrushFromBounds)
     EXPECT_EQ(found, 2);
 }
 
-// FIXME: failing because water tjuncs with walls
 TEST(qbspQ1, waterSubdivisionWithLitWaterOff)
 {
-    GTEST_SKIP();
-
     SCOPED_TRACE("-litwater 0 should suppress water subdivision");
 
     const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_water_subdivision.map", {"-litwater", "0"});
