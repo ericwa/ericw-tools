@@ -2266,6 +2266,19 @@ TEST(qbspQ1, waterSubdivisionWithDefaults)
     }
 }
 
+TEST(qbspQ1, waterSubdivisionWithNosubdivide)
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_water_subdivision.map", {"-nosubdivide"});
+
+    auto faces = FacesWithTextureName(bsp, "*swater5");
+    EXPECT_EQ(faces.size(), 2); // top and bottom
+
+    for (auto *face : faces) {
+        auto *texinfo = BSP_GetTexinfo(&bsp, face->texinfo);
+        EXPECT_EQ(texinfo->flags.native_q1, 0); // i.e., lightmapped (not TEX_SPECIAL)
+    }
+}
+
 TEST(qbspQ1, texturesSearchRelativeToCurrentDirectory)
 {
     // QuArK runs the compilers like this:
