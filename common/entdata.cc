@@ -83,6 +83,14 @@ int32_t entdict_t::get_vector(std::string_view key, qvec3f &vec) const
     return sscanf(value.data(), "%f %f %f", &vec[0], &vec[1], &vec[2]);
 }
 
+qvec3f entdict_t::get_vec3f(std::string_view key) const
+{
+    qvec3f result{};
+    if (3 == get_vector(key, result))
+        return result;
+    return {};
+}
+
 void entdict_t::set(std::string_view key, std::string_view value)
 {
     // search for existing key to update

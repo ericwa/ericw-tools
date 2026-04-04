@@ -726,3 +726,20 @@ TEST(tests, logMessagesPrefix)
     logging::print("WARNING: something\n");
     EXPECT_THAT(get_current_test_log(), WarningMatcher);
 }
+
+TEST(entdict, getVec3f)
+{
+    entdict_t test;
+    test.set("vec3key1", "1 2 3");
+    test.set("vec3key2", "1.0 2.0 3.0");
+
+    EXPECT_EQ(qvec3f(1, 2, 3), test.get_vec3f("vec3key1"));
+    EXPECT_EQ(qvec3f(1, 2, 3), test.get_vec3f("vec3key2"));
+
+    test.set("fail1", "1");
+    test.set("fail2", "asdf");
+
+    EXPECT_EQ(qvec3f(0, 0, 0), test.get_vec3f("fail1"));
+    EXPECT_EQ(qvec3f(0, 0, 0), test.get_vec3f("fail2"));
+    EXPECT_EQ(qvec3f(0, 0, 0), test.get_vec3f("fail3"));
+}
