@@ -587,34 +587,37 @@ TEST(testmapsQ1, chopNoChange)
     // TODO: ideally we should check we get back the same brush pointers from ChopBrushes
 }
 
-TEST(testmapsQ1, simpleSealed)
+class testmapsQ1SimpleSealed : public testing::TestWithParam<std::string>
 {
-    const std::vector<std::string> quake_maps{"qbsp_simple_sealed.map", "qbsp_simple_sealed_rotated.map"};
+};
 
-    for (const auto &mapname : quake_maps) {
-        SCOPED_TRACE(fmt::format("testing {}", mapname));
+INSTANTIATE_TEST_SUITE_P(
+    , testmapsQ1SimpleSealed, testing::Values("qbsp_simple_sealed.map", "qbsp_simple_sealed_rotated.map"));
 
-        const auto [bsp, bspx, prt] = LoadTestmapQ1(mapname);
+TEST_P(testmapsQ1SimpleSealed, test)
+{
+    const std::string &mapname = GetParam();
 
-        ASSERT_EQ(bsp.dleafs.size(), 2);
+    const auto [bsp, bspx, prt] = LoadTestmapQ1(mapname);
 
-        ASSERT_EQ(bsp.dleafs[0].contents, CONTENTS_SOLID);
-        ASSERT_EQ(bsp.dleafs[1].contents, CONTENTS_EMPTY);
+    ASSERT_EQ(bsp.dleafs.size(), 2);
 
-        // just a hollow box
-        ASSERT_EQ(bsp.dfaces.size(), 6);
+    ASSERT_EQ(bsp.dleafs[0].contents, CONTENTS_SOLID);
+    ASSERT_EQ(bsp.dleafs[1].contents, CONTENTS_EMPTY);
 
-        // no bspx lumps
-        EXPECT_TRUE(bspx.empty());
+    // just a hollow box
+    ASSERT_EQ(bsp.dfaces.size(), 6);
 
-        // check markfaces
-        EXPECT_EQ(bsp.dleafs[0].nummarksurfaces, 0);
-        EXPECT_EQ(bsp.dleafs[0].firstmarksurface, 0);
+    // no bspx lumps
+    EXPECT_TRUE(bspx.empty());
 
-        EXPECT_EQ(bsp.dleafs[1].nummarksurfaces, 6);
-        EXPECT_EQ(bsp.dleafs[1].firstmarksurface, 0);
-        EXPECT_THAT(bsp.dleaffaces, testing::UnorderedElementsAre(0, 1, 2, 3, 4, 5));
-    }
+    // check markfaces
+    EXPECT_EQ(bsp.dleafs[0].nummarksurfaces, 0);
+    EXPECT_EQ(bsp.dleafs[0].firstmarksurface, 0);
+
+    EXPECT_EQ(bsp.dleafs[1].nummarksurfaces, 6);
+    EXPECT_EQ(bsp.dleafs[1].firstmarksurface, 0);
+    EXPECT_THAT(bsp.dleaffaces, testing::UnorderedElementsAre(0, 1, 2, 3, 4, 5));
 }
 
 TEST(testmapsQ1, simpleSealed2)
@@ -853,50 +856,50 @@ TEST(testmapsQ1, bsp2rmq)
     EXPECT_EQ(&bspver_bsp2rmq, bsp.loadversion);
 }
 
-TEST(testmapsQ1, waterDetailIllusionary)
+class testmapsQ1WaterDetailIllusionary : public testing::TestWithParam<std::string>
 {
-    static const std::string basic_mapname = "qbsp_water_detail_illusionary.map";
-    static const std::string mirrorinside_mapname = "qbsp_water_detail_illusionary_mirrorinside.map";
+};
 
-    for (const auto &mapname : {basic_mapname, mirrorinside_mapname}) {
-        SCOPED_TRACE(fmt::format("testing {}", mapname));
+INSTANTIATE_TEST_SUITE_P(, testmapsQ1WaterDetailIllusionary,
+    testing::Values("qbsp_water_detail_illusionary.map", "qbsp_water_detail_illusionary_mirrorinside.map"));
 
-        const auto [bsp, bspx, prt] = LoadTestmapQ1(mapname);
+TEST_P(testmapsQ1WaterDetailIllusionary, test)
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ1(GetParam());
 
-        ASSERT_TRUE(prt.has_value());
+    ASSERT_TRUE(prt.has_value());
 
-        const qvec3d inside_water_and_fence{-20, -52, 124};
-        const qvec3d inside_fence{-20, -52, 172};
+    const qvec3d inside_water_and_fence{-20, -52, 124};
+    const qvec3d inside_fence{-20, -52, 172};
 
-        EXPECT_EQ(BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], inside_water_and_fence)->contents, CONTENTS_WATER);
-        EXPECT_EQ(BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], inside_fence)->contents, CONTENTS_EMPTY);
+    EXPECT_EQ(BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], inside_water_and_fence)->contents, CONTENTS_WATER);
+    EXPECT_EQ(BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], inside_fence)->contents, CONTENTS_EMPTY);
 
-        const qvec3d underwater_face_pos{-40, -52, 124};
-        const qvec3d above_face_pos{-40, -52, 172};
+    const qvec3d underwater_face_pos{-40, -52, 124};
+    const qvec3d above_face_pos{-40, -52, 172};
 
-        // make sure the detail_illusionary face underwater isn't clipped away
-        auto *underwater_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], underwater_face_pos, {-1, 0, 0});
-        auto *underwater_face_inner = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], underwater_face_pos, {1, 0, 0});
+    // make sure the detail_illusionary face underwater isn't clipped away
+    auto *underwater_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], underwater_face_pos, {-1, 0, 0});
+    auto *underwater_face_inner = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], underwater_face_pos, {1, 0, 0});
 
-        auto *above_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], above_face_pos, {-1, 0, 0});
-        auto *above_face_inner = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], above_face_pos, {1, 0, 0});
+    auto *above_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], above_face_pos, {-1, 0, 0});
+    auto *above_face_inner = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], above_face_pos, {1, 0, 0});
 
-        ASSERT_NE(nullptr, underwater_face);
-        ASSERT_NE(nullptr, above_face);
+    ASSERT_NE(nullptr, underwater_face);
+    ASSERT_NE(nullptr, above_face);
 
-        EXPECT_EQ(std::string("{trigger"), Face_TextureName(&bsp, underwater_face));
-        EXPECT_EQ(std::string("{trigger"), Face_TextureName(&bsp, above_face));
+    EXPECT_EQ(std::string("{trigger"), Face_TextureName(&bsp, underwater_face));
+    EXPECT_EQ(std::string("{trigger"), Face_TextureName(&bsp, above_face));
 
-        if (mapname == mirrorinside_mapname) {
-            ASSERT_NE(underwater_face_inner, nullptr);
-            ASSERT_NE(above_face_inner, nullptr);
+    if (GetParam() == "qbsp_water_detail_illusionary_mirrorinside.map") {
+        ASSERT_NE(underwater_face_inner, nullptr);
+        ASSERT_NE(above_face_inner, nullptr);
 
-            EXPECT_EQ(std::string("{trigger"), Face_TextureName(&bsp, underwater_face_inner));
-            EXPECT_EQ(std::string("{trigger"), Face_TextureName(&bsp, above_face_inner));
-        } else {
-            EXPECT_EQ(underwater_face_inner, nullptr);
-            EXPECT_EQ(above_face_inner, nullptr);
-        }
+        EXPECT_EQ(std::string("{trigger"), Face_TextureName(&bsp, underwater_face_inner));
+        EXPECT_EQ(std::string("{trigger"), Face_TextureName(&bsp, above_face_inner));
+    } else {
+        EXPECT_EQ(underwater_face_inner, nullptr);
+        EXPECT_EQ(above_face_inner, nullptr);
     }
 }
 
@@ -966,39 +969,42 @@ TEST(testmapsQ1, noclipfaces)
     EXPECT_EQ(prt->portalleafs, 1);
 }
 
+class testmapsQ1NoclipfacesJunction : public testing::TestWithParam<std::string>
+{
+};
+
+INSTANTIATE_TEST_SUITE_P(
+    , testmapsQ1NoclipfacesJunction, testing::Values("qbsp_noclipfaces_junction.map", "q2_noclipfaces_junction.map"));
+
 /**
  * _noclipfaces 1 detail_fence meeting a _noclipfaces 0 one.
  *
  * Currently, to simplify the implementation, we're treating that the same as if both had _noclipfaces 1
  */
-TEST(testmapsQ1, noclipfacesJunction)
+TEST_P(testmapsQ1NoclipfacesJunction, noclipfacesJunction)
 {
-    const std::vector<std::string> maps{"qbsp_noclipfaces_junction.map", "q2_noclipfaces_junction.map"};
+    const std::string &map = GetParam();
 
-    for (const auto &map : maps) {
-        const bool q2 = (map.find("q2") == 0);
+    const bool q2 = (map.find("q2") == 0);
 
-        SCOPED_TRACE(map);
+    const auto [bsp, bspx, prt] = q2 ? LoadTestmapQ2(map) : LoadTestmapQ1(map);
 
-        const auto [bsp, bspx, prt] = q2 ? LoadTestmapQ2(map) : LoadTestmapQ1(map);
+    EXPECT_EQ(bsp.dfaces.size(), 12);
 
-        EXPECT_EQ(bsp.dfaces.size(), 12);
+    const qvec3d portal_pos{96, 56, 32};
 
-        const qvec3d portal_pos{96, 56, 32};
+    auto *pos_x = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], portal_pos, {1, 0, 0});
+    auto *neg_x = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], portal_pos, {-1, 0, 0});
 
-        auto *pos_x = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], portal_pos, {1, 0, 0});
-        auto *neg_x = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], portal_pos, {-1, 0, 0});
+    ASSERT_NE(pos_x, nullptr);
+    ASSERT_NE(neg_x, nullptr);
 
-        ASSERT_NE(pos_x, nullptr);
-        ASSERT_NE(neg_x, nullptr);
-
-        if (q2) {
-            EXPECT_EQ(std::string("e1u1/wndow1_2"), Face_TextureName(&bsp, pos_x));
-            EXPECT_EQ(std::string("e1u1/window1"), Face_TextureName(&bsp, neg_x));
-        } else {
-            EXPECT_EQ(std::string("{trigger"), Face_TextureName(&bsp, pos_x));
-            EXPECT_EQ(std::string("blood1"), Face_TextureName(&bsp, neg_x));
-        }
+    if (q2) {
+        EXPECT_EQ(std::string("e1u1/wndow1_2"), Face_TextureName(&bsp, pos_x));
+        EXPECT_EQ(std::string("e1u1/window1"), Face_TextureName(&bsp, neg_x));
+    } else {
+        EXPECT_EQ(std::string("{trigger"), Face_TextureName(&bsp, pos_x));
+        EXPECT_EQ(std::string("blood1"), Face_TextureName(&bsp, neg_x));
     }
 }
 
@@ -1281,40 +1287,37 @@ TEST(testmapsQ1, brushClippingOrder)
     ASSERT_EQ(std::string("sbutt2"), Face_TextureName(&bsp, func_wall_button_face));
 }
 
+class testmapsQ1Origin : public testing::TestWithParam<std::string>
+{
+};
+
+INSTANTIATE_TEST_SUITE_P(, testmapsQ1Origin, testing::Values("qbsp_origin.map", "qbsp_hiprotate.map"));
+
 /**
  * Box room with a rotating fan (just a cube). Works in a mod with hiprotate - AD, Quoth, etc.
  */
-TEST(testmapsQ1, origin)
+TEST_P(testmapsQ1Origin, origin)
 {
-    const std::vector<std::string> maps{
-        "qbsp_origin.map",
-        "qbsp_hiprotate.map" // same, but uses info_rotate instead of an origin brush
-    };
+    const auto [bsp, bspx, prt] = LoadTestmapQ1(GetParam());
 
-    for (const auto &map : maps) {
-        SCOPED_TRACE(map);
+    ASSERT_TRUE(prt.has_value());
 
-        const auto [bsp, bspx, prt] = LoadTestmapQ1(map);
+    // 0 = world, 1 = rotate_object
+    ASSERT_EQ(2, bsp.dmodels.size());
 
-        ASSERT_TRUE(prt.has_value());
+    // check that the origin brush didn't clip away any solid faces, or generate faces
+    ASSERT_EQ(6, bsp.dmodels[1].numfaces);
 
-        // 0 = world, 1 = rotate_object
-        ASSERT_EQ(2, bsp.dmodels.size());
+    // FIXME: should the origin brush update the dmodel's origin too?
+    ASSERT_EQ(qvec3f(0, 0, 0), bsp.dmodels[1].origin);
 
-        // check that the origin brush didn't clip away any solid faces, or generate faces
-        ASSERT_EQ(6, bsp.dmodels[1].numfaces);
+    // check that the origin brush updated the entity lump
+    auto ents = EntData_Parse(bsp);
+    auto it = std::find_if(ents.begin(), ents.end(),
+        [](const entdict_t &dict) -> bool { return dict.get("classname") == "rotate_object"; });
 
-        // FIXME: should the origin brush update the dmodel's origin too?
-        ASSERT_EQ(qvec3f(0, 0, 0), bsp.dmodels[1].origin);
-
-        // check that the origin brush updated the entity lump
-        auto ents = EntData_Parse(bsp);
-        auto it = std::find_if(ents.begin(), ents.end(),
-            [](const entdict_t &dict) -> bool { return dict.get("classname") == "rotate_object"; });
-
-        ASSERT_NE(it, ents.end());
-        EXPECT_EQ(it->get("origin"), "216 -216 340");
-    }
+    ASSERT_NE(it, ents.end());
+    EXPECT_EQ(it->get("origin"), "216 -216 340");
 }
 
 TEST(testmapsQ1, simple)
@@ -1396,17 +1399,17 @@ TEST(testmapsQ1, cubes)
     EXPECT_EQ(bsp.dedges.size(), 26);
 }
 
-class ClipFuncWallTest : public testing::TestWithParam<std::string>
+class testmapsQ1ClipFuncWallTest : public testing::TestWithParam<std::string>
 {
 };
 
 INSTANTIATE_TEST_SUITE_P(
-    ClipFuncWallCases, ClipFuncWallTest, testing::Values("q1_clip_func_wall.map", "q1_clip_and_solid_func_wall.map"));
+    , testmapsQ1ClipFuncWallTest, testing::Values("q1_clip_func_wall.map", "q1_clip_and_solid_func_wall.map"));
 
 /**
  * Ensure submodels that are all "clip" get bounds set correctly
  */
-TEST_P(ClipFuncWallTest, testBounds)
+TEST_P(testmapsQ1ClipFuncWallTest, testBounds)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1(GetParam());
 
