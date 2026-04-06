@@ -30,6 +30,7 @@ TEST(testmapsQ2, detail)
     EXPECT_EQ(0, leaf0.firstmarksurface);
     EXPECT_EQ(0, leaf0.nummarksurfaces);
     EXPECT_EQ(leaf0.ambient_level, (std::array<uint8_t, NUM_AMBIENTS>{0, 0, 0, 0}));
+    // note, this is inconsistent with original qbsp3 (leaf 0 has Q2_CONTENTS_SOLID and all other fields 0) but makes more sense
     EXPECT_EQ(CLUSTER_INVALID, leaf0.cluster);
     EXPECT_EQ(AREA_INVALID, leaf0.area);
     EXPECT_EQ(0, leaf0.firstleafbrush);
