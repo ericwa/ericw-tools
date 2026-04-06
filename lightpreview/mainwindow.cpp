@@ -693,16 +693,18 @@ void MainWindow::showEvent(QShowEvent *event)
 
 void MainWindow::fileOpen()
 {
-    // open the file browser in the directory containing the currently open file, if there is one
-    QString currentDir;
-    if (!m_mapFile.isEmpty()) {
-        currentDir = QFileInfo(m_mapFile).absolutePath();
-    }
+    QSettings settings;
+    QString lastDir = settings.value("lastDir").toString();
 
-    QString fileName = QFileDialog::getOpenFileName(this, tr("Open File"), currentDir, tr("Map (*.map);; BSP (*.bsp)"));
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Open File"), lastDir, tr("Map (*.map);; BSP (*.bsp)"));
 
-    if (!fileName.isEmpty())
+    if (!fileName.isEmpty()) {
+        // update the lastDir setting
+        QString newDir = QFileInfo(fileName).absolutePath();
+        settings.setValue("lastDir", newDir);
+
         loadFile(fileName);
+    }
 }
 
 void MainWindow::takeScreenshot()
