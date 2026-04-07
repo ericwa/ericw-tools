@@ -925,7 +925,7 @@ public:
         return counts;
     }
 
-    float_type max_dist_off_plane(const qplane3d &plane)
+    float_type max_dist_off_plane(const qplane3d &plane) const
     {
         float_type max_dist = 0.0;
         for (size_t i = 0; i < size(); i++) {
