@@ -111,7 +111,7 @@ int main(int argc, char **argv)
 
             ConvertBSPFormat(&bsp, &bspver_generic);
 
-            serialize_bsp(bsp, std::get<mbsp_t>(bsp.bsp), fs::path(source).replace_extension("bsp.json"));
+            serialize_bsp(std::get<mbsp_t>(bsp.bsp), bsp.bspx.entries, fs::path(source).replace_extension("bsp.json"));
 
             PrintBSPTextureUsage(std::get<mbsp_t>(bsp.bsp));
 

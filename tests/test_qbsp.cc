@@ -160,8 +160,8 @@ std::tuple<mbsp_t, bspxentries_t, std::optional<prtfile_t>> LoadTestmap(
     CheckBsp(&std::get<mbsp_t>(bspdata.bsp));
 
     // write to .json for inspection
-    serialize_bsp(
-        bspdata, std::get<mbsp_t>(bspdata.bsp), fs::path(qbsp_options.bsp_path).replace_extension(".bsp.json"));
+    serialize_bsp(std::get<mbsp_t>(bspdata.bsp), bspdata.bspx.entries,
+        fs::path(qbsp_options.bsp_path).replace_extension(".bsp.json"));
 
     std::optional<prtfile_t> prtfile;
     if (const auto prtpath = fs::path(bsp_path).replace_extension(".prt"); fs::exists(prtpath)) {

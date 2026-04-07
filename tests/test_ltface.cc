@@ -97,8 +97,8 @@ static testresults_t QbspVisLight_Common(const std::filesystem::path &name, std:
         ConvertBSPFormat(&bspdata, &bspver_generic);
 
         // write to .json for inspection
-        serialize_bsp(
-            bspdata, std::get<mbsp_t>(bspdata.bsp), fs::path(qbsp_options.bsp_path).replace_extension(".bsp.json"));
+        serialize_bsp(std::get<mbsp_t>(bspdata.bsp), bspdata.bspx.entries,
+            fs::path(qbsp_options.bsp_path).replace_extension(".bsp.json"));
 
         return {std::move(std::get<mbsp_t>(bspdata.bsp)), std::move(bspdata.bspx.entries)};
     }

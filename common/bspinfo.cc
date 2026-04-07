@@ -611,7 +611,7 @@ static void export_obj_and_lightmaps(const mbsp_t &bsp, const bspxentries_t &bsp
     logging::print("wrote {}\n", obj_path);
 }
 
-void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &name)
+void serialize_bsp(const mbsp_t &bsp, const bspxentries_t &bspx, const fs::path &name)
 {
     auto j = Json::Value(Json::objectValue);
 
@@ -729,7 +729,7 @@ void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &
                 json_array({src_texinfo.vecs.at(1, 0), src_texinfo.vecs.at(1, 1), src_texinfo.vecs.at(1, 2),
                     src_texinfo.vecs.at(1, 3)})});
 
-            texinfo["flags"] = bspdata.loadversion->game->id == GAME_QUAKE_II ? src_texinfo.flags.native_q2
+            texinfo["flags"] = bsp.loadversion->game->id == GAME_QUAKE_II ? src_texinfo.flags.native_q2
                                                                               : src_texinfo.flags.native_q1;
             texinfo["miptex"] = src_texinfo.miptex;
             texinfo["value"] = src_texinfo.value;
@@ -853,15 +853,15 @@ void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &
             if (src_tex.data.size() > sizeof(dmiptex_t)) {
                 auto &mips = tex["mips"] = Json::Value(Json::arrayValue);
                 mips.append(
-                    serialize_image(img::load_mip(src_tex.name, src_tex.data, false, bspdata.loadversion->game)));
+                    serialize_image(img::load_mip(src_tex.name, src_tex.data, false, bsp.loadversion->game)));
             }
         }
     }
 
-    if (!bspdata.bspx.entries.empty()) {
+    if (!bspx.empty()) {
         auto &bspxentries = (j["bspxentries"] = Json::Value(Json::arrayValue));
 
-        for (auto &lump : bspdata.bspx.entries) {
+        for (auto &lump : bspx) {
             auto &entry = bspxentries.append(Json::Value(Json::objectValue));
             entry["lumpname"] = lump.first;
 
@@ -890,7 +890,7 @@ void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &
         }
     }
 #endif
-    export_obj_and_lightmaps(bsp, bspdata.bspx.entries, false, true, fs::path(name).replace_extension(".geometry.obj"),
+    export_obj_and_lightmaps(bsp, bspx, false, true, fs::path(name).replace_extension(".geometry.obj"),
         fs::path(name).replace_extension(".lm.png"));
 
     std::ofstream(name, std::fstream::out | std::fstream::trunc) << std::setw(4) << j;
