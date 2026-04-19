@@ -479,6 +479,43 @@ TEST(imglib, png)
     EXPECT_EQ(texture->height_scale, 1);
 }
 
+TEST(imglib, q1wad)
+{
+    auto *game = bspver_q1.game;
+
+    settings::common_settings settings;
+    game->init_filesystem("placeholder.map", settings);
+
+    {
+        SCOPED_TRACE("check it's not loaded initially");
+
+        auto [texture, resolve, data] = img::load_texture("orangestuff8", false, game, settings, false, true);
+        ASSERT_FALSE(texture);
+    }
+
+    auto wad_path = std::filesystem::path(testmaps_dir) / "deprecated" / "free_wad.wad";
+    ASSERT_TRUE(fs::addArchive(wad_path, false));
+
+    {
+        SCOPED_TRACE("check it's loaded now");
+
+        auto [texture, resolve, data] = img::load_texture("orangestuff8", false, game, settings, false, true);
+        ASSERT_TRUE(texture);
+
+        EXPECT_EQ(texture->meta.name, "orangestuff8");
+        EXPECT_EQ(texture->meta.width, 64);
+        EXPECT_EQ(texture->meta.height, 64);
+        EXPECT_EQ(texture->meta.extension.value(), img::ext::MIP);
+        EXPECT_FALSE(texture->meta.color_override);
+
+        EXPECT_EQ(texture->width, 64);
+        EXPECT_EQ(texture->height, 64);
+
+        EXPECT_EQ(texture->width_scale, 1);
+        EXPECT_EQ(texture->height_scale, 1);
+    }
+}
+
 TEST(qmat, transpose)
 {
     // clang-format off
