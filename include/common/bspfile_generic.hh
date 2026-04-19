@@ -372,7 +372,7 @@ struct bspversion_t;
 struct mbsp_t
 {
     // the BSP version that we came from, if any
-    const bspversion_t *loadversion;
+    const bspversion_t *loadversion = nullptr;
 
     // the BSP we were converted from, if any
     fs::path file;
