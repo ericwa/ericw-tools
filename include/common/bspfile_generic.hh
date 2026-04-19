@@ -101,6 +101,13 @@ struct dmiptex_t
 // the contents of the miptex beyond the header. we store
 // some of the data from the miptex (name, width, height) but
 // the full, raw miptex is also stored in `data`.
+//
+// note that only `data` is written, so changing other fields
+// will not affect what stream_write() writes.
+//
+// the exception is `null_texture`, which dmiptexlump_t::stream_write()
+// does look at, and will cause it to write a placeholder instead of
+// writing `data`.
 struct miptex_t
 {
     std::string name;
@@ -116,6 +123,9 @@ struct miptex_t
     std::array<int32_t, MIPLEVELS> offsets;
 
     size_t stream_size() const;
+
+    // populates name, width, height, offsets from `data`
+    void reload_header();
 
     void stream_read(std::istream &stream, size_t len);
     void stream_write(std::ostream &stream) const;

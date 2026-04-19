@@ -124,7 +124,12 @@ void miptex_t::stream_read(std::istream &stream, size_t len)
     data.resize(len);
     stream.read(reinterpret_cast<char *>(data.data()), len);
 
-    imemstream miptex_stream(data.data(), len);
+    reload_header();
+}
+
+void miptex_t::reload_header()
+{
+    imemstream miptex_stream(data.data(), data.size());
 
     dmiptex_t dtex;
     miptex_stream >= dtex;
