@@ -91,6 +91,17 @@ void mvis_t::stream_write(std::ostream &stream) const
 
 // dmiptex_t
 
+std::string dmiptex_t::name_as_string() const
+{
+    for (int i = 0; i < name.size(); ++i) {
+        if (!name[i]) {
+            return std::string(name.data(), name.data() + i);
+        }
+    }
+    // unterminated
+    return std::string(name.data(), name.size());
+}
+
 void dmiptex_t::stream_write(std::ostream &s) const
 {
     s <= std::tie(name, width, height, offsets);

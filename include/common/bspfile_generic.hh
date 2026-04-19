@@ -90,6 +90,8 @@ struct dmiptex_t
     uint32_t width, height;
     std::array<int32_t, MIPLEVELS> offsets; /* four mip maps stored */
 
+    std::string name_as_string() const;
+
     // serialize for streams
     void stream_write(std::ostream &s) const;
     void stream_read(std::istream &s);
