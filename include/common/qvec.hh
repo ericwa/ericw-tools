@@ -789,6 +789,15 @@ public:
         return qplane3(normal, dist);
     }
 
+    void translate(const qvec<T, 3> &delta)
+    {
+        qvec<T, 3> point_on_plane = normal * dist;
+
+        point_on_plane += delta;
+
+        dist = qv::dot(point_on_plane, normal);
+    }
+
 public:
     // Sort support
     [[nodiscard]] constexpr auto operator<=>(const qplane3 &other) const = default;
