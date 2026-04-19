@@ -274,6 +274,28 @@ contentflags_t contentflags_t::portal_visible_contents(contentflags_t a, content
     return strongest_contents_change;
 }
 
+bool contentflags_t::is_two_sided(contentflags_t brushcontents)
+{
+    auto bits_brush = brushcontents.flags;
+
+    // explicit override?
+    if (bits_brush & EWT_CFLAG_MIRROR_INSIDE_SET) {
+        return (bits_brush & EWT_CFLAG_MIRROR_INSIDE) != 0;
+    }
+
+    // windows or aux don't generate inside faces
+
+    if (bits_brush & (EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER |
+        EWT_VISCONTENTS_LAVA |
+        EWT_VISCONTENTS_SLIME |
+        EWT_VISCONTENTS_WATER |
+        EWT_VISCONTENTS_MIST)) {
+        return true;
+    }
+
+    return false;
+}
+
 bool contentflags_t::portal_generates_face(
     contentflags_t portal_visible_contents, contentflags_t brushcontents, planeside_t brushside_side)
 {

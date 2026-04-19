@@ -182,6 +182,21 @@ TEST(common, clusterContents)
     }
 }
 
+TEST(common, twoSided)
+{
+    EXPECT_FALSE(contentflags_t::is_two_sided(contentflags_t::make(EWT_VISCONTENTS_SOLID)));
+    EXPECT_TRUE(contentflags_t::is_two_sided(contentflags_t::make(EWT_VISCONTENTS_WATER)));
+
+    const auto di = contentflags_t::create_detail_illusionary_contents(contentflags_t::make(EWT_VISCONTENTS_SOLID));
+    EXPECT_FALSE(contentflags_t::is_two_sided(di));
+
+    {
+        auto di_mirrorinside = di;
+        di_mirrorinside.set_mirrored(true);
+        EXPECT_TRUE(contentflags_t::is_two_sided(di_mirrorinside));
+    }
+}
+
 TEST(common, q1Origin)
 {
     auto *game = bspver_q1.game;
