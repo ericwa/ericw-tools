@@ -16,6 +16,8 @@ mapentity_t &LoadMap(const char *map);
 mapentity_t &LoadMapPath(const std::filesystem::path &name);
 std::tuple<mbsp_t, bspxentries_t, std::optional<prtfile_t>> LoadTestmap(
     const std::filesystem::path &name, std::vector<std::string> extra_args = {});
+std::tuple<mbsp_t, bspxentries_t, std::optional<prtfile_t>> LoadTestmap(
+    const std::filesystem::path &map_path, const std::filesystem::path &bsp_path, std::vector<std::string> extra_args);
 std::tuple<mbsp_t, bspxentries_t, std::optional<prtfile_t>> LoadTestmapQ2(
     const std::filesystem::path &name, std::vector<std::string> extra_args = {});
 std::tuple<mbsp_t, bspxentries_t, std::optional<prtfile_t>> LoadTestmapQ1(

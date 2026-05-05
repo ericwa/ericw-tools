@@ -99,6 +99,12 @@ std::tuple<mbsp_t, bspxentries_t, std::optional<prtfile_t>> LoadTestmap(
     auto bsp_path = map_path;
     bsp_path.replace_extension(".bsp");
 
+    return LoadTestmap(map_path, bsp_path, extra_args);
+}
+
+std::tuple<mbsp_t, bspxentries_t, std::optional<prtfile_t>> LoadTestmap(
+    const std::filesystem::path &map_path, const std::filesystem::path &bsp_path, std::vector<std::string> extra_args)
+{
     auto wal_metadata_path = std::filesystem::path(testmaps_dir) / "q2_wal_metadata";
 
     std::vector<std::string> args{""}; // the exe path, which we're ignoring in this case
@@ -141,7 +147,7 @@ std::tuple<mbsp_t, bspxentries_t, std::optional<prtfile_t>> LoadTestmap(
 
     // copy .bsp to game's basedir/maps directory, for easy in-game testing
     if (strlen(destdir) > 0) {
-        auto dest = fs::path(destdir) / name.filename();
+        auto dest = fs::path(destdir) / map_path.filename();
         dest.replace_extension(".bsp");
         fs::copy(qbsp_options.bsp_path, dest, fs::copy_options::overwrite_existing);
         logging::print("copied from {} to {}\n", qbsp_options.bsp_path, dest);
@@ -3049,4 +3055,40 @@ TEST(testmapsQ1, faceCrossingInteriorFill)
             EXPECT_TRUE(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], face_above_pocket));
         }
     }
+}
+
+TEST(testmapsQ1, onlyents)
+{
+    // copy the reference .bsp from the "testmaps/compiled" subdir into "testmaps" where it's gitignored
+    auto orig_bsp_path = std::filesystem::path(testmaps_dir) / "compiled" / "q1_detail_fence2.bsp";
+    auto copy_bsp_path = std::filesystem::path(testmaps_dir) / "q1_detail_fence2.bsp";
+    ASSERT_TRUE(std::filesystem::copy_file(orig_bsp_path, copy_bsp_path, std::filesystem::copy_options::overwrite_existing));
+
+    // do an onlyents compile of testmaps/q1_detail_fence2.bsp, patching it with modified entdata from
+    // q1_detail_fence2_onlyents.map
+    const auto [bsp, bspx, prt] = LoadTestmap(
+        std::filesystem::path(testmaps_dir) / "q1_detail_fence2_onlyents.map",
+        copy_bsp_path,
+        {"-onlyents"});
+
+    // difference from q1_detail_fence2_onlyents.map:
+    // - "_tb_def" is removed
+    // - brushes are removed
+    // - func_detail_illusionary/func_detail_fence are removed
+    //
+    // differences from compiled/q1_detail_fence2.bsp:
+    // - worldspawn message
+    // - info_player_start position
+    EXPECT_EQ(bsp.dentdata, R"({
+"mapversion" "220"
+"classname" "worldspawn"
+"wad" "deprecated/free_wad.wad;deprecated/fence.wad;deprecated/origin.wad;deprecated/hintskip.wad"
+"_wateralpha" "0.5"
+"message" "Edited message"
+}
+{
+"classname" "info_player_start"
+"origin" "64 -112 98"
+}
+)");
 }

@@ -473,7 +473,7 @@ qbsp_settings::qbsp_settings()
       nodetail{this, "nodetail", false, &debugging_group, "treat all detail brushes to structural"}, // tests, docs
       chop{this, "chop", false, &debugging_group, "adjust brushes to remove intersections if possible"},
       chopfragment{this, "chopfragment", false, &debugging_group, "always do full fragmentation for chop"},
-      onlyents{this, "onlyents", false, &map_development_group, "only updates .MAP entities"},
+      onlyents{this, "onlyents", false, &map_development_group, "only updates .MAP entities"}, // tests, docs
       splitsky{this, "splitsky", false, &debugging_group, "doesn't combine sky faces into one large face"},
       splitturb{this, {"litwater", "splitturb"}, true, &common_format_group,
           "doesn't combine water faces into one large face"},
