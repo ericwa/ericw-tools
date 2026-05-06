@@ -482,9 +482,9 @@ qbsp_settings::qbsp_settings()
       transwater{this, "transwater", true, &common_format_group, // tests, docs
           "compute portal information for transparent water"},
       notextures{this, "notex", false, &common_format_group,
-          "write only placeholder textures to depend upon replacements, keep file sizes down, or to skirt copyrights"},
+          "write only placeholder textures to depend upon replacements, keep file sizes down, or to skirt copyrights"}, // tests, docs
       missing_textures_as_zero_size{
-          this, "missing_textures_as_zero_size", false, &common_format_group, "write missing textures as 0x0"},
+          this, "missing_textures_as_zero_size", false, &common_format_group, "write missing textures as 0x0"}, // tests, docs
       convertmapformat{this, "convert", conversion_t::none,
           {{"quake", conversion_t::quake}, {"quake2", conversion_t::quake2}, {"valve", conversion_t::valve},
               {"bp", conversion_t::bp}},
@@ -521,19 +521,19 @@ qbsp_settings::qbsp_settings()
       tjunc{this, {"tjunc", "notjunc"}, tjunclevel_t::MWT,
           {{"none", tjunclevel_t::NONE}, {"rotate", tjunclevel_t::ROTATE}, {"retopologize", tjunclevel_t::RETOPOLOGIZE},
               {"mwt", tjunclevel_t::MWT}},
-          &debugging_group, "T-junction fix level"},
+          &debugging_group, "T-junction fix level"}, // tests, docs
       objexport{
           this, "objexport", false, &debugging_group, "export the map file as .OBJ models during various CSG phases"},
-      noextendedsurfflags{this, "noextendedsurfflags", false, &debugging_group, "suppress writing a .texinfo file"},
+      noextendedsurfflags{this, "noextendedsurfflags", false, &debugging_group, "suppress writing a .texinfo file"}, // tests, docs
       noextendedcontentflags{
-          this, "noextendedcontentflags", false, &debugging_group, "suppress writing a .content.json file"},
+          this, "noextendedcontentflags", false, &debugging_group, "suppress writing a .content.json file"}, // tests
       wrbrushes{this, {"wrbrushes", "bspx"}, false, &common_format_group,
-          "includes a list of brushes for brush-based collision"},
+          "includes a list of brushes for brush-based collision"}, // tests, docs
       wrbrushesonly{this, {"wrbrushesonly", "bspxonly"}, {&wrbrushes, &noclip}, &common_format_group,
           "includes BSPX brushes and does not output clipping hulls (wrbrushes + noclip)"},
       bmodelcontents{this, "bmodelcontents", false, &common_format_group,
-          "allow control over brush contents in bmodels, don't force CONTENTS_SOLID"},
-      omitdetail{this, "omitdetail", false, &map_development_group, "omit *all* detail brushes from the compile"},
+          "allow control over brush contents in bmodels, don't force CONTENTS_SOLID"}, // tests, docs
+      omitdetail{this, "omitdetail", false, &map_development_group, "omit *all* detail brushes from the compile"}, // tests, docs
       omitdetailwall{this, "omitdetailwall", false, &map_development_group,
           "func_detail_wall brushes are omitted from the compile"},
       omitdetailillusionary{this, "omitdetailillusionary", false, &map_development_group,
@@ -560,10 +560,10 @@ qbsp_settings::qbsp_settings()
           "allow formats to \"upgrade\" to compatible extended formats when a limit is exceeded (ie Quake BSP to BSP2)"},
       maxedges{[](setting_int32 &setting) { return setting.value() == 0 || setting.value() >= 3; }, this, "maxedges",
           64, &map_development_group,
-          "the max number of edges/vertices on a single face before it is split into another face"},
+          "the max number of edges/vertices on a single face before it is split into another face"}, // tests, docs
       midsplitbrushfraction{this, "midsplitbrushfraction", 0.0, &common_format_group,
           "switch to cheaper partitioning if a node contains this % of brushes in the map"},
-      add{this, "add", "", "", &common_format_group, "the given map file will be appended to the base map"},
+      add{this, "add", "", "", &common_format_group, "the given map file will be appended to the base map"}, // tests, docs
       scale{this, "scale", 1.0, &map_development_group,
           "scales the map brushes and point entity origins by a give factor"},
       loghulls{this, {"loghulls"}, false, &logging_group, "print log output for collision hulls"},
