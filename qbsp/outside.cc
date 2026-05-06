@@ -775,8 +775,7 @@ bool FillOutside(tree_t &tree, hull_index_t hullnum, bspbrush_t::container &brus
         }
 
         if (qbsp_options.leaktest.value()) {
-            logging::print("Aborting because -leaktest was used.\n");
-            exit(1);
+            FError("Aborting because -leaktest was used.\n");
         }
 
         // clear occupied state, so areas can be flooded in Q2

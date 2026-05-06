@@ -500,7 +500,7 @@ qbsp_settings::qbsp_settings()
       oldrottex{this, "oldrottex", false, &debugging_group, "use old rotate_ brush texturing aligned at (0 0 0)"},
       epsilon{this, "epsilon", 0.0001, 0.0, 1.0, &debugging_group, "customize epsilon value for point-on-plane checks"},
       microvolume{this, "microvolume", 0.0, 0.0, 1000.0, &debugging_group, "microbrush volume"},
-      leaktest{this, "leaktest", false, &map_development_group, "make compilation fail if the map leaks"},
+      leaktest{this, "leaktest", false, &map_development_group, "make compilation fail if the map leaks"}, // tests, docs
       outsidedebug{this, "outsidedebug", false, &debugging_group,
           "write a .map after outside filling showing non-visible brush sides"},
       debugchop{this, "debugchop", false, &debugging_group, "write a .map after ChopBrushes"},

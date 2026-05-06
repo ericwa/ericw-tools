@@ -3092,3 +3092,13 @@ TEST(testmapsQ1, onlyents)
 }
 )");
 }
+
+TEST(testmapsQ1, leaktest)
+{
+    auto l = []() {
+        const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_cube.map", {"-leaktest"});
+    };
+
+    EXPECT_THAT(
+            l, testing::ThrowsMessage<std::exception>(testing::HasSubstr("Aborting because -leaktest was used.")));
+}
