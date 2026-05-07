@@ -30,7 +30,8 @@ TEST(testmapsQ2, detail)
     EXPECT_EQ(0, leaf0.firstmarksurface);
     EXPECT_EQ(0, leaf0.nummarksurfaces);
     EXPECT_EQ(leaf0.ambient_level, (std::array<uint8_t, NUM_AMBIENTS>{0, 0, 0, 0}));
-    // note, this is inconsistent with original qbsp3 (leaf 0 has Q2_CONTENTS_SOLID and all other fields 0) but makes more sense
+    // note, this is inconsistent with original qbsp3 (leaf 0 has Q2_CONTENTS_SOLID and all other fields 0) but makes
+    // more sense
     EXPECT_EQ(CLUSTER_INVALID, leaf0.cluster);
     EXPECT_EQ(AREA_INVALID, leaf0.area);
     EXPECT_EQ(0, leaf0.firstleafbrush);
@@ -1251,4 +1252,50 @@ TEST(testmapsQ2, chopOrder1)
 
     EXPECT_THAT(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0})),
         testing::UnorderedElementsAre("e1u1/+0btshoot2"));
+}
+
+TEST(testmapsQ2, brushListMerging)
+{
+    SCOPED_TRACE("when adjacent leafs are merged, their brush lists should merge as well");
+
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_cubes.map");
+
+    ASSERT_EQ(bsp.dleafs.size(), 8); // 1 unused (leaf 0) + 6 sides of a cube + 1 cube interior (empty)
+
+    auto *floor_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0});
+    EXPECT_EQ(2, floor_leaf->numleafbrushes);
+}
+
+TEST(testmapsQ2, nomergeOff)
+{
+    SCOPED_TRACE("the floor is merged into 1 face by default");
+
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_cubes.map");
+
+    auto *floor_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 16});
+    const auto w = Face_Winding(&bsp, floor_face);
+
+    const auto expected = winding_t{{-48, 64, 16}, {48, 64, 16}, {48, -48, 16}, {-48, -48, 16}};
+
+    EXPECT_TRUE(w.directional_equal(expected));
+}
+
+TEST(testmapsQ2, nomergeOn)
+{
+    SCOPED_TRACE("with -nomerge, the top faces of the two floor brushes aren't merged");
+
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_cubes.map", {"-nomerge"});
+
+    auto *floor_face_top = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {0, 32, 16});
+    auto *floor_face_bot = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {0, -24, 16});
+    ASSERT_NE(floor_face_top, floor_face_bot);
+
+    const auto top = Face_Winding(&bsp, floor_face_top);
+    const auto bot = Face_Winding(&bsp, floor_face_bot);
+
+    const auto expected_top = winding_t{{-48, 64, 16}, {48, 64, 16}, {48, 0, 16}, {-48, 0, 16}};
+    const auto expected_bot = winding_t{{-48, 0, 16}, {48, 0, 16}, {48, -48, 16}, {-48, -48, 16}};
+
+    EXPECT_TRUE(top.directional_equal(expected_top));
+    EXPECT_TRUE(bot.directional_equal(expected_bot));
 }

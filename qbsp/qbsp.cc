@@ -465,7 +465,7 @@ qbsp_settings::qbsp_settings()
       subdivide{this, "subdivide", 240, &common_format_group,
           "change the subdivide threshold, in luxels. 0 will disable subdivision entirely"},
       nofill{this, "nofill", false, &debugging_group, "don't perform outside filling"}, // tests, docs
-      nomerge{this, "nomerge", false, &debugging_group, "don't perform face merging"},
+      nomerge{this, "nomerge", false, &debugging_group, "don't perform face merging"}, // tests, docs
       nomergeacrossliquids{this, "nomergeacrossliquids", false, &common_format_group, "deprecated, no effect"},
       noedgereuse{this, "noedgereuse", false, &debugging_group, "don't reuse edges (for debugging software rendering)"},
       noclip{this, "noclip", false, &common_format_group, "don't write clip nodes (Q1-like BSP formats)"},
