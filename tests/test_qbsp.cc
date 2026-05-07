@@ -3093,6 +3093,29 @@ TEST(testmapsQ1, onlyents)
 )");
 }
 
+TEST(testmapsQ1, dentdata)
+{
+    const auto [bsp, bspx, prt] = LoadTestmap("q1_detail_fence2.map");
+
+    // basic test of how the .map gets converted into bsp.dentdata
+    // - comments are removed
+    // - "_tb_def" is removed
+    // - brushes are removed
+    // - func_detail_illusionary/func_detail_fence are removed
+
+    EXPECT_EQ(bsp.dentdata, R"({
+"mapversion" "220"
+"classname" "worldspawn"
+"wad" "deprecated/free_wad.wad;deprecated/fence.wad;deprecated/origin.wad;deprecated/hintskip.wad"
+"_wateralpha" "0.5"
+}
+{
+"classname" "info_player_start"
+"origin" "64 -112 88"
+}
+)");
+}
+
 TEST(testmapsQ1, leaktest)
 {
     auto l = []() {
