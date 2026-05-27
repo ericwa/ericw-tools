@@ -1061,6 +1061,7 @@ TEST(ltfaceQ1, sunlightTwoSuns)
 
         {
             SCOPED_TRACE("check point getting both suns");
+            SCOPED_TRACE("and not _light_channel_mask 2 green light_fluoro");
 
             auto samp_optional = Lightgrid_SampleAtPoint(*parsed, {88, 600, -248});
             ASSERT_TRUE(samp_optional.has_value());

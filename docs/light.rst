@@ -1171,6 +1171,8 @@ Light Keys
 
    Default 1.
 
+   .. note:: Lightgrids only receive light channel mask 1.
+
 .. light-key:: "_shadow_channel_mask" "n"
 
    This is the mask of lighting channels that will block this entity's light rays. If the the bitwise AND of this

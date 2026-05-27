@@ -1332,6 +1332,11 @@ static void LightFace_Entity(
 static void LightPoint_Entity(const mbsp_t *bsp, raystream_occlusion_t &rs, const light_t *entity,
     const qvec3f &surfpoint, lightgrid_samples_t &result)
 {
+    // check lighting channels
+    if (entity->light_channel_mask.value() != CHANNEL_MASK_DEFAULT) {
+        return;
+    }
+
     rs.clearPushedRays();
 
     qvec3f surfpointToLightDir;
