@@ -19,7 +19,7 @@ See file, 'COPYING', for details.
 
 #pragma once
 
-#include <fmt/core.h>
+#include <fmt/base.h>
 #include <ostream>
 #include <iterator>
 

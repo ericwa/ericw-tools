@@ -85,7 +85,7 @@ target_precompile_headers(common INTERFACE
         <shared_mutex>
         <type_traits>
         <variant>
-        <fmt/core.h>
+        <fmt/base.h>
         <tbb/scalable_allocator.h>
         <tbb/task_group.h>
         <tbb/task_group.h>

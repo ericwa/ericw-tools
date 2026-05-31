@@ -272,7 +272,7 @@ template<class T, size_t Dim>
 struct fmt::formatter<aabb<T, Dim>> : formatter<qvec<T, Dim>>
 {
     template<typename FormatContext>
-    auto format(const aabb<T, Dim> &b, FormatContext &ctx) -> decltype(ctx.out())
+    auto format(const aabb<T, Dim> &b, FormatContext &ctx) const -> decltype(ctx.out())
     {
         fmt::format_to(ctx.out(), "{{mins: ");
         fmt::formatter<qvec<T, Dim>>::format(b.mins(), ctx);

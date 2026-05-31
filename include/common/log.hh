@@ -33,7 +33,7 @@
 #include <stdexcept> // for std::runtime_error
 #include <functional> // for std::function
 #include <optional> // for std::optional
-#include <fmt/core.h>
+#include <fmt/base.h>
 #include <common/bitflags.hh>
 #include <common/fs.hh>
 #include <common/cmdlib.hh>

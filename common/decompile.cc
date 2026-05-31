@@ -37,7 +37,7 @@
 #include <utility>
 #include <tuple>
 
-#include <fmt/core.h>
+#include <fmt/base.h>
 
 #include "tbb/parallel_for.h"
 

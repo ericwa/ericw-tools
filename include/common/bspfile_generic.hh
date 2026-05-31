@@ -19,7 +19,7 @@
 
 #pragma once
 
-#include <fmt/core.h>
+#include <fmt/base.h>
 
 #include <cinttypes>
 #include <iosfwd>
@@ -184,7 +184,7 @@ struct fmt::formatter<plane_type_t>
     constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) { return ctx.end(); }
 
     template<typename FormatContext>
-    auto format(plane_type_t t, FormatContext &ctx)
+    auto format(plane_type_t t, FormatContext &ctx) const
     {
         string_view name = "unknown";
         switch (t) {

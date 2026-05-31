@@ -20,7 +20,7 @@
 #include <common/qvec.hh>
 
 #include <cmath> // for NAN
-#include <fmt/core.h>
+#include <fmt/base.h>
 
 namespace qv
 {

@@ -554,7 +554,7 @@ struct fmt::formatter<bspversion_t>
     constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) { return ctx.end(); }
 
     template<typename FormatContext>
-    auto format(const bspversion_t &v, FormatContext &ctx) -> decltype(ctx.out())
+    auto format(const bspversion_t &v, FormatContext &ctx) const -> decltype(ctx.out())
     {
         if (v.name) {
             fmt::format_to(ctx.out(), "{} ", v.name);

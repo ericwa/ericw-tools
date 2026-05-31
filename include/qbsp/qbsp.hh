@@ -363,7 +363,7 @@ template<>
 struct fmt::formatter<qbsp_plane_t> : formatter<qplane3d>
 {
     template<typename FormatContext>
-    auto format(const qbsp_plane_t &p, FormatContext &ctx) -> decltype(ctx.out())
+    auto format(const qbsp_plane_t &p, FormatContext &ctx) const -> decltype(ctx.out())
     {
         fmt::format_to(ctx.out(), "<");
         fmt::formatter<qplane3d>::format(p.get_plane(), ctx);

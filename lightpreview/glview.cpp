@@ -29,7 +29,7 @@ See file, 'COPYING', for details.
 #include <QWheelEvent>
 #include <QKeyEvent>
 #include <QTime>
-#include <fmt/core.h>
+#include <fmt/base.h>
 #include <QOpenGLFramebufferObject>
 #include <QOpenGLDebugLogger>
 #include <QStandardPaths>

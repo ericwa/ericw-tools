@@ -25,7 +25,7 @@
 
 #include <fstream>
 #include <iomanip>
-#include <fmt/core.h>
+#include <fmt/base.h>
 #include <common/json.hh>
 #include "common/fs.hh"
 #include "common/imglib.hh"

@@ -106,7 +106,7 @@ path resolveArchivePath(const path &source);
 // returns the path with extension replaced with `extension`.
 fs::path DefaultExtension(const fs::path &path, const fs::path &extension);
 
-#include <fmt/core.h>
+#include <fmt/base.h>
 
 // TODO: no wchar_t support in this version apparently
 template<>
@@ -115,7 +115,7 @@ struct fmt::formatter<fs::path>
     constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) { return ctx.end(); }
 
     template<typename FormatContext>
-    auto format(const fs::path &p, FormatContext &ctx)
+    auto format(const fs::path &p, FormatContext &ctx) const
     {
         return fmt::format_to(ctx.out(), "{}", p.string());
     }

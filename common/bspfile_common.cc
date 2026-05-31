@@ -33,7 +33,7 @@
 #include <cstdint>
 #include <limits.h>
 
-#include <fmt/core.h>
+#include <fmt/base.h>
 
 #include <atomic>
 #include <mutex>

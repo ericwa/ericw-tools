@@ -30,7 +30,7 @@
 #include <limits.h>
 #include <system_error>
 
-#include <fmt/core.h>
+#include <fmt/base.h>
 
 #include <atomic>
 #include <mutex>

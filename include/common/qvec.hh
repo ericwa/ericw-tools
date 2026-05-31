@@ -27,7 +27,8 @@
 #include <algorithm>
 #include <array>
 #include <ostream>
-#include <fmt/core.h>
+#include <fmt/base.h>
+#include <fmt/format.h>
 #include <tuple>
 #include <functional>
 #include "common/mathlib.hh"
@@ -299,7 +300,7 @@ struct fmt::formatter<qvec<T, N>>
     constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) { return ctx.end(); }
 
     template<typename FormatContext>
-    auto format(const qvec<T, N> &p, FormatContext &ctx) -> decltype(ctx.out())
+    auto format(const qvec<T, N> &p, FormatContext &ctx) const -> decltype(ctx.out())
     {
         for (size_t i = 0; i < N - 1; i++) {
             fmt::format_to(ctx.out(), "{}", p[i]);
@@ -823,7 +824,7 @@ template<class T>
 struct fmt::formatter<qplane3<T>> : formatter<qvec<T, 3>>
 {
     template<typename FormatContext>
-    auto format(const qplane3<T> &p, FormatContext &ctx) -> decltype(ctx.out())
+    auto format(const qplane3<T> &p, FormatContext &ctx) const -> decltype(ctx.out())
     {
         fmt::format_to(ctx.out(), "{{normal: ");
         fmt::formatter<qvec<T, 3>>::format(p.normal, ctx);
@@ -1028,7 +1029,7 @@ template<class T, size_t NRow, size_t NCol>
 struct fmt::formatter<qmat<T, NRow, NCol>> : formatter<qvec<T, NCol>>
 {
     template<typename FormatContext>
-    auto format(const qmat<T, NRow, NCol> &p, FormatContext &ctx) -> decltype(ctx.out())
+    auto format(const qmat<T, NRow, NCol> &p, FormatContext &ctx) const -> decltype(ctx.out())
     {
         for (size_t i = 0; i < NRow; i++) {
             fmt::format_to(ctx.out(), "[ ");
