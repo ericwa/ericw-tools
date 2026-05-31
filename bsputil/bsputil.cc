@@ -178,7 +178,7 @@ bsputil_settings::bsputil_settings()
           nullptr, "Remove a BSPX lump"},
       svg{this, "svg",
           [&](const std::string &name, parser_base_t &parser, settings::source src) {
-              return this->load_setting<settings::setting_int32>(name, parser, src, 0);
+              return this->load_setting<settings::setting_bool>(name, parser, src, false);
           },
           nullptr, "Create an SVG view of the input BSP"}
 {

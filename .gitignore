@@ -22,6 +22,7 @@ testmaps/**/*.vis
 testmaps/**/*.texinfo
 testmaps/**/*.json
 testmaps/**/*.chop.map
+testmaps/**/*.svg
 **/autosave
 CMakeSettings.json
 sphinx-venv

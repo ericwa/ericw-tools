@@ -95,3 +95,58 @@ TEST(bsputil, parseExtractEntities)
     ASSERT_EQ(1, remainder.size());
     ASSERT_EQ("test.bsp", remainder[0]);
 }
+
+TEST(bsputil, parseSvg)
+{
+    bsputil_settings settings;
+
+    const char *arguments[] = {"bsputil.exe", "--svg", "test.bsp"};
+    token_parser_t p{std::size(arguments) - 1, arguments + 1, {}};
+    auto remainder = settings.parse(p);
+
+    ASSERT_EQ(1, remainder.size());
+    ASSERT_EQ("test.bsp", remainder[0]);
+
+    ASSERT_EQ(1, settings.operations.size());
+
+    settings::setting_base *svg_setting_base = settings.operations[0].get();
+    ASSERT_EQ(svg_setting_base->primary_name(), "svg");
+
+    settings::setting_bool *svg_bool = dynamic_cast<settings::setting_bool *>(svg_setting_base);
+    ASSERT_TRUE(svg_bool);
+    ASSERT_TRUE(svg_bool->value());
+}
+
+TEST(bsputil, svg)
+{
+    fs::path path = std::filesystem::path(testmaps_dir) / "compiled" / "q1_cube.bsp";
+    std::string path_str = path.generic_string();
+    const char *path_cstr = path_str.c_str();
+
+    std::vector<const char *> args;
+    args.push_back("bsputil.exe");
+    args.push_back("--svg");
+    args.push_back(path_cstr);
+
+    ASSERT_EQ(0, bsputil_main(args.size(), args.data()));
+
+    fs::path svg_path = path;
+    svg_path.replace_extension(".svg");
+
+    // read into a string
+    std::ifstream svg_istream(svg_path);
+    std::stringstream svg_sstream;
+    svg_sstream << svg_istream.rdbuf();
+
+    // TODO: the -nan
+    EXPECT_EQ(svg_sstream.str(), R"-(<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="112" height="160">
+<defs><g id="bsp">
+<polygon points="32,128 32,32 80,32 80,128 " fill="rgb(-nan, -nan, -nan)" />
+</g></defs>
+<use href="#bsp" fill="none" stroke="black" stroke-width="15" stroke-miterlimit="0" />
+<use href="#bsp" fill="white" stroke="black" stroke-width="1" />
+</svg>
+)-");
+}
