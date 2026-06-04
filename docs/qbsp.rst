@@ -594,13 +594,6 @@ exit.
    indicates slime, ``*lava`` is for lava, and anything else beginning with
    ``*`` will have contents as water.
 
-.. texture:: !slime
-             !lava
-             !
-
-   In all Q1-like games, for compatibility with Half-Life maps, names beginning with ``!`` are treated the same
-   as names beginning with ``*`` and create liquids.
-
 .. texture:: skip
 
    Any surfaces assigned a texture name of *skip* will be compiled into the
@@ -649,6 +642,14 @@ exit.
 
 Half-Life BSP Specifc
 ^^^^^^^^^^^^^^^^^^^^^
+
+If :option:`-hlbsp` is in use, the following exta texture prefixes are recognized:
+
+.. texture:: !slime
+             !lava
+             !
+
+   These act the same as names beginning with ``*`` and create liquids.
 
 .. texture:: !cur_0
              !cur_90

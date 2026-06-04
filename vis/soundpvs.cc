@@ -108,24 +108,28 @@ void CalcAmbientSounds(mbsp_t *bsp)
                 if (!Q_strncasecmp(miptex.name.data(), "sky", 3) && !vis_options.noambientsky.value()) {
                     ambient_type = AMBIENT_SKY;
                 } else if (!Q_strncasecmp(miptex.name.data(), "*water", 6) ||
-                           !Q_strncasecmp(miptex.name.data(), "!water", 6)) {
+                           (!Q_strncasecmp(miptex.name.data(), "!water", 6) &&
+                               bsp->loadversion->game->allows_hl_contents)) {
                     if (!vis_options.noambientwater.value()) {
                         ambient_type = AMBIENT_WATER;
                     }
                 } else if (!Q_strncasecmp(miptex.name.data(), "*04water", 6) ||
-                           !Q_strncasecmp(miptex.name.data(), "!04water", 6)) {
+                           (!Q_strncasecmp(miptex.name.data(), "!04water", 6) &&
+                               bsp->loadversion->game->allows_hl_contents)) {
                     if (!vis_options.noambientwater.value()) {
                         ambient_type = AMBIENT_WATER;
                     }
                 } else if (!Q_strncasecmp(miptex.name.data(), "*slime", 6) ||
-                           !Q_strncasecmp(miptex.name.data(), "!slime", 6)) {
+                           (!Q_strncasecmp(miptex.name.data(), "!slime", 6) &&
+                               bsp->loadversion->game->allows_hl_contents)) {
                     if (!vis_options.noambientslime.value()) {
                         ambient_type =
                             AMBIENT_WATER; // AMBIENT_SLIME; // there should probably be a VIS arg to use the acutal
                                            // AMBIENT_SLIME, for games on custom engines that can parse it
                     }
                 } else if (!Q_strncasecmp(miptex.name.data(), "*lava", 5) ||
-                           !Q_strncasecmp(miptex.name.data(), "!lava", 5)) {
+                           (!Q_strncasecmp(miptex.name.data(), "!lava", 5) &&
+                               bsp->loadversion->game->allows_hl_contents)) {
                     if (!vis_options.noambientslime.value()) {
                         ambient_type = AMBIENT_LAVA;
                     }

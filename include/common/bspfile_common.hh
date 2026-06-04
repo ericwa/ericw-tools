@@ -477,6 +477,10 @@ struct gamedef_t
     // whether the game supports content flags on brush models
     bool allow_contented_bmodels = false;
 
+    // are HL specific texture prefixes recognized?
+    // TODO: move this back to gamedef_q1_like_t; should not be public
+    bool allows_hl_contents = false;
+
     // base dir for searching for paths, in case we are in a mod dir
     // note: we need this to be able to be overridden via options
     const std::string default_base_dir = {};

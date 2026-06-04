@@ -207,7 +207,7 @@ const qvec3f &GetSurfaceVertexPoint(const mbsp_t *bsp, const mface_t *f, int v)
     return bsp->dvertexes[Face_VertexAtIndex(bsp, f, v)];
 }
 
-static int TextureName_Contents(const char *texname)
+static int TextureName_Contents(const gamedef_t *game, const char *texname)
 {
     if (!Q_strncasecmp(texname, "sky", 3))
         return CONTENTS_SKY;
@@ -219,7 +219,7 @@ static int TextureName_Contents(const char *texname)
             return CONTENTS_SLIME;
         else
             return CONTENTS_WATER;
-    } else if (texname[0] == '!') // don't check liquids if not prefixed as such
+    } else if (texname[0] == '!' && game->allows_hl_contents) // don't check liquids if not prefixed as such
     {
         if (!Q_strncasecmp(texname, "!lava", 5))
             return CONTENTS_LAVA;
@@ -255,7 +255,7 @@ Face_ContentsOrSurfaceFlags(const mbsp_t *bsp, const mface_t *face)
         const mtexinfo_t *info = Face_Texinfo(bsp, face);
         return info->flags.native_q2;
     } else {
-        return TextureName_Contents(Face_TextureName(bsp, face));
+        return TextureName_Contents(bsp->loadversion->game, Face_TextureName(bsp, face));
     }
 }
 

@@ -115,6 +115,41 @@ TEST(common, q1Contents)
     }
 }
 
+TEST(common, q1ContentsParse)
+{
+    auto *game = bspver_q1.game;
+
+    struct case_t
+    {
+        const char *texname;
+        contents_int_t expected_ewt;
+        int expected_q1;
+    };
+
+    std::vector<case_t> cases{
+        {"something", EWT_VISCONTENTS_SOLID, CONTENTS_SOLID},
+        {"*something", EWT_VISCONTENTS_WATER, CONTENTS_WATER},
+        {"*slimexyz", EWT_VISCONTENTS_SLIME, CONTENTS_SLIME},
+        {"*lavaxyz", EWT_VISCONTENTS_LAVA, CONTENTS_LAVA},
+        {"skyxyz", EWT_VISCONTENTS_SKY, CONTENTS_SKY},
+        // these HL contents are not supported in q1 mode
+        {"!something", EWT_VISCONTENTS_SOLID, CONTENTS_SOLID},
+        {"!cur_0X", EWT_VISCONTENTS_SOLID, CONTENTS_SOLID},
+    };
+
+    for (const case_t &c : cases) {
+        // check face_get_contents
+        auto case_contents = game->face_get_contents(c.texname, {}, {}, false);
+        EXPECT_EQ(case_contents.flags, c.expected_ewt);
+
+        // check EWT -> Q1
+        EXPECT_EQ(c.expected_q1, game->contents_to_native(case_contents));
+
+        // check Q1 -> EWT
+        EXPECT_EQ(c.expected_ewt, game->create_contents_from_native(c.expected_q1).flags);
+    }
+}
+
 TEST(common, hlCurrents)
 {
     auto *game = bspver_hl.game;

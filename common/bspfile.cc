@@ -182,8 +182,6 @@ template<gameid_t ID>
 struct gamedef_q1_like_t : public gamedef_t
 {
 public:
-    bool allows_hl_contents = false;
-
     explicit gamedef_q1_like_t(const char *friendly_name = "quake", const char *base_dir = "ID1")
         : gamedef_t(friendly_name, base_dir)
     {
@@ -360,7 +358,7 @@ public:
             return contentflags_t::make(EWT_VISCONTENTS_EMPTY);
         } else if (!Q_strcasecmp(texname.data(), "clip")) {
             return contentflags_t::make(EWT_INVISCONTENTS_PLAYERCLIP);
-        } else if ((texname[0] == '*') || (texname[0] == '!')) {
+        } else if ((texname[0] == '*') || (texname[0] == '!' && allows_hl_contents)) {
             // non-Q2: -transwater implies liquids are detail and translucent
             contents_int_t liquid_flags = 0;
             if (transwater) {

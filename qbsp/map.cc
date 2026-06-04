@@ -497,15 +497,17 @@ int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_inf
 
 static bool IsSkipName(const char *name)
 {
+    const gamedef_t *game = qbsp_options.target_game;
+
     if (qbsp_options.noskip.value())
         return false;
     if (!Q_strcasecmp(name, "skip"))
         return true;
-    if ((!Q_strcasecmp(name, "*waterskip")) || (!Q_strcasecmp(name, "!waterskip")))
+    if ((!Q_strcasecmp(name, "*waterskip")) || (!Q_strcasecmp(name, "!waterskip") && game->allows_hl_contents))
         return true;
-    if ((!Q_strcasecmp(name, "*slimeskip")) || (!Q_strcasecmp(name, "!slimeskip")))
+    if ((!Q_strcasecmp(name, "*slimeskip")) || (!Q_strcasecmp(name, "!slimeskip") && game->allows_hl_contents))
         return true;
-    if ((!Q_strcasecmp(name, "*lavaskip")) || (!Q_strcasecmp(name, "!lavaskip")))
+    if ((!Q_strcasecmp(name, "*lavaskip")) || (!Q_strcasecmp(name, "!lavaskip") && game->allows_hl_contents))
         return true;
     if (!Q_strcasecmp(name, "bevel")) // zhlt compat
         return true;
@@ -527,7 +529,9 @@ static bool IsNoExpandName(const char *name)
  */
 static bool IsSpecialName(const char *name, bool allow_litwater)
 {
-    if (((name[0] == '*') || (name[0] == '!')) && !allow_litwater)
+    const gamedef_t *game = qbsp_options.target_game;
+
+    if (((name[0] == '*') || (name[0] == '!' && game->allows_hl_contents)) && !allow_litwater)
         return true;
     if (!Q_strncasecmp(name, "sky", 3) && !qbsp_options.splitsky.value())
         return true;
