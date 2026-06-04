@@ -2,19 +2,37 @@
 Changelog
 =========
 
-2.0.0-alpha11 (unreleased)
-==========================
+2.0.0-alpha11
+=============
+
+Changes
+-------
+
+- common: disable color codes where stdout is not a TTY
+- common: ENABLE_WRAP_AT_EOL_OUTPUT for console wrapping on Windows
+- qbsp: :option:`qbsp -wrbrushes` no longer implies contented bmodels (https://github.com/ericwa/ericw-tools/issues/467)
 
 Features
 --------
 
+- lightpreview: file dialogs now remember the last used directory
+- lightpreview: add Face panel which shows info on the clicked face
+- qbsp: Half-Life: support ``!`` prefix for liquids, as well as ``!cur_`` water current contents
+- light: support for new ``LIGHTGRIDS`` BSPX lump (:option:`light -lightgrid_format` ``lightgrids``)
+- lightpreview: added a visualization for lightgrids ("Draw Lightgrid" checkbox)
 - light: support Half-Life style :light-key:`light` fields where the value is ``r g b brightness`` or ``r g b`` instead
   of the ususal ``brightness``
-- lightpreview: added a visualization for lightgrids ("Draw Lightgrid" checkbox).
 
 Bug fixes
 ---------
 
+- bsputil: fix :option:`bsputil --svg` option parsing
+- light: fix lightgrids to only receive on light channel 1
+- qbsp: handle :classname:`func_detail_fence` + :classname:`func_illusionary_visblocker` in q1
+- maputil: fix conversion to Valve texture format leaving the "rotate" field uninitialized
+- qbsp: fix crash on ``nan`` in the texture offset component of Valve 220 .map format
+- qbsp: further :classname:`func_detail_fence` fixes following on alpha10's. This last fix only affects engines
+  that frustum-cull leaf bounds.
 - light: fix :worldspawn-key:`_bouncecolorscale` being ignored (only worked if specified on command-line).
   regression from 0.18 (https://github.com/ericwa/ericw-tools/issues/424).
 - light: fix using :light-key:`delay` ``4`` (local minlight) + :light-key:`_light_channel_mask` together on the same
