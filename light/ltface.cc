@@ -2751,8 +2751,6 @@ static bool LightFace_DirectGPU(const mbsp_t *bsp, lightsurf_t *lightsurf, light
 
 
 
-
-
 #if defined(HAVE_GPU_LIGHT)
 namespace {
 struct gpu_direct_face_record_t {
