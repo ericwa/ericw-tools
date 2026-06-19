@@ -2594,8 +2594,8 @@ struct gpu_direct_source_key_t {
 
 // lower values merge more nearby sun rays into one representative ray.
 // This preserves approximate energy by accumulating light/color into the merged source.
-// Raise to 64/128 for quality, lower to 16/8 for speed.
-static constexpr float GPU_DIRECT_SUN_DIR_MERGE_SCALE = 32.0f;
+// Raise to 512~4096 for quality, lower to 16/8 for speed.
+static constexpr float GPU_DIRECT_SUN_DIR_MERGE_SCALE = 512.0f;
 
 static int GPU_Direct_Quantize(float v, float scale = 4096.0f)
 {
