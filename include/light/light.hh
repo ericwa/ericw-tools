@@ -396,6 +396,7 @@ public:
     setting_bool novanilla;
     setting_scalar gate;
     setting_int32 sunsamples;
+    settings::setting_bool gpu; // -gpu: use Vulkan GPU ray-query backend when available
     setting_bool arghradcompat;
     setting_bool nolighting;
     setting_vec3 debugface;

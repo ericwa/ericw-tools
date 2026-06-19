@@ -18,6 +18,10 @@
 */
 
 #include <light/ltface.hh>
+#include <chrono>
+#include <cstdint>
+#include <mutex>
+#include <light/trace_gpu.hh>
 
 #include <light/light.hh>
 #include <light/trace_embree.hh>
@@ -2556,6 +2560,400 @@ lightsurf_t CreateLightmapSurface(const mbsp_t *bsp, const mface_t *face, const 
     return Lightsurf_Init(modelinfo, cfg, face, bsp, facesup, facesup_decoupled);
 }
 
+
+
+#if defined(HAVE_GPU_LIGHT)
+static bool LightFace_DirectGPU(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
+{
+    // v5 disabled: per-face GPU direct was slower than Embree.
+    return false;
+
+    // v4 disabled: per-face GPU direct was slower than Embree.
+    return false;
+
+    // Disabled: this per-face GPU direct path is currently slower than Embree.
+    // It is not the final whole-phase batching architecture.
+    return false;
+
+    if (!GPU_TraceAvailable()) {
+        return false;
+    }
+
+    constexpr std::size_t GPU_DIRECT_MIN_JOBS = 32768;
+
+    const settings::worldspawn_keys &cfg = *lightsurf->cfg;
+    const modelinfo_t *modelinfo = lightsurf->modelinfo;
+    const qplane3f &plane = lightsurf->plane;
+    const std::size_t sample_count = lightsurf->samples.size();
+    if (!sample_count) {
+        return true;
+    }
+
+    std::vector<std::vector<gpu_light::direct_job_t>> per_sample(sample_count);
+
+    auto add_job = [&](int sample_index, const qvec3f &origin, const qvec3f &direction, float dist, const qvec3f &color, const qvec3f &normalcontrib) {
+        gpu_light::direct_job_t job{};
+        job.ox = origin[0];
+        job.oy = origin[1];
+        job.oz = origin[2];
+        job.tmin = 0.01f;
+        job.dx = direction[0];
+        job.dy = direction[1];
+        job.dz = direction[2];
+        job.tmax = dist;
+        job.cr = color[0];
+        job.cg = color[1];
+        job.cb = color[2];
+        job.nr = normalcontrib[0];
+        job.ng = normalcontrib[1];
+        job.nb = normalcontrib[2];
+        job.sample_index = static_cast<std::uint32_t>(sample_index);
+        per_sample[static_cast<std::size_t>(sample_index)].push_back(job);
+    };
+
+    // Entity lights.  This fast path is deliberately style-0/default-channel only.
+    for (const auto &entity_ptr : GetLights()) {
+        const light_t *entity = entity_ptr.get();
+        if (entity->getFormula() == LF_LOCALMIN) continue;
+        if (entity->nostaticlight.value()) continue;
+        if (entity->light.value() <= 0) continue;
+
+        if (entity->style.value() != 0) return false;
+        if (entity->shadow_channel_mask.value() != CHANNEL_MASK_DEFAULT) return false;
+        if (entity->light_channel_mask.value() != CHANNEL_MASK_DEFAULT) return false;
+
+        if (light_options.visapprox.value() == visapprox_t::VIS &&
+            entity->light_channel_mask.value() == CHANNEL_MASK_DEFAULT &&
+            entity->shadow_channel_mask.value() == CHANNEL_MASK_DEFAULT &&
+            VisCullEntity(bsp, lightsurf->pvs, entity->leaf)) {
+            continue;
+        }
+
+        const float planedist = plane.distance_to(entity->origin.value());
+        if (planedist < 0 && !entity->bleed.value() && !lightsurf->curved && !lightsurf->twosided) {
+            continue;
+        }
+        if (CullLight(entity, lightsurf)) {
+            continue;
+        }
+        if (!(entity->light_channel_mask.value() & lightsurf->object_channel_mask)) {
+            continue;
+        }
+
+        for (int i = 0; i < static_cast<int>(lightsurf->samples.size()); i++) {
+            const auto &sample = lightsurf->samples[i];
+            if (sample.occluded) continue;
+
+            const qvec3f &surfpoint = sample.point;
+            const qvec3f &surfnorm = sample.normal;
+            qvec3f surfpointToLightDir;
+            float surfpointToLightDist;
+            qvec3f color;
+            qvec3f normalcontrib;
+            GetLightContrib(cfg, entity, surfnorm, true, surfpoint, lightsurf->twosided, color, surfpointToLightDir, normalcontrib, &surfpointToLightDist);
+            const float occlusion = Dirt_GetScaleFactor(cfg, sample.occlusion, entity, surfpointToLightDist, lightsurf);
+            color *= occlusion;
+            if (fabs(LightSample_Brightness(color)) <= light_options.gate.value()) {
+                continue;
+            }
+            add_job(i, surfpoint, surfpointToLightDir, surfpointToLightDist, color, normalcontrib);
+        }
+    }
+
+    // Sunlight.  The GPU AS contains opaque solids only, so a miss is treated as visible sky.
+    // Sun texture filtering and non-zero styles stay on the CPU path.
+    for (const sun_t &sun : GetSuns()) {
+        if (sun.sunlight <= 0) continue;
+        if (sun.style != 0) return false;
+        if (sun.suntexture_value) return false;
+
+        qvec3f incoming = qv::normalize(sun.sunvec);
+        const float dp = qv::dot(incoming, plane.normal);
+        if (dp < -LIGHT_ANGLE_EPSILON && !lightsurf->curved && !lightsurf->twosided) {
+            continue;
+        }
+        if (!(lightsurf->object_channel_mask & CHANNEL_MASK_DEFAULT)) {
+            continue;
+        }
+
+        for (int i = 0; i < static_cast<int>(lightsurf->samples.size()); i++) {
+            const auto &sample = lightsurf->samples[i];
+            if (sample.occluded) continue;
+
+            const qvec3f &surfpoint = sample.point;
+            const qvec3f &surfnorm = sample.normal;
+            float angle = qv::dot(incoming, surfnorm);
+            if (lightsurf->twosided && angle < 0) {
+                angle = -angle;
+            }
+            angle = std::max(0.0f, angle);
+            angle = (1.0f - sun.anglescale) + sun.anglescale * angle;
+            float value = angle * sun.sunlight;
+            if (sun.dirt) {
+                value *= Dirt_GetScaleFactor(cfg, sample.occlusion, NULL, 0.0f, lightsurf);
+            }
+            qvec3f color = sun.sunlight_color * (value / 255.0f);
+            if (fabs(LightSample_Brightness(color)) <= light_options.gate.value()) {
+                continue;
+            }
+            qvec3f normalcontrib = incoming * value;
+            add_job(i, surfpoint, incoming, MAX_SKY_DIST, color, normalcontrib);
+        }
+    }
+
+    std::size_t job_count = 0;
+    for (const auto &v : per_sample) {
+        job_count += v.size();
+    }
+    if (job_count == 0) {
+        return true;
+    }
+    if (job_count < GPU_DIRECT_MIN_JOBS) {
+        return false;
+    }
+
+    std::vector<gpu_light::direct_job_t> jobs;
+    std::vector<gpu_light::direct_sample_range_t> ranges(sample_count);
+    jobs.reserve(job_count);
+    for (std::size_t i = 0; i < sample_count; ++i) {
+        ranges[i].first = static_cast<std::uint32_t>(jobs.size());
+        ranges[i].count = static_cast<std::uint32_t>(per_sample[i].size());
+        jobs.insert(jobs.end(), per_sample[i].begin(), per_sample[i].end());
+    }
+
+    std::vector<gpu_light::direct_accum_t> accum(sample_count);
+    if (!gpu_light::trace_direct_accumulate_batch(
+            modelinfo,
+            CHANNEL_MASK_DEFAULT,
+            jobs.data(),
+            jobs.size(),
+            ranges.data(),
+            accum.data(),
+            sample_count)) {
+        return false;
+    }
+
+    lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
+    bool hit = false;
+    for (std::size_t i = 0; i < sample_count; ++i) {
+        if (!accum[i].hit) continue;
+        const qvec3f color{accum[i].cr, accum[i].cg, accum[i].cb};
+        const qvec3f normalcontrib{accum[i].nr, accum[i].ng, accum[i].nb};
+        lightsample_t &sample = lightmap->samples[i];
+        sample.color += color;
+        sample.direction += normalcontrib;
+        lightmap->bounce_color += color;
+        hit = true;
+    }
+    if (hit) {
+        Lightmap_Save(bsp, lightmaps, lightsurf, lightmap, 0);
+    }
+    return true;
+}
+#endif
+
+
+
+
+
+
+#if defined(HAVE_GPU_LIGHT)
+namespace {
+struct gpu_direct_face_record_t {
+    lightsurf_t *lightsurf = nullptr;
+    lightmapdict_t *lightmaps = nullptr;
+    std::size_t first_sample = 0;
+    std::size_t sample_count = 0;
+};
+
+std::mutex g_gpu_direct_queue_mutex;
+std::vector<gpu_light::direct_phase_sample_t> g_gpu_direct_samples;
+std::vector<gpu_light::direct_phase_source_t> g_gpu_direct_sources;
+std::vector<gpu_direct_face_record_t> g_gpu_direct_faces;
+bool g_gpu_direct_sources_built = false;
+bool g_gpu_direct_disabled = false;
+
+static constexpr std::size_t GPU_DIRECT_FLUSH_SAMPLES = 1024ull * 1024ull;
+
+static bool GPU_DirectQueue_BuildSourcesLocked()
+{
+    if (g_gpu_direct_sources_built) {
+        return !g_gpu_direct_disabled;
+    }
+    g_gpu_direct_sources_built = true;
+    g_gpu_direct_sources.clear();
+
+    for (const auto &entity_ptr : GetLights()) {
+        const light_t *entity = entity_ptr.get();
+        if (entity->nostaticlight.value()) continue;
+        if (entity->light.value() <= 0) continue;
+        if (entity->sun.value()) continue;
+
+        if (entity->style.value() != 0 ||
+            entity->shadow_channel_mask.value() != CHANNEL_MASK_DEFAULT ||
+            entity->light_channel_mask.value() != CHANNEL_MASK_DEFAULT ||
+            entity->spotlight || entity->projectedmip ||
+            entity->getFormula() == LF_LOCALMIN) {
+            logging::print("GPU direct phase: unsupported entity light encountered; falling back to CPU direct path.\n");
+            g_gpu_direct_disabled = true;
+            return false;
+        }
+
+        gpu_light::direct_phase_source_t src{};
+        const qvec3f origin = entity->origin.value();
+        const qvec3f color = entity->color.value();
+        src.px = origin[0]; src.py = origin[1]; src.pz = origin[2];
+        src.light = entity->light.value();
+        src.dx = 0; src.dy = 0; src.dz = 1; src.dist = 0;
+        src.cr = color[0]; src.cg = color[1]; src.cb = color[2];
+        src.atten = entity->atten.value();
+        src.type = 0;
+        src.formula = static_cast<std::uint32_t>(entity->getFormula());
+        src.flags = entity->dirt.value() ? 1u : 0u;
+        src.anglescale = entity->anglescale.value();
+        src.dirt = entity->dirt.value();
+        src.falloff = entity->falloff.value();
+        g_gpu_direct_sources.push_back(src);
+    }
+
+    for (const sun_t &sun : GetSuns()) {
+        if (sun.sunlight <= 0) continue;
+        if (sun.style != 0 || sun.suntexture_value) {
+            logging::print("GPU direct phase: unsupported sun style/texture encountered; falling back to CPU direct path.\n");
+            g_gpu_direct_disabled = true;
+            return false;
+        }
+        qvec3f incoming = qv::normalize(sun.sunvec);
+        gpu_light::direct_phase_source_t src{};
+        src.type = 1;
+        src.dx = incoming[0]; src.dy = incoming[1]; src.dz = incoming[2];
+        src.dist = MAX_SKY_DIST;
+        src.light = sun.sunlight;
+        src.cr = sun.sunlight_color[0]; src.cg = sun.sunlight_color[1]; src.cb = sun.sunlight_color[2];
+        src.atten = 1;
+        src.formula = 0;
+        src.flags = sun.dirt ? 1u : 0u;
+        src.anglescale = sun.anglescale;
+        src.dirt = sun.dirt ? 1.0f : 0.0f;
+        g_gpu_direct_sources.push_back(src);
+    }
+
+    logging::print("GPU direct phase: queued {} compatible direct sources.\n", g_gpu_direct_sources.size());
+    if (g_gpu_direct_sources.empty()) {
+        return true;
+    }
+    return true;
+}
+
+static bool GPU_DirectQueue_FlushLocked(const mbsp_t *bsp)
+{
+    if (g_gpu_direct_samples.empty()) {
+        g_gpu_direct_faces.clear();
+        return true;
+    }
+
+    const auto t0 = std::chrono::steady_clock::now();
+    std::vector<gpu_light::direct_phase_accum_t> accum(g_gpu_direct_samples.size());
+    const bool ok = gpu_light::trace_direct_phase_batch(
+        g_gpu_direct_sources.data(),
+        g_gpu_direct_sources.size(),
+        g_gpu_direct_samples.data(),
+        accum.data(),
+        g_gpu_direct_samples.size());
+    const auto t1 = std::chrono::steady_clock::now();
+    const double gpu_ms = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count() / 1000.0;
+
+    if (!ok) {
+        g_gpu_direct_disabled = true;
+        logging::print("ERROR: GPU direct phase dispatch failed: {}\n", GPU_TraceLastError());
+        logging::print("ERROR: disabling GPU direct phase for the rest of this run. Re-run without -gpu for guaranteed CPU output.\n");
+        g_gpu_direct_samples.clear();
+        g_gpu_direct_faces.clear();
+        return false;
+    }
+
+    for (const auto &rec : g_gpu_direct_faces) {
+        if (!rec.lightsurf || !rec.lightmaps || rec.sample_count == 0) {
+            continue;
+        }
+        lightmap_t *lightmap = Lightmap_ForStyle(rec.lightmaps, 0, rec.lightsurf);
+        bool hit = false;
+        for (std::size_t i = 0; i < rec.sample_count; ++i) {
+            const std::size_t gi = rec.first_sample + i;
+            if (!accum[gi].hit) continue;
+            const qvec3f color{accum[gi].cr, accum[gi].cg, accum[gi].cb};
+            const qvec3f normalcontrib{accum[gi].nr, accum[gi].ng, accum[gi].nb};
+            lightsample_t &sample = lightmap->samples[i];
+            sample.color += color;
+            sample.direction += normalcontrib;
+            lightmap->bounce_color += color;
+            hit = true;
+        }
+        if (hit) {
+            Lightmap_Save(bsp, rec.lightmaps, rec.lightsurf, lightmap, 0);
+        }
+    }
+
+    const std::uint64_t implicit_rays = static_cast<std::uint64_t>(g_gpu_direct_samples.size()) * static_cast<std::uint64_t>(g_gpu_direct_sources.size());
+    logging::print("GPU direct phase: flushed {} samples x {} sources = {} implicit rays in {:.3f} ms\n",
+        g_gpu_direct_samples.size(), g_gpu_direct_sources.size(), implicit_rays, gpu_ms);
+
+    g_gpu_direct_samples.clear();
+    g_gpu_direct_faces.clear();
+    return true;
+}
+} // namespace
+
+void GPU_DirectQueue_Flush(const mbsp_t *bsp)
+{
+    std::lock_guard<std::mutex> lock(g_gpu_direct_queue_mutex);
+    GPU_DirectQueue_FlushLocked(bsp);
+}
+
+static bool GPU_DirectQueue_AddFace(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
+{
+    if (!GPU_TraceAvailable() || g_gpu_direct_disabled || !lightsurf || !lightmaps) {
+        return false;
+    }
+    if (!(lightsurf->object_channel_mask & CHANNEL_MASK_DEFAULT)) {
+        return true;
+    }
+    const std::size_t sample_count = lightsurf->samples.size();
+    if (!sample_count) {
+        return true;
+    }
+
+    std::lock_guard<std::mutex> lock(g_gpu_direct_queue_mutex);
+    if (!GPU_DirectQueue_BuildSourcesLocked()) {
+        return false;
+    }
+    if (g_gpu_direct_sources.empty()) {
+        return true;
+    }
+
+    const std::size_t first_sample = g_gpu_direct_samples.size();
+    g_gpu_direct_faces.push_back(gpu_direct_face_record_t{lightsurf, lightmaps, first_sample, sample_count});
+
+    for (const auto &sample : lightsurf->samples) {
+        gpu_light::direct_phase_sample_t s{};
+        if (!sample.occluded) {
+            s.px = sample.point[0]; s.py = sample.point[1]; s.pz = sample.point[2];
+            s.nx = sample.normal[0]; s.ny = sample.normal[1]; s.nz = sample.normal[2];
+            s.occlusion = sample.occlusion;
+            s.twosided = lightsurf->twosided ? 1.0f : 0.0f;
+        } else {
+            s.twosided = -1.0f; // sentinel: shader skips occluded/invalid samples
+        }
+        g_gpu_direct_samples.push_back(s);
+    }
+
+    if (g_gpu_direct_samples.size() >= GPU_DIRECT_FLUSH_SAMPLES) {
+        GPU_DirectQueue_FlushLocked(bsp);
+    }
+    return true;
+}
+#endif
+
 /*
  * ============
  * LightFace
@@ -2587,7 +2985,10 @@ void DirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::
 
         /* positive lights */
         if (!(modelinfo->lightignore.value() || extended_flags.light_ignore)) {
-            for (const auto &entity : GetLights()) {
+            #if defined(HAVE_GPU_LIGHT)
+            if (!GPU_DirectQueue_AddFace(bsp, &lightsurf, lightmaps)) {
+#endif
+for (const auto &entity : GetLights()) {
                 if (entity->getFormula() == LF_LOCALMIN)
                     continue;
                 if (entity->nostaticlight.value())
@@ -2598,6 +2999,9 @@ void DirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::
             for (const sun_t &sun : GetSuns())
                 if (sun.sunlight > 0)
                     LightFace_Sky(bsp, &sun, &lightsurf, lightmaps);
+#if defined(HAVE_GPU_LIGHT)
+            }
+#endif
 
             // mxd. Add surface lights...
             // FIXME: negative surface lights
