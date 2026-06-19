@@ -45,8 +45,7 @@ stats_t g_stats;
 } // namespace
 
 bool requested() {
-    // The apply script wires this to light_options.gpu in the call site. Keeping
-    // this function independent avoids pulling all light settings into this TU.
+    // Keeping this function independent avoids pulling all light settings into this TU.
     return true;
 }
 

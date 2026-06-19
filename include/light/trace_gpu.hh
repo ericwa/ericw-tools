@@ -130,11 +130,10 @@ bool trace_direct_accumulate_batch(
 
 } // namespace gpu_light
 
-// C-style wrappers are easier to call from older code paths.
 bool GPU_TraceInit(const mbsp_t *bsp);
 void GPU_TraceShutdown();
 bool GPU_TraceAvailable();
 const char *GPU_TraceLastError();
 
-// Implemented in light/ltface.cc by the v5 overlay; flushes pending sample-driven direct-light work.
+// Flushes pending sample-driven direct-light work.
 void GPU_DirectQueue_Flush(const mbsp_t *bsp);
