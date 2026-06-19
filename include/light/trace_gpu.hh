@@ -61,6 +61,15 @@ struct direct_accum_t {
 struct direct_phase_sample_t {
     float px = 0, py = 0, pz = 0, occlusion = 1;
     float nx = 0, ny = 0, nz = 1, twosided = 0;
+    std::uint32_t face_index = 0;
+    std::uint32_t reserved0 = 0;
+    std::uint32_t reserved1 = 0;
+    std::uint32_t reserved2 = 0;
+};
+
+struct direct_phase_face_range_t {
+    std::uint32_t source_begin = 0;
+    std::uint32_t source_count = 0;
 };
 
 struct direct_phase_source_t {
@@ -117,7 +126,11 @@ bool trace_direct_phase_batch(
     std::size_t source_count,
     const direct_phase_sample_t *samples,
     direct_phase_accum_t *accum,
-    std::size_t sample_count);
+    std::size_t sample_count,
+    const direct_phase_face_range_t *face_ranges,
+    std::size_t face_range_count,
+    const std::uint32_t *face_source_indices,
+    std::size_t face_source_index_count);
 
 bool trace_direct_accumulate_batch(
     const modelinfo_t *self,

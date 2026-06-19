@@ -90,6 +90,15 @@ struct gpu_direct_accum_host_t {
 struct gpu_direct_phase_sample_host_t {
     float px, py, pz, occlusion;
     float nx, ny, nz, twosided;
+    std::uint32_t face_index;
+    std::uint32_t reserved0;
+    std::uint32_t reserved1;
+    std::uint32_t reserved2;
+};
+
+struct gpu_direct_phase_face_range_host_t {
+    std::uint32_t source_begin;
+    std::uint32_t source_count;
 };
 
 struct gpu_direct_phase_source_host_t {
@@ -122,7 +131,8 @@ static_assert(sizeof(gpu_result_host_t) == 20, "GPU result layout must match sha
 static_assert(sizeof(gpu_direct_job_host_t) == 80, "GPU direct job layout must match shader");
 static_assert(sizeof(gpu_direct_range_host_t) == 8, "GPU direct range layout must match shader");
 static_assert(sizeof(gpu_direct_accum_host_t) == 48, "GPU direct accum layout must match shader");
-static_assert(sizeof(gpu_direct_phase_sample_host_t) == 32, "GPU direct phase sample layout must match shader");
+static_assert(sizeof(gpu_direct_phase_sample_host_t) == 48, "GPU direct phase sample layout must match shader");
+static_assert(sizeof(gpu_direct_phase_face_range_host_t) == 8, "GPU direct phase face range layout must match shader");
 static_assert(sizeof(gpu_direct_phase_source_host_t) == 80, "GPU direct phase source layout must match shader");
 
 struct context_t {
@@ -793,7 +803,19 @@ static bool create_direct_pipeline(std::string &error) {
     b3.descriptorCount = 1;
     b3.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
-    std::array<VkDescriptorSetLayoutBinding, 4> bindings{b0, b1, b2, b3};
+    VkDescriptorSetLayoutBinding b4{};
+    b4.binding = 4;
+    b4.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    b4.descriptorCount = 1;
+    b4.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+    VkDescriptorSetLayoutBinding b5{};
+    b5.binding = 5;
+    b5.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    b5.descriptorCount = 1;
+    b5.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+    std::array<VkDescriptorSetLayoutBinding, 6> bindings{b0, b1, b2, b3, b4, b5};
     VkDescriptorSetLayoutCreateInfo dlci{};
     dlci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     dlci.bindingCount = static_cast<std::uint32_t>(bindings.size());
@@ -840,7 +862,7 @@ static bool create_direct_pipeline(std::string &error) {
     ps0.descriptorCount = 1;
     VkDescriptorPoolSize ps1{};
     ps1.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    ps1.descriptorCount = 3;
+    ps1.descriptorCount = 5;
     std::array<VkDescriptorPoolSize, 2> sizes{ps0, ps1};
 
     VkDescriptorPoolCreateInfo dpci{};
@@ -860,7 +882,12 @@ static bool create_direct_pipeline(std::string &error) {
     return true;
 }
 
-static void update_direct_descriptor_set(const buffer_t &job_buffer, const buffer_t &range_buffer, const buffer_t &accum_buffer) {
+static void update_direct_descriptor_set(
+    const buffer_t &sample_buffer,
+    const buffer_t &source_buffer,
+    const buffer_t &face_range_buffer,
+    const buffer_t &face_source_index_buffer,
+    const buffer_t &accum_buffer) {
     VkWriteDescriptorSetAccelerationStructureKHR as_info{};
     as_info.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR;
     as_info.accelerationStructureCount = 1;
@@ -874,43 +901,67 @@ static void update_direct_descriptor_set(const buffer_t &job_buffer, const buffe
     w0.descriptorCount = 1;
     w0.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
 
-    VkDescriptorBufferInfo job_info{};
-    job_info.buffer = job_buffer.buffer;
-    job_info.offset = 0;
-    job_info.range = job_buffer.size;
+    VkDescriptorBufferInfo sample_info{};
+    sample_info.buffer = sample_buffer.buffer;
+    sample_info.offset = 0;
+    sample_info.range = sample_buffer.size;
     VkWriteDescriptorSet w1{};
     w1.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     w1.dstSet = g.direct_descriptor_set;
     w1.dstBinding = 1;
     w1.descriptorCount = 1;
     w1.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    w1.pBufferInfo = &job_info;
+    w1.pBufferInfo = &sample_info;
 
-    VkDescriptorBufferInfo range_info{};
-    range_info.buffer = range_buffer.buffer;
-    range_info.offset = 0;
-    range_info.range = range_buffer.size;
+    VkDescriptorBufferInfo source_info{};
+    source_info.buffer = source_buffer.buffer;
+    source_info.offset = 0;
+    source_info.range = source_buffer.size;
     VkWriteDescriptorSet w2{};
     w2.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     w2.dstSet = g.direct_descriptor_set;
     w2.dstBinding = 2;
     w2.descriptorCount = 1;
     w2.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    w2.pBufferInfo = &range_info;
+    w2.pBufferInfo = &source_info;
 
-    VkDescriptorBufferInfo accum_info{};
-    accum_info.buffer = accum_buffer.buffer;
-    accum_info.offset = 0;
-    accum_info.range = accum_buffer.size;
+    VkDescriptorBufferInfo face_range_info{};
+    face_range_info.buffer = face_range_buffer.buffer;
+    face_range_info.offset = 0;
+    face_range_info.range = face_range_buffer.size;
     VkWriteDescriptorSet w3{};
     w3.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     w3.dstSet = g.direct_descriptor_set;
     w3.dstBinding = 3;
     w3.descriptorCount = 1;
     w3.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    w3.pBufferInfo = &accum_info;
+    w3.pBufferInfo = &face_range_info;
 
-    std::array<VkWriteDescriptorSet, 4> writes{w0, w1, w2, w3};
+    VkDescriptorBufferInfo face_source_index_info{};
+    face_source_index_info.buffer = face_source_index_buffer.buffer;
+    face_source_index_info.offset = 0;
+    face_source_index_info.range = face_source_index_buffer.size;
+    VkWriteDescriptorSet w4{};
+    w4.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    w4.dstSet = g.direct_descriptor_set;
+    w4.dstBinding = 4;
+    w4.descriptorCount = 1;
+    w4.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    w4.pBufferInfo = &face_source_index_info;
+
+    VkDescriptorBufferInfo accum_info{};
+    accum_info.buffer = accum_buffer.buffer;
+    accum_info.offset = 0;
+    accum_info.range = accum_buffer.size;
+    VkWriteDescriptorSet w5{};
+    w5.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    w5.dstSet = g.direct_descriptor_set;
+    w5.dstBinding = 5;
+    w5.descriptorCount = 1;
+    w5.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    w5.pBufferInfo = &accum_info;
+
+    std::array<VkWriteDescriptorSet, 6> writes{w0, w1, w2, w3, w4, w5};
     vkUpdateDescriptorSets(g.device, static_cast<std::uint32_t>(writes.size()), writes.data(), 0, nullptr);
 }
 
@@ -1089,6 +1140,10 @@ bool trace_direct_phase_batch(
     const gpu_light::direct_phase_sample_t *samples,
     gpu_light::direct_phase_accum_t *accum,
     std::size_t sample_count,
+    const gpu_light::direct_phase_face_range_t *face_ranges,
+    std::size_t face_range_count,
+    const std::uint32_t *face_source_indices,
+    std::size_t face_source_index_count,
     std::string &error) {
     std::lock_guard<std::mutex> lock(g_mutex);
     if (!g.device || !g.direct_pipeline || !g.tlas.as) {
@@ -1098,7 +1153,7 @@ bool trace_direct_phase_batch(
     if (g.has_filtered_embree_geometry) {
         return false;
     }
-    if (!sources || !samples || !accum || source_count == 0 || sample_count == 0) {
+    if (!sources || !samples || !accum || !face_ranges || !face_source_indices || source_count == 0 || sample_count == 0 || face_range_count == 0 || face_source_index_count == 0) {
         return true;
     }
 
@@ -1112,6 +1167,10 @@ bool trace_direct_phase_batch(
         gpu_samples[i].ny = samples[i].ny;
         gpu_samples[i].nz = samples[i].nz;
         gpu_samples[i].twosided = samples[i].twosided;
+        gpu_samples[i].face_index = samples[i].face_index;
+        gpu_samples[i].reserved0 = 0;
+        gpu_samples[i].reserved1 = 0;
+        gpu_samples[i].reserved2 = 0;
     }
 
     std::vector<gpu_direct_phase_source_host_t> gpu_sources(source_count);
@@ -1138,10 +1197,21 @@ bool trace_direct_phase_batch(
         gpu_sources[i].pad0 = 0.0f;
     }
 
+    std::vector<gpu_direct_phase_face_range_host_t> gpu_face_ranges(face_range_count);
+    for (std::size_t i = 0; i < face_range_count; ++i) {
+        gpu_face_ranges[i].source_begin = face_ranges[i].source_begin;
+        gpu_face_ranges[i].source_count = face_ranges[i].source_count;
+    }
+
+    std::vector<std::uint32_t> gpu_face_source_indices(face_source_index_count);
+    std::memcpy(gpu_face_source_indices.data(), face_source_indices, sizeof(std::uint32_t) * face_source_index_count);
+
     std::vector<gpu_direct_accum_host_t> zero_accum(sample_count);
 
     buffer_t sample_buffer;
     buffer_t source_buffer;
+    buffer_t face_range_buffer;
+    buffer_t face_source_index_buffer;
     buffer_t accum_buffer;
 
     bool ok = create_buffer(sizeof(gpu_direct_phase_sample_host_t) * sample_count,
@@ -1163,6 +1233,31 @@ bool trace_direct_phase_batch(
         return false;
     }
 
+    ok = create_buffer(sizeof(gpu_direct_phase_face_range_host_t) * face_range_count,
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        face_range_buffer,
+        error,
+        gpu_face_ranges.data());
+    if (!ok) {
+        destroy_buffer(source_buffer);
+        destroy_buffer(sample_buffer);
+        return false;
+    }
+
+    ok = create_buffer(sizeof(std::uint32_t) * face_source_index_count,
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        face_source_index_buffer,
+        error,
+        gpu_face_source_indices.data());
+    if (!ok) {
+        destroy_buffer(face_range_buffer);
+        destroy_buffer(source_buffer);
+        destroy_buffer(sample_buffer);
+        return false;
+    }
+
     ok = create_buffer(sizeof(gpu_direct_accum_host_t) * sample_count,
         VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -1170,12 +1265,14 @@ bool trace_direct_phase_batch(
         error,
         zero_accum.data());
     if (!ok) {
+        destroy_buffer(face_source_index_buffer);
+        destroy_buffer(face_range_buffer);
         destroy_buffer(source_buffer);
         destroy_buffer(sample_buffer);
         return false;
     }
 
-    update_direct_descriptor_set(sample_buffer, source_buffer, accum_buffer);
+    update_direct_descriptor_set(sample_buffer, source_buffer, face_range_buffer, face_source_index_buffer, accum_buffer);
 
     direct_push_constants_t pc{};
     pc.sample_count = static_cast<std::uint32_t>(sample_count);
@@ -1214,6 +1311,8 @@ bool trace_direct_phase_batch(
     }
 
     destroy_buffer(accum_buffer);
+    destroy_buffer(face_source_index_buffer);
+    destroy_buffer(face_range_buffer);
     destroy_buffer(source_buffer);
     destroy_buffer(sample_buffer);
     return ok;

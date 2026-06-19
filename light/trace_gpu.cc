@@ -22,6 +22,10 @@ bool trace_direct_phase_batch(
     const gpu_light::direct_phase_sample_t *samples,
     gpu_light::direct_phase_accum_t *accum,
     std::size_t sample_count,
+    const gpu_light::direct_phase_face_range_t *face_ranges,
+    std::size_t face_range_count,
+    const std::uint32_t *face_source_indices,
+    std::size_t face_source_index_count,
     std::string &error);
 
 bool trace_direct_accumulate_batch(
@@ -145,12 +149,23 @@ bool trace_direct_phase_batch(
     std::size_t source_count,
     const direct_phase_sample_t *samples,
     direct_phase_accum_t *accum,
-    std::size_t sample_count) {
-    if (!sources || !samples || !accum || source_count == 0 || sample_count == 0) {
+    std::size_t sample_count,
+    const direct_phase_face_range_t *face_ranges,
+    std::size_t face_range_count,
+    const std::uint32_t *face_source_indices,
+    std::size_t face_source_index_count) {
+    if (!sources || !samples || !accum || !face_ranges || !face_source_indices || source_count == 0 || sample_count == 0 || face_range_count == 0) {
         return true;
     }
 
-    const std::uint64_t implicit_rays = static_cast<std::uint64_t>(source_count) * static_cast<std::uint64_t>(sample_count);
+    std::uint64_t implicit_rays = 0;
+    for (std::size_t i = 0; i < face_range_count; ++i) {
+        implicit_rays += face_ranges[i].source_count;
+    }
+    if (implicit_rays == 0 || face_source_index_count == 0) {
+        return true;
+    }
+    implicit_rays *= static_cast<std::uint64_t>(sample_count) / static_cast<std::uint64_t>(face_range_count);
     {
         std::lock_guard<std::mutex> lock(g_mutex);
         g_stats.batches++;
@@ -164,7 +179,8 @@ bool trace_direct_phase_batch(
 #if defined(HAVE_GPU_LIGHT)
     std::string error;
     const bool ok = vulkan_backend::trace_direct_phase_batch(
-        sources, source_count, samples, accum, sample_count, error);
+        sources, source_count, samples, accum, sample_count,
+        face_ranges, face_range_count, face_source_indices, face_source_index_count, error);
     std::lock_guard<std::mutex> lock(g_mutex);
     if (ok) {
         g_stats.gpu_batches++;

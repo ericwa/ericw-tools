@@ -18,6 +18,7 @@
 */
 
 #include <light/ltface.hh>
+#include <limits>
 #include <chrono>
 #include <cstdint>
 #include <mutex>
@@ -2565,14 +2566,7 @@ lightsurf_t CreateLightmapSurface(const mbsp_t *bsp, const mface_t *face, const 
 #if defined(HAVE_GPU_LIGHT)
 static bool LightFace_DirectGPU(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
-    // v5 disabled: per-face GPU direct was slower than Embree.
-    return false;
 
-    // v4 disabled: per-face GPU direct was slower than Embree.
-    return false;
-
-    // Disabled: this per-face GPU direct path is currently slower than Embree.
-    // It is not the final whole-phase batching architecture.
     return false;
 
     if (!GPU_TraceAvailable()) {
@@ -2757,6 +2751,8 @@ static bool LightFace_DirectGPU(const mbsp_t *bsp, lightsurf_t *lightsurf, light
 
 
 
+
+
 #if defined(HAVE_GPU_LIGHT)
 namespace {
 struct gpu_direct_face_record_t {
@@ -2769,11 +2765,153 @@ struct gpu_direct_face_record_t {
 std::mutex g_gpu_direct_queue_mutex;
 std::vector<gpu_light::direct_phase_sample_t> g_gpu_direct_samples;
 std::vector<gpu_light::direct_phase_source_t> g_gpu_direct_sources;
+std::vector<gpu_light::direct_phase_face_range_t> g_gpu_direct_face_ranges;
+std::vector<std::uint32_t> g_gpu_direct_face_source_indices;
 std::vector<gpu_direct_face_record_t> g_gpu_direct_faces;
 bool g_gpu_direct_sources_built = false;
 bool g_gpu_direct_disabled = false;
 
 static constexpr std::size_t GPU_DIRECT_FLUSH_SAMPLES = 1024ull * 1024ull;
+
+struct gpu_direct_source_key_t {
+    std::uint32_t type = 0;
+    std::uint32_t formula = 0;
+    std::uint32_t flags = 0;
+    int px = 0, py = 0, pz = 0;
+    int dx = 0, dy = 0, dz = 0;
+    int cr = 0, cg = 0, cb = 0;
+    int light = 0, atten = 0, anglescale = 0, falloff = 0;
+};
+
+static int GPU_Direct_Quantize(float v, float scale = 4096.0f)
+{
+    return static_cast<int>(std::lround(v * scale));
+}
+
+static gpu_direct_source_key_t GPU_Direct_SourceKey(const gpu_light::direct_phase_source_t &s)
+{
+    gpu_direct_source_key_t k{};
+    k.type = s.type;
+    k.formula = s.formula;
+    k.flags = s.flags;
+    k.px = GPU_Direct_Quantize(s.px);
+    k.py = GPU_Direct_Quantize(s.py);
+    k.pz = GPU_Direct_Quantize(s.pz);
+    k.dx = GPU_Direct_Quantize(s.dx);
+    k.dy = GPU_Direct_Quantize(s.dy);
+    k.dz = GPU_Direct_Quantize(s.dz);
+    k.cr = GPU_Direct_Quantize(s.cr);
+    k.cg = GPU_Direct_Quantize(s.cg);
+    k.cb = GPU_Direct_Quantize(s.cb);
+    k.light = GPU_Direct_Quantize(s.light, 1024.0f);
+    k.atten = GPU_Direct_Quantize(s.atten, 1024.0f);
+    k.anglescale = GPU_Direct_Quantize(s.anglescale, 1024.0f);
+    k.falloff = GPU_Direct_Quantize(s.falloff, 1024.0f);
+    return k;
+}
+
+static bool GPU_Direct_SourceKeyEquals(const gpu_direct_source_key_t &a, const gpu_direct_source_key_t &b)
+{
+    return a.type == b.type && a.formula == b.formula && a.flags == b.flags &&
+        a.px == b.px && a.py == b.py && a.pz == b.pz &&
+        a.dx == b.dx && a.dy == b.dy && a.dz == b.dz &&
+        a.cr == b.cr && a.cg == b.cg && a.cb == b.cb &&
+        a.light == b.light && a.atten == b.atten &&
+        a.anglescale == b.anglescale && a.falloff == b.falloff;
+}
+
+static void GPU_Direct_AddUniqueSource(
+    std::vector<gpu_direct_source_key_t> &keys,
+    const gpu_light::direct_phase_source_t &src)
+{
+    const auto key = GPU_Direct_SourceKey(src);
+    for (const auto &existing : keys) {
+        if (GPU_Direct_SourceKeyEquals(existing, key)) {
+            return;
+        }
+    }
+    keys.push_back(key);
+    g_gpu_direct_sources.push_back(src);
+}
+
+static float GPU_Direct_EffectivePointRadius(const gpu_light::direct_phase_source_t &src)
+{
+    if (src.type == 1) {
+        return MAX_SKY_DIST;
+    }
+    if (src.formula == 3u) { // LF_INFINITE
+        return MAX_SKY_DIST;
+    }
+    if (src.falloff > 0.0f) {
+        return std::min(src.falloff, static_cast<float>(MAX_SKY_DIST));
+    }
+    // Conservative only for LF_LINEAR/default: value = light - distance * atten.
+    // Inverse formulas are treated as global unless they provide _falloff.
+    if (src.formula == 0u && src.atten > 0.0001f && src.light > 0.0f) {
+        return std::min(src.light / src.atten, static_cast<float>(MAX_SKY_DIST));
+    }
+    return MAX_SKY_DIST;
+}
+
+static float GPU_Direct_PointAABBDistance2(
+    const gpu_light::direct_phase_source_t &src,
+    const qvec3f &mins,
+    const qvec3f &maxs)
+{
+    const float p[3] = {src.px, src.py, src.pz};
+    float d2 = 0.0f;
+    for (int axis = 0; axis < 3; ++axis) {
+        if (p[axis] < mins[axis]) {
+            const float d = mins[axis] - p[axis];
+            d2 += d * d;
+        } else if (p[axis] > maxs[axis]) {
+            const float d = p[axis] - maxs[axis];
+            d2 += d * d;
+        }
+    }
+    return d2;
+}
+
+static bool GPU_Direct_SourceAffectsFace(
+    const gpu_light::direct_phase_source_t &src,
+    const qvec3f &mins,
+    const qvec3f &maxs,
+    const qvec3f &normal,
+    bool twosided)
+{
+    if (twosided) {
+        return true;
+    }
+
+    if (src.type == 1) {
+        const qvec3f dir{src.dx, src.dy, src.dz};
+        return qv::dot(normal, dir) > -0.05f;
+    }
+
+    const float radius = GPU_Direct_EffectivePointRadius(src);
+    if (radius < static_cast<float>(MAX_SKY_DIST) * 0.999f) {
+        const float d2 = GPU_Direct_PointAABBDistance2(src, mins, maxs);
+        if (d2 > radius * radius) {
+            return false;
+        }
+    }
+
+    // Conservative face-normal cull for point lights: use vector from face center to light.
+    const qvec3f center{
+        (mins[0] + maxs[0]) * 0.5f,
+        (mins[1] + maxs[1]) * 0.5f,
+        (mins[2] + maxs[2]) * 0.5f};
+    qvec3f to_light{src.px - center[0], src.py - center[1], src.pz - center[2]};
+    const float to_light_len2 = qv::dot(to_light, to_light);
+    if (to_light_len2 > 0.0001f) {
+        to_light = to_light * (1.0f / std::sqrt(to_light_len2));
+        if (qv::dot(normal, to_light) <= -0.10f) {
+            return false;
+        }
+    }
+
+    return true;
+}
 
 static bool GPU_DirectQueue_BuildSourcesLocked()
 {
@@ -2782,7 +2920,9 @@ static bool GPU_DirectQueue_BuildSourcesLocked()
     }
     g_gpu_direct_sources_built = true;
     g_gpu_direct_sources.clear();
+    std::vector<gpu_direct_source_key_t> unique_keys;
 
+    std::size_t raw_sources = 0;
     for (const auto &entity_ptr : GetLights()) {
         const light_t *entity = entity_ptr.get();
         if (entity->nostaticlight.value()) continue;
@@ -2813,7 +2953,8 @@ static bool GPU_DirectQueue_BuildSourcesLocked()
         src.anglescale = entity->anglescale.value();
         src.dirt = entity->dirt.value();
         src.falloff = entity->falloff.value();
-        g_gpu_direct_sources.push_back(src);
+        ++raw_sources;
+        GPU_Direct_AddUniqueSource(unique_keys, src);
     }
 
     for (const sun_t &sun : GetSuns()) {
@@ -2835,20 +2976,33 @@ static bool GPU_DirectQueue_BuildSourcesLocked()
         src.flags = sun.dirt ? 1u : 0u;
         src.anglescale = sun.anglescale;
         src.dirt = sun.dirt ? 1.0f : 0.0f;
-        g_gpu_direct_sources.push_back(src);
+        ++raw_sources;
+        GPU_Direct_AddUniqueSource(unique_keys, src);
     }
 
-    logging::print("GPU direct phase: queued {} compatible direct sources.\n", g_gpu_direct_sources.size());
-    if (g_gpu_direct_sources.empty()) {
-        return true;
-    }
+    logging::print("GPU direct phase: queued {} compatible direct sources ({} raw, {} deduped).\n",
+        g_gpu_direct_sources.size(), raw_sources, raw_sources - g_gpu_direct_sources.size());
     return true;
+}
+
+static std::uint64_t GPU_DirectQueue_ImplicitRayCountLocked()
+{
+    std::uint64_t implicit_rays = 0;
+    for (const auto &sample : g_gpu_direct_samples) {
+        const std::size_t face_index = sample.face_index;
+        if (face_index < g_gpu_direct_face_ranges.size()) {
+            implicit_rays += g_gpu_direct_face_ranges[face_index].source_count;
+        }
+    }
+    return implicit_rays;
 }
 
 static bool GPU_DirectQueue_FlushLocked(const mbsp_t *bsp)
 {
     if (g_gpu_direct_samples.empty()) {
         g_gpu_direct_faces.clear();
+        g_gpu_direct_face_ranges.clear();
+        g_gpu_direct_face_source_indices.clear();
         return true;
     }
 
@@ -2859,7 +3013,11 @@ static bool GPU_DirectQueue_FlushLocked(const mbsp_t *bsp)
         g_gpu_direct_sources.size(),
         g_gpu_direct_samples.data(),
         accum.data(),
-        g_gpu_direct_samples.size());
+        g_gpu_direct_samples.size(),
+        g_gpu_direct_face_ranges.data(),
+        g_gpu_direct_face_ranges.size(),
+        g_gpu_direct_face_source_indices.data(),
+        g_gpu_direct_face_source_indices.size());
     const auto t1 = std::chrono::steady_clock::now();
     const double gpu_ms = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count() / 1000.0;
 
@@ -2869,6 +3027,8 @@ static bool GPU_DirectQueue_FlushLocked(const mbsp_t *bsp)
         logging::print("ERROR: disabling GPU direct phase for the rest of this run. Re-run without -gpu for guaranteed CPU output.\n");
         g_gpu_direct_samples.clear();
         g_gpu_direct_faces.clear();
+        g_gpu_direct_face_ranges.clear();
+        g_gpu_direct_face_source_indices.clear();
         return false;
     }
 
@@ -2894,12 +3054,14 @@ static bool GPU_DirectQueue_FlushLocked(const mbsp_t *bsp)
         }
     }
 
-    const std::uint64_t implicit_rays = static_cast<std::uint64_t>(g_gpu_direct_samples.size()) * static_cast<std::uint64_t>(g_gpu_direct_sources.size());
-    logging::print("GPU direct phase: flushed {} samples x {} sources = {} implicit rays in {:.3f} ms\n",
-        g_gpu_direct_samples.size(), g_gpu_direct_sources.size(), implicit_rays, gpu_ms);
+    const std::uint64_t implicit_rays = GPU_DirectQueue_ImplicitRayCountLocked();
+    logging::print("GPU direct phase: flushed {} samples, {} unique sources, {} face-source refs = {} implicit rays in {:.3f} ms\n",
+        g_gpu_direct_samples.size(), g_gpu_direct_sources.size(), g_gpu_direct_face_source_indices.size(), implicit_rays, gpu_ms);
 
     g_gpu_direct_samples.clear();
     g_gpu_direct_faces.clear();
+    g_gpu_direct_face_ranges.clear();
+    g_gpu_direct_face_source_indices.clear();
     return true;
 }
 } // namespace
@@ -2931,18 +3093,60 @@ static bool GPU_DirectQueue_AddFace(const mbsp_t *bsp, lightsurf_t *lightsurf, l
         return true;
     }
 
+    qvec3f mins{std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max()};
+    qvec3f maxs{-std::numeric_limits<float>::max(), -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max()};
+    qvec3f normal_sum{0, 0, 0};
+    std::size_t valid_samples = 0;
+    for (const auto &sample : lightsurf->samples) {
+        if (sample.occluded) {
+            continue;
+        }
+        for (int axis = 0; axis < 3; ++axis) {
+            mins[axis] = std::min(mins[axis], sample.point[axis]);
+            maxs[axis] = std::max(maxs[axis], sample.point[axis]);
+        }
+        normal_sum += sample.normal;
+        ++valid_samples;
+    }
+    if (valid_samples == 0) {
+        return true;
+    }
+
+    qvec3f face_normal = lightsurf->snormal;
+    const float normal_len2 = qv::dot(normal_sum, normal_sum);
+    if (normal_len2 > 0.0001f) {
+        face_normal = normal_sum * (1.0f / std::sqrt(normal_len2));
+    }
+
+    const std::uint32_t face_index = static_cast<std::uint32_t>(g_gpu_direct_face_ranges.size());
+    gpu_light::direct_phase_face_range_t face_range{};
+    face_range.source_begin = static_cast<std::uint32_t>(g_gpu_direct_face_source_indices.size());
+
+    for (std::uint32_t source_index = 0; source_index < g_gpu_direct_sources.size(); ++source_index) {
+        if (GPU_Direct_SourceAffectsFace(g_gpu_direct_sources[source_index], mins, maxs, face_normal, lightsurf->twosided)) {
+            g_gpu_direct_face_source_indices.push_back(source_index);
+        }
+    }
+
+    face_range.source_count = static_cast<std::uint32_t>(g_gpu_direct_face_source_indices.size()) - face_range.source_begin;
+    if (face_range.source_count == 0) {
+        return true;
+    }
+    g_gpu_direct_face_ranges.push_back(face_range);
+
     const std::size_t first_sample = g_gpu_direct_samples.size();
     g_gpu_direct_faces.push_back(gpu_direct_face_record_t{lightsurf, lightmaps, first_sample, sample_count});
 
     for (const auto &sample : lightsurf->samples) {
         gpu_light::direct_phase_sample_t s{};
+        s.face_index = face_index;
         if (!sample.occluded) {
             s.px = sample.point[0]; s.py = sample.point[1]; s.pz = sample.point[2];
             s.nx = sample.normal[0]; s.ny = sample.normal[1]; s.nz = sample.normal[2];
             s.occlusion = sample.occlusion;
             s.twosided = lightsurf->twosided ? 1.0f : 0.0f;
         } else {
-            s.twosided = -1.0f; // sentinel: shader skips occluded/invalid samples
+            s.twosided = -1.0f;
         }
         g_gpu_direct_samples.push_back(s);
     }
