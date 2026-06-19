@@ -149,7 +149,7 @@ void main() {
         vec3 ncontrib_dir;
 
         if (l.type == 1u) {
-            ray_dir = normalize(l.direction);
+            ray_dir = l.direction;
             ray_dist = l.dist;
             float angle = dot(ray_dir, s.normal);
             if (s.twosided > 0.5 && angle < 0.0) angle = -angle;

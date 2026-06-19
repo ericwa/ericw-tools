@@ -2564,194 +2564,6 @@ lightsurf_t CreateLightmapSurface(const mbsp_t *bsp, const mface_t *face, const 
 
 
 #if defined(HAVE_GPU_LIGHT)
-static bool LightFace_DirectGPU(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
-{
-
-    return false;
-
-    if (!GPU_TraceAvailable()) {
-        return false;
-    }
-
-    constexpr std::size_t GPU_DIRECT_MIN_JOBS = 32768;
-
-    const settings::worldspawn_keys &cfg = *lightsurf->cfg;
-    const modelinfo_t *modelinfo = lightsurf->modelinfo;
-    const qplane3f &plane = lightsurf->plane;
-    const std::size_t sample_count = lightsurf->samples.size();
-    if (!sample_count) {
-        return true;
-    }
-
-    std::vector<std::vector<gpu_light::direct_job_t>> per_sample(sample_count);
-
-    auto add_job = [&](int sample_index, const qvec3f &origin, const qvec3f &direction, float dist, const qvec3f &color, const qvec3f &normalcontrib) {
-        gpu_light::direct_job_t job{};
-        job.ox = origin[0];
-        job.oy = origin[1];
-        job.oz = origin[2];
-        job.tmin = 0.01f;
-        job.dx = direction[0];
-        job.dy = direction[1];
-        job.dz = direction[2];
-        job.tmax = dist;
-        job.cr = color[0];
-        job.cg = color[1];
-        job.cb = color[2];
-        job.nr = normalcontrib[0];
-        job.ng = normalcontrib[1];
-        job.nb = normalcontrib[2];
-        job.sample_index = static_cast<std::uint32_t>(sample_index);
-        per_sample[static_cast<std::size_t>(sample_index)].push_back(job);
-    };
-
-    // Entity lights.  This fast path is deliberately style-0/default-channel only.
-    for (const auto &entity_ptr : GetLights()) {
-        const light_t *entity = entity_ptr.get();
-        if (entity->getFormula() == LF_LOCALMIN) continue;
-        if (entity->nostaticlight.value()) continue;
-        if (entity->light.value() <= 0) continue;
-
-        if (entity->style.value() != 0) return false;
-        if (entity->shadow_channel_mask.value() != CHANNEL_MASK_DEFAULT) return false;
-        if (entity->light_channel_mask.value() != CHANNEL_MASK_DEFAULT) return false;
-
-        if (light_options.visapprox.value() == visapprox_t::VIS &&
-            entity->light_channel_mask.value() == CHANNEL_MASK_DEFAULT &&
-            entity->shadow_channel_mask.value() == CHANNEL_MASK_DEFAULT &&
-            VisCullEntity(bsp, lightsurf->pvs, entity->leaf)) {
-            continue;
-        }
-
-        const float planedist = plane.distance_to(entity->origin.value());
-        if (planedist < 0 && !entity->bleed.value() && !lightsurf->curved && !lightsurf->twosided) {
-            continue;
-        }
-        if (CullLight(entity, lightsurf)) {
-            continue;
-        }
-        if (!(entity->light_channel_mask.value() & lightsurf->object_channel_mask)) {
-            continue;
-        }
-
-        for (int i = 0; i < static_cast<int>(lightsurf->samples.size()); i++) {
-            const auto &sample = lightsurf->samples[i];
-            if (sample.occluded) continue;
-
-            const qvec3f &surfpoint = sample.point;
-            const qvec3f &surfnorm = sample.normal;
-            qvec3f surfpointToLightDir;
-            float surfpointToLightDist;
-            qvec3f color;
-            qvec3f normalcontrib;
-            GetLightContrib(cfg, entity, surfnorm, true, surfpoint, lightsurf->twosided, color, surfpointToLightDir, normalcontrib, &surfpointToLightDist);
-            const float occlusion = Dirt_GetScaleFactor(cfg, sample.occlusion, entity, surfpointToLightDist, lightsurf);
-            color *= occlusion;
-            if (fabs(LightSample_Brightness(color)) <= light_options.gate.value()) {
-                continue;
-            }
-            add_job(i, surfpoint, surfpointToLightDir, surfpointToLightDist, color, normalcontrib);
-        }
-    }
-
-    // Sunlight.  The GPU AS contains opaque solids only, so a miss is treated as visible sky.
-    // Sun texture filtering and non-zero styles stay on the CPU path.
-    for (const sun_t &sun : GetSuns()) {
-        if (sun.sunlight <= 0) continue;
-        if (sun.style != 0) return false;
-        if (sun.suntexture_value) return false;
-
-        qvec3f incoming = qv::normalize(sun.sunvec);
-        const float dp = qv::dot(incoming, plane.normal);
-        if (dp < -LIGHT_ANGLE_EPSILON && !lightsurf->curved && !lightsurf->twosided) {
-            continue;
-        }
-        if (!(lightsurf->object_channel_mask & CHANNEL_MASK_DEFAULT)) {
-            continue;
-        }
-
-        for (int i = 0; i < static_cast<int>(lightsurf->samples.size()); i++) {
-            const auto &sample = lightsurf->samples[i];
-            if (sample.occluded) continue;
-
-            const qvec3f &surfpoint = sample.point;
-            const qvec3f &surfnorm = sample.normal;
-            float angle = qv::dot(incoming, surfnorm);
-            if (lightsurf->twosided && angle < 0) {
-                angle = -angle;
-            }
-            angle = std::max(0.0f, angle);
-            angle = (1.0f - sun.anglescale) + sun.anglescale * angle;
-            float value = angle * sun.sunlight;
-            if (sun.dirt) {
-                value *= Dirt_GetScaleFactor(cfg, sample.occlusion, NULL, 0.0f, lightsurf);
-            }
-            qvec3f color = sun.sunlight_color * (value / 255.0f);
-            if (fabs(LightSample_Brightness(color)) <= light_options.gate.value()) {
-                continue;
-            }
-            qvec3f normalcontrib = incoming * value;
-            add_job(i, surfpoint, incoming, MAX_SKY_DIST, color, normalcontrib);
-        }
-    }
-
-    std::size_t job_count = 0;
-    for (const auto &v : per_sample) {
-        job_count += v.size();
-    }
-    if (job_count == 0) {
-        return true;
-    }
-    if (job_count < GPU_DIRECT_MIN_JOBS) {
-        return false;
-    }
-
-    std::vector<gpu_light::direct_job_t> jobs;
-    std::vector<gpu_light::direct_sample_range_t> ranges(sample_count);
-    jobs.reserve(job_count);
-    for (std::size_t i = 0; i < sample_count; ++i) {
-        ranges[i].first = static_cast<std::uint32_t>(jobs.size());
-        ranges[i].count = static_cast<std::uint32_t>(per_sample[i].size());
-        jobs.insert(jobs.end(), per_sample[i].begin(), per_sample[i].end());
-    }
-
-    std::vector<gpu_light::direct_accum_t> accum(sample_count);
-    if (!gpu_light::trace_direct_accumulate_batch(
-            modelinfo,
-            CHANNEL_MASK_DEFAULT,
-            jobs.data(),
-            jobs.size(),
-            ranges.data(),
-            accum.data(),
-            sample_count)) {
-        return false;
-    }
-
-    lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
-    bool hit = false;
-    for (std::size_t i = 0; i < sample_count; ++i) {
-        if (!accum[i].hit) continue;
-        const qvec3f color{accum[i].cr, accum[i].cg, accum[i].cb};
-        const qvec3f normalcontrib{accum[i].nr, accum[i].ng, accum[i].nb};
-        lightsample_t &sample = lightmap->samples[i];
-        sample.color += color;
-        sample.direction += normalcontrib;
-        lightmap->bounce_color += color;
-        hit = true;
-    }
-    if (hit) {
-        Lightmap_Save(bsp, lightmaps, lightsurf, lightmap, 0);
-    }
-    return true;
-}
-#endif
-
-
-
-
-
-
-#if defined(HAVE_GPU_LIGHT)
 namespace {
 struct gpu_direct_face_record_t {
     lightsurf_t *lightsurf = nullptr;
@@ -2777,9 +2589,13 @@ struct gpu_direct_source_key_t {
     std::uint32_t flags = 0;
     int px = 0, py = 0, pz = 0;
     int dx = 0, dy = 0, dz = 0;
-    int cr = 0, cg = 0, cb = 0;
-    int light = 0, atten = 0, anglescale = 0, falloff = 0;
+    int atten = 0, anglescale = 0, falloff = 0;
 };
+
+// lower values merge more nearby sun rays into one representative ray.
+// This preserves approximate energy by accumulating light/color into the merged source.
+// Raise to 64/128 for quality, lower to 16/8 for speed.
+static constexpr float GPU_DIRECT_SUN_DIR_MERGE_SCALE = 32.0f;
 
 static int GPU_Direct_Quantize(float v, float scale = 4096.0f)
 {
@@ -2795,13 +2611,10 @@ static gpu_direct_source_key_t GPU_Direct_SourceKey(const gpu_light::direct_phas
     k.px = GPU_Direct_Quantize(s.px);
     k.py = GPU_Direct_Quantize(s.py);
     k.pz = GPU_Direct_Quantize(s.pz);
-    k.dx = GPU_Direct_Quantize(s.dx);
-    k.dy = GPU_Direct_Quantize(s.dy);
-    k.dz = GPU_Direct_Quantize(s.dz);
-    k.cr = GPU_Direct_Quantize(s.cr);
-    k.cg = GPU_Direct_Quantize(s.cg);
-    k.cb = GPU_Direct_Quantize(s.cb);
-    k.light = GPU_Direct_Quantize(s.light, 1024.0f);
+    const float dir_scale = (s.type == 1u) ? GPU_DIRECT_SUN_DIR_MERGE_SCALE : 4096.0f;
+    k.dx = GPU_Direct_Quantize(s.dx, dir_scale);
+    k.dy = GPU_Direct_Quantize(s.dy, dir_scale);
+    k.dz = GPU_Direct_Quantize(s.dz, dir_scale);
     k.atten = GPU_Direct_Quantize(s.atten, 1024.0f);
     k.anglescale = GPU_Direct_Quantize(s.anglescale, 1024.0f);
     k.falloff = GPU_Direct_Quantize(s.falloff, 1024.0f);
@@ -2813,18 +2626,44 @@ static bool GPU_Direct_SourceKeyEquals(const gpu_direct_source_key_t &a, const g
     return a.type == b.type && a.formula == b.formula && a.flags == b.flags &&
         a.px == b.px && a.py == b.py && a.pz == b.pz &&
         a.dx == b.dx && a.dy == b.dy && a.dz == b.dz &&
-        a.cr == b.cr && a.cg == b.cg && a.cb == b.cb &&
-        a.light == b.light && a.atten == b.atten &&
-        a.anglescale == b.anglescale && a.falloff == b.falloff;
+        a.atten == b.atten && a.anglescale == b.anglescale && a.falloff == b.falloff;
 }
 
-static void GPU_Direct_AddUniqueSource(
+static void GPU_Direct_MergeInto(gpu_light::direct_phase_source_t &dst, const gpu_light::direct_phase_source_t &src)
+{
+    const float a = std::max(dst.light, 0.0f);
+    const float b = std::max(src.light, 0.0f);
+    const float total = a + b;
+    if (total <= 0.0f) {
+        return;
+    }
+
+    dst.cr = (dst.cr * a + src.cr * b) / total;
+    dst.cg = (dst.cg * a + src.cg * b) / total;
+    dst.cb = (dst.cb * a + src.cb * b) / total;
+
+    if (dst.type == 1u) {
+        qvec3f d{dst.dx * a + src.dx * b, dst.dy * a + src.dy * b, dst.dz * a + src.dz * b};
+        const float len2 = qv::dot(d, d);
+        if (len2 > 0.0001f) {
+            d = d * (1.0f / std::sqrt(len2));
+            dst.dx = d[0];
+            dst.dy = d[1];
+            dst.dz = d[2];
+        }
+    }
+
+    dst.light = total;
+}
+
+static void GPU_Direct_AddMergedSource(
     std::vector<gpu_direct_source_key_t> &keys,
     const gpu_light::direct_phase_source_t &src)
 {
     const auto key = GPU_Direct_SourceKey(src);
-    for (const auto &existing : keys) {
-        if (GPU_Direct_SourceKeyEquals(existing, key)) {
+    for (std::size_t i = 0; i < keys.size(); ++i) {
+        if (GPU_Direct_SourceKeyEquals(keys[i], key)) {
+            GPU_Direct_MergeInto(g_gpu_direct_sources[i], src);
             return;
         }
     }
@@ -2883,7 +2722,7 @@ static bool GPU_Direct_SourceAffectsFace(
 
     if (src.type == 1) {
         const qvec3f dir{src.dx, src.dy, src.dz};
-        return qv::dot(normal, dir) > -0.05f;
+        return qv::dot(normal, dir) > -0.01f;
     }
 
     const float radius = GPU_Direct_EffectivePointRadius(src);
@@ -2921,6 +2760,8 @@ static bool GPU_DirectQueue_BuildSourcesLocked()
     std::vector<gpu_direct_source_key_t> unique_keys;
 
     std::size_t raw_sources = 0;
+    std::size_t raw_point_sources = 0;
+    std::size_t raw_sun_sources = 0;
     for (const auto &entity_ptr : GetLights()) {
         const light_t *entity = entity_ptr.get();
         if (entity->nostaticlight.value()) continue;
@@ -2952,7 +2793,8 @@ static bool GPU_DirectQueue_BuildSourcesLocked()
         src.dirt = entity->dirt.value();
         src.falloff = entity->falloff.value();
         ++raw_sources;
-        GPU_Direct_AddUniqueSource(unique_keys, src);
+        ++raw_point_sources;
+        GPU_Direct_AddMergedSource(unique_keys, src);
     }
 
     for (const sun_t &sun : GetSuns()) {
@@ -2975,11 +2817,20 @@ static bool GPU_DirectQueue_BuildSourcesLocked()
         src.anglescale = sun.anglescale;
         src.dirt = sun.dirt ? 1.0f : 0.0f;
         ++raw_sources;
-        GPU_Direct_AddUniqueSource(unique_keys, src);
+        ++raw_sun_sources;
+        GPU_Direct_AddMergedSource(unique_keys, src);
     }
 
-    logging::print("GPU direct phase: queued {} compatible direct sources ({} raw, {} deduped).\n",
-        g_gpu_direct_sources.size(), raw_sources, raw_sources - g_gpu_direct_sources.size());
+    std::size_t merged_point_sources = 0;
+    std::size_t merged_sun_sources = 0;
+    for (const auto &src : g_gpu_direct_sources) {
+        if (src.type == 1u) ++merged_sun_sources;
+        else ++merged_point_sources;
+    }
+
+    logging::print("GPU direct phase: queued {} merged direct sources ({} raw: {} point, {} sun; merged: {} point, {} sun; {} merged away; sun merge scale {}).\n",
+        g_gpu_direct_sources.size(), raw_sources, raw_point_sources, raw_sun_sources,
+        merged_point_sources, merged_sun_sources, raw_sources - g_gpu_direct_sources.size(), GPU_DIRECT_SUN_DIR_MERGE_SCALE);
     return true;
 }
 
