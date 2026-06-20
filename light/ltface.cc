@@ -2592,10 +2592,45 @@ struct gpu_direct_source_key_t {
     int atten = 0, anglescale = 0, falloff = 0;
 };
 
-// lower values merge more nearby sun rays into one representative ray.
-// This preserves approximate energy by accumulating light/color into the merged source.
-// Raise to 512~4096 for quality, lower to 16/8 for speed.
-static constexpr float GPU_DIRECT_SUN_DIR_MERGE_SCALE = 512.0f;
+// Optional approximate sun-direction merge. Disabled by default for final quality.
+// When enabled with -gpusunmerge, -gpusunmergequality maps to a direction quantization scale:
+//   0.00 => 16   fastest/roughest
+//   0.50 => 256  balanced preview
+//   1.00 => 4096 best quality/least merging
+static float GPU_Direct_SunMergeQuality()
+{
+    float q = light_options.gpusunmergequality.value();
+    if (!std::isfinite(q)) {
+        q = 0.75f;
+    }
+    if (q < 0.0f) q = 0.0f;
+    if (q > 1.0f) q = 1.0f;
+    return q;
+}
+
+static float GPU_Direct_SunMergeScale()
+{
+    if (!light_options.gpusunmerge.value()) {
+        return 65536.0f; // effectively exact; preserves final-quality sun jitter
+    }
+    return 16.0f * std::pow(256.0f, GPU_Direct_SunMergeQuality());
+}
+
+static float GPU_Direct_SourceCullQuality()
+{
+    float q = light_options.gpusourcecullquality.value();
+    if (!std::isfinite(q)) {
+        q = 1.0f;
+    }
+    if (q < 0.0f) q = 0.0f;
+    if (q > 1.0f) q = 1.0f;
+    return q;
+}
+
+static bool GPU_Direct_SourceCullEnabled()
+{
+    return light_options.gpusourcecull.value();
+}
 
 static int GPU_Direct_Quantize(float v, float scale = 4096.0f)
 {
@@ -2611,7 +2646,7 @@ static gpu_direct_source_key_t GPU_Direct_SourceKey(const gpu_light::direct_phas
     k.px = GPU_Direct_Quantize(s.px);
     k.py = GPU_Direct_Quantize(s.py);
     k.pz = GPU_Direct_Quantize(s.pz);
-    const float dir_scale = (s.type == 1u) ? GPU_DIRECT_SUN_DIR_MERGE_SCALE : 4096.0f;
+    const float dir_scale = (s.type == 1u) ? GPU_Direct_SunMergeScale() : 4096.0f;
     k.dx = GPU_Direct_Quantize(s.dx, dir_scale);
     k.dy = GPU_Direct_Quantize(s.dy, dir_scale);
     k.dz = GPU_Direct_Quantize(s.dz, dir_scale);
@@ -2716,34 +2751,52 @@ static bool GPU_Direct_SourceAffectsFace(
     const qvec3f &normal,
     bool twosided)
 {
+    if (!GPU_Direct_SourceCullEnabled()) {
+        return true;
+    }
     if (twosided) {
         return true;
     }
 
+    const float quality = GPU_Direct_SourceCullQuality();
+
     if (src.type == 1) {
+        // Sun normal culling is the quality-sensitive part. At max quality we keep
+        // all sun jitter directions for every face. Lower quality progressively
+        // removes back-facing sun directions.
+        if (quality >= 0.999f) {
+            return true;
+        }
         const qvec3f dir{src.dx, src.dy, src.dz};
-        return qv::dot(normal, dir) > -0.01f;
+        const float threshold = -0.50f + (0.55f * (1.0f - quality)); // q=0 -> 0.05, q=1 -> -0.50
+        return qv::dot(normal, dir) > threshold;
     }
 
     const float radius = GPU_Direct_EffectivePointRadius(src);
     if (radius < static_cast<float>(MAX_SKY_DIST) * 0.999f) {
+        // More quality = more radius padding = less chance of missing a faint edge case.
+        const float padded_radius = radius * (1.0f + 3.0f * quality) + 256.0f * quality;
         const float d2 = GPU_Direct_PointAABBDistance2(src, mins, maxs);
-        if (d2 > radius * radius) {
+        if (d2 > padded_radius * padded_radius) {
             return false;
         }
     }
 
-    // Conservative face-normal cull for point lights: use vector from face center to light.
-    const qvec3f center{
-        (mins[0] + maxs[0]) * 0.5f,
-        (mins[1] + maxs[1]) * 0.5f,
-        (mins[2] + maxs[2]) * 0.5f};
-    qvec3f to_light{src.px - center[0], src.py - center[1], src.pz - center[2]};
-    const float to_light_len2 = qv::dot(to_light, to_light);
-    if (to_light_len2 > 0.0001f) {
-        to_light = to_light * (1.0f / std::sqrt(to_light_len2));
-        if (qv::dot(normal, to_light) <= -0.10f) {
-            return false;
+    // Conservative face-normal cull for point lights. At max quality this is disabled;
+    // lower quality allows removing back-facing points.
+    if (quality < 0.999f) {
+        const qvec3f center{
+            (mins[0] + maxs[0]) * 0.5f,
+            (mins[1] + maxs[1]) * 0.5f,
+            (mins[2] + maxs[2]) * 0.5f};
+        qvec3f to_light{src.px - center[0], src.py - center[1], src.pz - center[2]};
+        const float to_light_len2 = qv::dot(to_light, to_light);
+        if (to_light_len2 > 0.0001f) {
+            to_light = to_light * (1.0f / std::sqrt(to_light_len2));
+            const float threshold = -0.75f + (0.65f * (1.0f - quality)); // q=0 -> -0.10, q=1 -> -0.75
+            if (qv::dot(normal, to_light) <= threshold) {
+                return false;
+            }
         }
     }
 
@@ -2828,9 +2881,16 @@ static bool GPU_DirectQueue_BuildSourcesLocked()
         else ++merged_point_sources;
     }
 
-    logging::print("GPU direct phase: queued {} merged direct sources ({} raw: {} point, {} sun; merged: {} point, {} sun; {} merged away; sun merge scale {}).\n",
+    const bool sun_merge_enabled = light_options.gpusunmerge.value();
+    const float sun_merge_quality = GPU_Direct_SunMergeQuality();
+    const float sun_merge_scale = GPU_Direct_SunMergeScale();
+    const bool source_cull_enabled = GPU_Direct_SourceCullEnabled();
+    const float source_cull_quality = GPU_Direct_SourceCullQuality();
+    logging::print("GPU direct phase: queued {} direct sources ({} raw: {} point, {} sun; merged: {} point, {} sun; {} merged away; sun merge {}; quality {:.2f}; scale {:.1f}; source cull {}; quality {:.2f}).\n",
         g_gpu_direct_sources.size(), raw_sources, raw_point_sources, raw_sun_sources,
-        merged_point_sources, merged_sun_sources, raw_sources - g_gpu_direct_sources.size(), GPU_DIRECT_SUN_DIR_MERGE_SCALE);
+        merged_point_sources, merged_sun_sources, raw_sources - g_gpu_direct_sources.size(),
+        sun_merge_enabled ? "on" : "off", sun_merge_quality, sun_merge_scale,
+        source_cull_enabled ? "on" : "off", source_cull_quality);
     return true;
 }
 
