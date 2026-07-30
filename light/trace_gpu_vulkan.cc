@@ -43,6 +43,13 @@ struct as_t {
     VkDeviceAddress address = 0;
 };
 
+// host-visible buffer kept alive and persistently mapped across flushes
+struct persistent_buffer_t {
+    buffer_t buf;
+    void *mapped = nullptr;
+    VkDeviceSize capacity = 0;
+};
+
 struct vertex_t {
     float x, y, z;
 };
@@ -135,6 +142,12 @@ static_assert(sizeof(gpu_direct_phase_sample_host_t) == 48, "GPU direct phase sa
 static_assert(sizeof(gpu_direct_phase_face_range_host_t) == 8, "GPU direct phase face range layout must match shader");
 static_assert(sizeof(gpu_direct_phase_source_host_t) == 80, "GPU direct phase source layout must match shader");
 
+// the public API structs are memcpy'd straight into mapped GPU memory
+static_assert(sizeof(direct_phase_sample_t) == sizeof(gpu_direct_phase_sample_host_t), "API sample struct must match GPU layout");
+static_assert(sizeof(direct_phase_source_t) == sizeof(gpu_direct_phase_source_host_t), "API source struct must match GPU layout");
+static_assert(sizeof(direct_phase_face_range_t) == sizeof(gpu_direct_phase_face_range_host_t), "API face range struct must match GPU layout");
+static_assert(sizeof(direct_phase_accum_t) == sizeof(gpu_direct_accum_host_t), "API accum struct must match GPU layout");
+
 struct context_t {
     VkInstance instance = VK_NULL_HANDLE;
     VkPhysicalDevice physical = VK_NULL_HANDLE;
@@ -172,6 +185,13 @@ struct context_t {
     VkPipeline direct_pipeline = VK_NULL_HANDLE;
     VkDescriptorPool direct_descriptor_pool = VK_NULL_HANDLE;
     VkDescriptorSet direct_descriptor_set = VK_NULL_HANDLE;
+
+    persistent_buffer_t direct_samples;
+    persistent_buffer_t direct_sources;
+    persistent_buffer_t direct_face_ranges;
+    persistent_buffer_t direct_face_source_indices;
+    persistent_buffer_t direct_accum;
+    bool direct_descriptors_dirty = true;
 
     std::size_t triangle_count = 0;
     bool has_filtered_embree_geometry = false;
@@ -237,6 +257,13 @@ static void destroy_locked() {
     if (g.pipeline_layout) vkDestroyPipelineLayout(g.device, g.pipeline_layout, nullptr);
     if (g.descriptor_pool) vkDestroyDescriptorPool(g.device, g.descriptor_pool, nullptr);
     if (g.descriptor_set_layout) vkDestroyDescriptorSetLayout(g.device, g.descriptor_set_layout, nullptr);
+
+    // vkFreeMemory implicitly unmaps the persistent mappings
+    destroy_buffer(g.direct_samples.buf);
+    destroy_buffer(g.direct_sources.buf);
+    destroy_buffer(g.direct_face_ranges.buf);
+    destroy_buffer(g.direct_face_source_indices.buf);
+    destroy_buffer(g.direct_accum.buf);
 
     destroy_as(g.tlas);
     destroy_as(g.blas);
@@ -319,6 +346,44 @@ static VkDeviceAddress buffer_address(const buffer_t &b) {
     info.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
     info.buffer = b.buffer;
     return g.vkGetBufferDeviceAddressKHR_(g.device, &info);
+}
+
+// Grows (never shrinks) a persistently-mapped host-visible buffer. Only safe to
+// call while the queue is idle, which flush guarantees via vkQueueWaitIdle.
+// host_cached: request HOST_CACHED memory so CPU readback isn't crippled by
+// uncached/write-combined reads; falls back to plain coherent memory.
+static bool ensure_persistent_buffer(persistent_buffer_t &pb, VkDeviceSize needed, std::string &error, bool host_cached = false) {
+    if (pb.buf.buffer && pb.capacity >= needed) return true;
+
+    destroy_buffer(pb.buf); // implicitly unmaps
+    pb.mapped = nullptr;
+    pb.capacity = 0;
+
+    const VkDeviceSize capacity = needed + needed / 4; // headroom so batch-size jitter doesn't reallocate
+    bool created = false;
+    if (host_cached) {
+        std::string cached_error;
+        created = create_buffer(capacity,
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT |
+                VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
+            pb.buf,
+            cached_error);
+    }
+    if (!created && !create_buffer(capacity,
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            pb.buf,
+            error)) return false;
+
+    if (!check(vkMapMemory(g.device, pb.buf.memory, 0, VK_WHOLE_SIZE, 0, &pb.mapped), "vkMapMemory(persistent)", error)) {
+        destroy_buffer(pb.buf);
+        return false;
+    }
+
+    pb.capacity = capacity;
+    g.direct_descriptors_dirty = true;
+    return true;
 }
 
 static bool one_time_submit(const std::function<void(VkCommandBuffer)> &record, std::string &error) {
@@ -1157,122 +1222,25 @@ bool trace_direct_phase_batch(
         return true;
     }
 
-    std::vector<gpu_direct_phase_sample_host_t> gpu_samples(sample_count);
-    for (std::size_t i = 0; i < sample_count; ++i) {
-        gpu_samples[i].px = samples[i].px;
-        gpu_samples[i].py = samples[i].py;
-        gpu_samples[i].pz = samples[i].pz;
-        gpu_samples[i].occlusion = samples[i].occlusion;
-        gpu_samples[i].nx = samples[i].nx;
-        gpu_samples[i].ny = samples[i].ny;
-        gpu_samples[i].nz = samples[i].nz;
-        gpu_samples[i].twosided = samples[i].twosided;
-        gpu_samples[i].face_index = samples[i].face_index;
-        gpu_samples[i].reserved0 = 0;
-        gpu_samples[i].reserved1 = 0;
-        gpu_samples[i].reserved2 = 0;
-    }
-
-    std::vector<gpu_direct_phase_source_host_t> gpu_sources(source_count);
-    for (std::size_t i = 0; i < source_count; ++i) {
-        gpu_sources[i].px = sources[i].px;
-        gpu_sources[i].py = sources[i].py;
-        gpu_sources[i].pz = sources[i].pz;
-        gpu_sources[i].light = sources[i].light;
-        gpu_sources[i].dx = sources[i].dx;
-        gpu_sources[i].dy = sources[i].dy;
-        gpu_sources[i].dz = sources[i].dz;
-        gpu_sources[i].dist = sources[i].dist;
-        gpu_sources[i].cr = sources[i].cr;
-        gpu_sources[i].cg = sources[i].cg;
-        gpu_sources[i].cb = sources[i].cb;
-        gpu_sources[i].atten = sources[i].atten;
-        gpu_sources[i].type = sources[i].type;
-        gpu_sources[i].formula = sources[i].formula;
-        gpu_sources[i].flags = sources[i].flags;
-        gpu_sources[i].reserved0 = 0;
-        gpu_sources[i].anglescale = sources[i].anglescale;
-        gpu_sources[i].dirt = sources[i].dirt;
-        gpu_sources[i].falloff = sources[i].falloff;
-        gpu_sources[i].pad0 = 0.0f;
-    }
-
-    std::vector<gpu_direct_phase_face_range_host_t> gpu_face_ranges(face_range_count);
-    for (std::size_t i = 0; i < face_range_count; ++i) {
-        gpu_face_ranges[i].source_begin = face_ranges[i].source_begin;
-        gpu_face_ranges[i].source_count = face_ranges[i].source_count;
-    }
-
-    std::vector<std::uint32_t> gpu_face_source_indices(face_source_index_count);
-    std::memcpy(gpu_face_source_indices.data(), face_source_indices, sizeof(std::uint32_t) * face_source_index_count);
-
-    std::vector<gpu_direct_accum_host_t> zero_accum(sample_count);
-
-    buffer_t sample_buffer;
-    buffer_t source_buffer;
-    buffer_t face_range_buffer;
-    buffer_t face_source_index_buffer;
-    buffer_t accum_buffer;
-
-    bool ok = create_buffer(sizeof(gpu_direct_phase_sample_host_t) * sample_count,
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-        sample_buffer,
-        error,
-        gpu_samples.data());
-    if (!ok) return false;
-
-    ok = create_buffer(sizeof(gpu_direct_phase_source_host_t) * source_count,
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-        source_buffer,
-        error,
-        gpu_sources.data());
-    if (!ok) {
-        destroy_buffer(sample_buffer);
+    if (!ensure_persistent_buffer(g.direct_samples, sizeof(gpu_direct_phase_sample_host_t) * sample_count, error) ||
+        !ensure_persistent_buffer(g.direct_sources, sizeof(gpu_direct_phase_source_host_t) * source_count, error) ||
+        !ensure_persistent_buffer(g.direct_face_ranges, sizeof(gpu_direct_phase_face_range_host_t) * face_range_count, error) ||
+        !ensure_persistent_buffer(g.direct_face_source_indices, sizeof(std::uint32_t) * face_source_index_count, error) ||
+        !ensure_persistent_buffer(g.direct_accum, sizeof(gpu_direct_accum_host_t) * sample_count, error, /*host_cached=*/true)) {
         return false;
     }
 
-    ok = create_buffer(sizeof(gpu_direct_phase_face_range_host_t) * face_range_count,
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-        face_range_buffer,
-        error,
-        gpu_face_ranges.data());
-    if (!ok) {
-        destroy_buffer(source_buffer);
-        destroy_buffer(sample_buffer);
-        return false;
-    }
+    std::memcpy(g.direct_samples.mapped, samples, sizeof(gpu_direct_phase_sample_host_t) * sample_count);
+    std::memcpy(g.direct_sources.mapped, sources, sizeof(gpu_direct_phase_source_host_t) * source_count);
+    std::memcpy(g.direct_face_ranges.mapped, face_ranges, sizeof(gpu_direct_phase_face_range_host_t) * face_range_count);
+    std::memcpy(g.direct_face_source_indices.mapped, face_source_indices, sizeof(std::uint32_t) * face_source_index_count);
+    // no accum pre-clear needed: the shader writes every accum slot below sample_count
 
-    ok = create_buffer(sizeof(std::uint32_t) * face_source_index_count,
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-        face_source_index_buffer,
-        error,
-        gpu_face_source_indices.data());
-    if (!ok) {
-        destroy_buffer(face_range_buffer);
-        destroy_buffer(source_buffer);
-        destroy_buffer(sample_buffer);
-        return false;
+    if (g.direct_descriptors_dirty) {
+        update_direct_descriptor_set(g.direct_samples.buf, g.direct_sources.buf, g.direct_face_ranges.buf,
+            g.direct_face_source_indices.buf, g.direct_accum.buf);
+        g.direct_descriptors_dirty = false;
     }
-
-    ok = create_buffer(sizeof(gpu_direct_accum_host_t) * sample_count,
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-        accum_buffer,
-        error,
-        zero_accum.data());
-    if (!ok) {
-        destroy_buffer(face_source_index_buffer);
-        destroy_buffer(face_range_buffer);
-        destroy_buffer(source_buffer);
-        destroy_buffer(sample_buffer);
-        return false;
-    }
-
-    update_direct_descriptor_set(sample_buffer, source_buffer, face_range_buffer, face_source_index_buffer, accum_buffer);
 
     direct_push_constants_t pc{};
     pc.sample_count = static_cast<std::uint32_t>(sample_count);
@@ -1280,41 +1248,24 @@ bool trace_direct_phase_batch(
     pc.flags = 0;
     pc.reserved0 = 0;
 
-    ok = one_time_submit([&](VkCommandBuffer cmd) {
+    bool ok = one_time_submit([&](VkCommandBuffer cmd) {
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, g.direct_pipeline);
         vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, g.direct_pipeline_layout, 0, 1, &g.direct_descriptor_set, 0, nullptr);
         vkCmdPushConstants(cmd, g.direct_pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(pc), &pc);
         vkCmdDispatch(cmd, (pc.sample_count + 63u) / 64u, 1, 1);
+
+        // make the shader's accum writes visible to the persistently-mapped host readback
+        VkMemoryBarrier to_host{};
+        to_host.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+        to_host.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+        to_host.dstAccessMask = VK_ACCESS_HOST_READ_BIT;
+        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_HOST_BIT, 0,
+            1, &to_host, 0, nullptr, 0, nullptr);
     }, error);
 
     if (ok) {
-        void *mapped = nullptr;
-        ok = check(vkMapMemory(g.device, accum_buffer.memory, 0, accum_buffer.size, 0, &mapped), "vkMapMemory(direct phase accum)", error);
-        if (ok) {
-            const auto *gpu_accum = static_cast<const gpu_direct_accum_host_t *>(mapped);
-            for (std::size_t i = 0; i < sample_count; ++i) {
-                accum[i].cr = gpu_accum[i].cr;
-                accum[i].cg = gpu_accum[i].cg;
-                accum[i].cb = gpu_accum[i].cb;
-                accum[i].pad0 = 0.0f;
-                accum[i].nr = gpu_accum[i].nr;
-                accum[i].ng = gpu_accum[i].ng;
-                accum[i].nb = gpu_accum[i].nb;
-                accum[i].pad1 = 0.0f;
-                accum[i].hit = gpu_accum[i].hit;
-                accum[i].reserved0 = 0;
-                accum[i].reserved1 = 0;
-                accum[i].reserved2 = 0;
-            }
-            vkUnmapMemory(g.device, accum_buffer.memory);
-        }
+        std::memcpy(accum, g.direct_accum.mapped, sizeof(gpu_direct_accum_host_t) * sample_count);
     }
-
-    destroy_buffer(accum_buffer);
-    destroy_buffer(face_source_index_buffer);
-    destroy_buffer(face_range_buffer);
-    destroy_buffer(source_buffer);
-    destroy_buffer(sample_buffer);
     return ok;
 }
 
