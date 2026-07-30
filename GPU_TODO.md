@@ -62,5 +62,6 @@ Plan:
 - `trace_occlusion_batch` still uses the old create/destroy-per-batch pattern;
   port it to persistent buffers if it ever gets used on a hot path.
 - Indirect/bounce lighting is the dominant cost on light-count-poor maps
-  (~26 s of the ~28 s cave.bsp run) and is untouched by all of the above; a GPU
-  path for `IndirectLightFace` ray batches is where the next big win lives.
+  (~22.5 s of the ~23 s cave.bsp run) and is untouched by all of the above; a
+  GPU path for `IndirectLightFace` is where the next big win lives. Detailed
+  design + validation playbook: see `GPU_INDIRECT_HANDOFF.md`.
