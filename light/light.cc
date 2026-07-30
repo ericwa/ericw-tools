@@ -857,6 +857,12 @@ static void LightWorld(bspdata_t *bspdata, const fs::path &source, bool forcedsc
         }
     });
 
+#if defined(HAVE_GPU_LIGHT)
+    if (light_options.gpu.value()) {
+        GPU_DirectQueue_Flush(&bsp);
+    }
+#endif
+
     if (bouncerequired && !light_options.nolighting.value()) {
 
         for (size_t i = 0; i < light_options.bounce.value(); i++) {
@@ -1425,14 +1431,12 @@ int light_main(int argc, const char **argv)
     logging::print("{} empty lightmaps\n", static_cast<int>(fully_transparent_lightmaps));
     logging::close();
 
-    
 #if defined(HAVE_GPU_LIGHT)
     if (light_options.gpu.value()) {
-        GPU_DirectQueue_Flush(&bsp);
         GPU_TraceShutdown();
     }
 #endif
-return 0;
+    return 0;
 }
 
 int light_main(const std::vector<std::string> &args)
