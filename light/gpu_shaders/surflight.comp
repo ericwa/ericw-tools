@@ -1,0 +1,196 @@
+#version 460
+#extension GL_EXT_ray_query : require
+#extension GL_EXT_scalar_block_layout : require
+
+layout(local_size_x = 64) in;
+
+// Consumes the bounce-pass surface lights (VPLs) for LightFace_SurfaceLight in
+// ltface.cc. One thread per receiving sample; loops the face's culled source
+// list and each source's emission points, replicating GetSurfaceLighting +
+// SurfaceLight_ColorAtDist exactly. Rays are traced from the VPL point toward
+// the sample (matching the CPU's epsilon behavior at the emitter end).
+
+struct GpuDirectPhaseSample {
+    vec3 position;
+    float occlusion;
+    vec3 normal;
+    float twosided;
+    uint faceIndex;
+    uint reserved0;
+    uint reserved1;
+    uint reserved2;
+};
+
+struct GpuSurflightSource {
+    vec3 surfnormal;
+    float intensity;    // per-point intensity (totalintensity / points)
+    vec3 color;
+    float atten;
+    uint flags;         // bit 0: omnidirectional, bit 1: rescale
+    uint pointBegin;
+    uint pointCount;
+    uint reserved0;
+};
+
+struct GpuDirectPhaseFaceRange {
+    uint sourceBegin;
+    uint sourceCount;
+};
+
+struct GpuDirectAccum {
+    vec3 color;
+    float pad0;
+    vec3 normal;
+    float pad1;
+    uint hit;
+    uint reserved0;
+    uint reserved1;
+    uint reserved2;
+};
+
+layout(set = 0, binding = 0) uniform accelerationStructureEXT sceneAS;
+layout(std430, set = 0, binding = 1) readonly buffer Samples { GpuDirectPhaseSample samples[]; } sampleBuffer;
+layout(std430, set = 0, binding = 2) readonly buffer Sources { GpuSurflightSource sources[]; } sourceBuffer;
+layout(std430, set = 0, binding = 3) readonly buffer Points { vec4 points[]; } pointBuffer;
+layout(std430, set = 0, binding = 4) readonly buffer FaceRanges { GpuDirectPhaseFaceRange ranges[]; } faceRangeBuffer;
+layout(std430, set = 0, binding = 5) readonly buffer FaceSourceIndices { uint indices[]; } faceSourceIndexBuffer;
+layout(std430, set = 0, binding = 6) writeonly buffer Accum { GpuDirectAccum accum[]; } accumBuffer;
+
+layout(push_constant) uniform PushConstants {
+    uint sampleCount;
+    uint sourceCount;
+    float scaledist;        // cfg.scaledist
+    float gate;             // surflight_gate: 0.01, or 0 for -emissivequality HIGH
+    float standardScale;    // bouncescale * 0.5 for bounce passes
+    float skyScale;         // bouncescale for bounce passes
+    float hotspotClamp;     // 128 for bounce passes, 16 for direct surflights
+    float surflightSkyDist; // cfg.surflightskydist (omnidirectional only)
+} pc;
+
+// LIGHT_ANGLE_EPSILON in light.hh
+#define LIGHT_ANGLE_EPSILON 0.01
+
+bool occluded(vec3 origin, vec3 dir, float tmax) {
+    rayQueryEXT rq;
+    rayQueryInitializeEXT(
+        rq,
+        sceneAS,
+        gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT,
+        0xff,
+        origin,
+        0.01,
+        dir,
+        max(tmax, 0.02));
+
+    while (rayQueryProceedEXT(rq)) {}
+
+    return rayQueryGetIntersectionTypeEXT(rq, true) != gl_RayQueryCommittedIntersectionNoneEXT;
+}
+
+void clear_accum(uint sample_id) {
+    accumBuffer.accum[sample_id].color = vec3(0.0);
+    accumBuffer.accum[sample_id].pad0 = 0.0;
+    accumBuffer.accum[sample_id].normal = vec3(0.0);
+    accumBuffer.accum[sample_id].pad1 = 0.0;
+    accumBuffer.accum[sample_id].hit = 0u;
+    accumBuffer.accum[sample_id].reserved0 = 0u;
+    accumBuffer.accum[sample_id].reserved1 = 0u;
+    accumBuffer.accum[sample_id].reserved2 = 0u;
+}
+
+void main() {
+    uint sample_id = gl_GlobalInvocationID.x;
+    if (sample_id >= pc.sampleCount) {
+        return;
+    }
+
+    GpuDirectPhaseSample s = sampleBuffer.samples[sample_id];
+    if (s.twosided < -0.5) { // occluded sample: CPU path skips it entirely
+        clear_accum(sample_id);
+        return;
+    }
+
+    GpuDirectPhaseFaceRange r = faceRangeBuffer.ranges[s.faceIndex];
+    if (r.sourceCount == 0u) {
+        clear_accum(sample_id);
+        return;
+    }
+
+    bool use_normal = !(s.twosided > 0.5);
+
+    vec3 total_color = vec3(0.0);
+    uint any_hit = 0u;
+
+    for (uint local_i = 0u; local_i < r.sourceCount; ++local_i) {
+        uint source_id = faceSourceIndexBuffer.indices[r.sourceBegin + local_i];
+        if (source_id >= pc.sourceCount) {
+            continue;
+        }
+        GpuSurflightSource l = sourceBuffer.sources[source_id];
+        bool omnidirectional = (l.flags & 1u) != 0u;
+        bool rescale = (l.flags & 2u) != 0u;
+
+        for (uint p = 0u; p < l.pointCount; ++p) {
+            vec3 pos = pointBuffer.points[l.pointBegin + p].xyz;
+
+            // matches LightFace_SurfaceLight: dist clamped before normalizing
+            vec3 to_sample = s.position - pos;
+            float dist = max(0.01, length(to_sample));
+            vec3 dir = to_sample / dist;
+
+            // GetSurfaceLighting
+            float dp1 = dot(l.surfnormal, dir);
+            float dp2 = use_normal ? dot(-dir, s.normal) : 1.0;
+            float dpf;
+            if (!omnidirectional) {
+                if (dp1 < -LIGHT_ANGLE_EPSILON) continue; // sample behind vpl
+                if (dp2 < -LIGHT_ANGLE_EPSILON) continue; // vpl behind sample face
+                if (rescale) {
+                    dp1 = 0.5 + dp1 * 0.5;
+                    dp2 = 0.5 + dp2 * 0.5;
+                }
+                dpf = dp1 * dp2;
+            } else {
+                dpf = dp2 * 0.5; // sky emitters
+            }
+            dpf = max(0.0, dpf);
+            if (dpf == 0.0) {
+                continue;
+            }
+
+            float falloff_dist = dist;
+            if (omnidirectional) {
+                falloff_dist += pc.surflightSkyDist;
+            }
+            float surf_scale = (omnidirectional ? pc.skyScale : pc.standardScale) * dpf;
+
+            // SurfaceLight_ColorAtDist = GetLightValue(LF_QRAD3) * surf_scale
+            float value = pc.scaledist * l.atten * falloff_dist;
+            float d = max(value, pc.hotspotClamp);
+            vec3 contrib = l.color * (l.intensity / (d * d) * surf_scale);
+
+            // qv::gate: skip only when ALL components <= gate
+            if (all(lessThanEqual(contrib, vec3(pc.gate)))) {
+                continue;
+            }
+
+            // origin = vpl point, toward the sample (matches the CPU ray)
+            if (occluded(pos, dir, dist)) {
+                continue;
+            }
+
+            total_color += contrib;
+            any_hit = 1u;
+        }
+    }
+
+    // LightFace_SurfaceLight never adds a normalcontrib; accum normal stays 0
+    accumBuffer.accum[sample_id].color = total_color;
+    accumBuffer.accum[sample_id].pad0 = 0.0;
+    accumBuffer.accum[sample_id].normal = vec3(0.0);
+    accumBuffer.accum[sample_id].pad1 = 0.0;
+    accumBuffer.accum[sample_id].hit = any_hit;
+    accumBuffer.accum[sample_id].reserved0 = 0u;
+    accumBuffer.accum[sample_id].reserved1 = 0u;
+    accumBuffer.accum[sample_id].reserved2 = 0u;
+}

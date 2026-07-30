@@ -3165,6 +3165,307 @@ static bool GPU_DirectQueue_WillHandleFace(const lightsurf_t *lightsurf, const l
     }
     return GPU_DirectQueue_BuildSourcesLocked();
 }
+
+// ---------------------------------------------------------------------------
+// GPU indirect (bounce) queue: batches LightFace_SurfaceLight's per-sample
+// work for the bounce passes onto the surflight compute kernel. Sources are
+// the pass's VPLs (bounce_level == depth), rebuilt at each pass boundary.
+// ---------------------------------------------------------------------------
+namespace {
+struct gpu_indirect_face_record_t {
+    lightsurf_t *lightsurf = nullptr;
+    lightmapdict_t *lightmaps = nullptr;
+    std::size_t first_sample = 0;
+    std::size_t sample_count = 0;
+};
+
+std::mutex g_gpu_indirect_queue_mutex;
+std::vector<gpu_light::direct_phase_sample_t> g_gpu_indirect_samples;
+std::vector<gpu_light::surflight_source_t> g_gpu_indirect_sources;
+std::vector<gpu_light::surflight_point_t> g_gpu_indirect_points;
+// per-source emitting surface + style setting, for the exact CPU-parity culls
+std::vector<const lightsurf_t *> g_gpu_indirect_source_surfs;
+std::vector<const surfacelight_t::per_style_t *> g_gpu_indirect_source_settings;
+std::vector<gpu_light::direct_phase_face_range_t> g_gpu_indirect_face_ranges;
+std::vector<std::uint32_t> g_gpu_indirect_face_source_indices;
+std::vector<gpu_indirect_face_record_t> g_gpu_indirect_faces;
+std::optional<size_t> g_gpu_indirect_built_depth;
+bool g_gpu_indirect_disabled = false;
+
+constexpr std::size_t GPU_INDIRECT_FLUSH_SAMPLES = 1024ull * 1024ull;
+constexpr float GPU_INDIRECT_HOTSPOT_CLAMP = 128.0f; // bounce-pass hotspot_clamp
+
+static float GPU_Indirect_SurflightGate()
+{
+    return light_options.emissivequality.value() == emissivequality_t::HIGH ? 0.0f : 0.01f;
+}
+
+// Builds the GPU source list for one bounce pass. The queue is empty at every
+// pass boundary (GPU_IndirectQueue_Flush runs after each pass's parallel
+// loop), so rebuilding here cannot orphan queued faces.
+static bool GPU_IndirectQueue_BuildSourcesLocked(size_t bounce_depth)
+{
+    if (g_gpu_indirect_disabled) {
+        return false;
+    }
+    if (g_gpu_indirect_built_depth == bounce_depth) {
+        return true;
+    }
+    g_gpu_indirect_built_depth = bounce_depth;
+    g_gpu_indirect_sources.clear();
+    g_gpu_indirect_points.clear();
+    g_gpu_indirect_source_surfs.clear();
+    g_gpu_indirect_source_settings.clear();
+
+    if (dirt_in_use) {
+        logging::print("GPU indirect phase: dirt/AO is enabled; falling back to CPU indirect path.\n");
+        g_gpu_indirect_disabled = true;
+        return false;
+    }
+
+    for (const lightsurf_t *surf_ptr : EmissiveLightSurfaces()) {
+        const surfacelight_t &vpl = *surf_ptr->vpl;
+        for (const auto &setting : vpl.styles) {
+            if (setting.bounce_level != bounce_depth) {
+                continue;
+            }
+            if (setting.style != 0) {
+                logging::print("GPU indirect phase: styled bounce light encountered; falling back to CPU indirect path.\n");
+                g_gpu_indirect_disabled = true;
+                return false;
+            }
+
+            gpu_light::surflight_source_t src{};
+            src.nx = vpl.surfnormal[0]; src.ny = vpl.surfnormal[1]; src.nz = vpl.surfnormal[2];
+            src.intensity = setting.intensity;
+            src.cr = setting.color[0]; src.cg = setting.color[1]; src.cb = setting.color[2];
+            src.atten = setting.atten;
+            src.flags = (setting.omnidirectional ? 1u : 0u) | (setting.rescale ? 2u : 0u);
+            src.point_begin = static_cast<std::uint32_t>(g_gpu_indirect_points.size());
+            src.point_count = static_cast<std::uint32_t>(vpl.points.size());
+            for (const qvec3f &pt : vpl.points) {
+                g_gpu_indirect_points.push_back(gpu_light::surflight_point_t{pt[0], pt[1], pt[2], 0.0f});
+            }
+            g_gpu_indirect_sources.push_back(src);
+            g_gpu_indirect_source_surfs.push_back(surf_ptr);
+            g_gpu_indirect_source_settings.push_back(&setting);
+        }
+    }
+
+    logging::print("GPU indirect phase: pass {} has {} surflight sources ({} points).\n",
+        bounce_depth, g_gpu_indirect_sources.size(), g_gpu_indirect_points.size());
+    return true;
+}
+
+// A snapshot of the queue, taken under the mutex and dispatched without it.
+// sample.face_index values index into this batch's face_ranges.
+struct gpu_indirect_batch_t {
+    std::vector<gpu_light::direct_phase_sample_t> samples;
+    std::vector<gpu_light::direct_phase_face_range_t> face_ranges;
+    std::vector<std::uint32_t> face_source_indices;
+    std::vector<gpu_indirect_face_record_t> faces;
+};
+
+// caller must hold g_gpu_indirect_queue_mutex
+static gpu_indirect_batch_t GPU_IndirectQueue_TakeBatchLocked()
+{
+    gpu_indirect_batch_t batch;
+    batch.samples = std::move(g_gpu_indirect_samples);
+    batch.face_ranges = std::move(g_gpu_indirect_face_ranges);
+    batch.face_source_indices = std::move(g_gpu_indirect_face_source_indices);
+    batch.faces = std::move(g_gpu_indirect_faces);
+    g_gpu_indirect_samples.clear();
+    g_gpu_indirect_face_ranges.clear();
+    g_gpu_indirect_face_source_indices.clear();
+    g_gpu_indirect_faces.clear();
+    return batch;
+}
+
+static std::uint64_t GPU_IndirectBatch_ImplicitRayCount(const gpu_indirect_batch_t &batch)
+{
+    // per-face ray weight = sum of the point counts of its culled-in sources
+    std::vector<std::uint64_t> face_weights(batch.face_ranges.size(), 0);
+    for (std::size_t f = 0; f < batch.face_ranges.size(); ++f) {
+        const auto &range = batch.face_ranges[f];
+        for (std::uint32_t i = 0; i < range.source_count; ++i) {
+            const std::uint32_t source_index = batch.face_source_indices[range.source_begin + i];
+            if (source_index < g_gpu_indirect_sources.size()) {
+                face_weights[f] += g_gpu_indirect_sources[source_index].point_count;
+            }
+        }
+    }
+    std::uint64_t implicit_rays = 0;
+    for (const auto &sample : batch.samples) {
+        if (sample.face_index < face_weights.size()) {
+            implicit_rays += face_weights[sample.face_index];
+        }
+    }
+    return implicit_rays;
+}
+
+// Dispatches a batch and applies the results to the lightmaps. Runs WITHOUT
+// the queue mutex so workers keep queueing faces while the GPU traces. Safe
+// because a queued face has no further CPU writes this pass, each face is in
+// exactly one batch, and the source/point vectors are immutable for the
+// duration of a pass (rebuilds only happen between passes, single-threaded).
+static bool GPU_IndirectQueue_DispatchBatch(const mbsp_t *bsp, gpu_indirect_batch_t &batch)
+{
+    if (batch.samples.empty()) {
+        return true;
+    }
+
+    const auto t0 = std::chrono::steady_clock::now();
+    std::vector<gpu_light::direct_phase_accum_t> accum(batch.samples.size());
+
+    gpu_light::surflight_params_t params{};
+    params.standard_scale = light_options.bouncescale.value() * 0.5f;
+    params.sky_scale = light_options.bouncescale.value();
+    params.hotspot_clamp = GPU_INDIRECT_HOTSPOT_CLAMP;
+    params.gate = GPU_Indirect_SurflightGate();
+    params.scaledist = light_options.scaledist.value();
+    params.surflightskydist = light_options.surflightskydist.value();
+
+    const bool ok = gpu_light::trace_surflight_batch(
+        g_gpu_indirect_sources.data(),
+        g_gpu_indirect_sources.size(),
+        g_gpu_indirect_points.data(),
+        g_gpu_indirect_points.size(),
+        batch.samples.data(),
+        accum.data(),
+        batch.samples.size(),
+        batch.face_ranges.data(),
+        batch.face_ranges.size(),
+        batch.face_source_indices.data(),
+        batch.face_source_indices.size(),
+        params);
+    const auto t1 = std::chrono::steady_clock::now();
+    const double gpu_ms = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count() / 1000.0;
+
+    if (!ok) {
+        {
+            std::lock_guard<std::mutex> lock(g_gpu_indirect_queue_mutex);
+            g_gpu_indirect_disabled = true;
+        }
+        logging::print("ERROR: GPU indirect phase dispatch failed: {}\n", GPU_TraceLastError());
+        logging::print("ERROR: disabling GPU indirect phase for the rest of this run. Re-run without -gpu for guaranteed CPU output.\n");
+        return false;
+    }
+
+    for (const auto &rec : batch.faces) {
+        if (!rec.lightsurf || !rec.lightmaps || rec.sample_count == 0) {
+            continue;
+        }
+        lightmap_t *lightmap = Lightmap_ForStyle(rec.lightmaps, 0, rec.lightsurf);
+        bool hit = false;
+        for (std::size_t i = 0; i < rec.sample_count; ++i) {
+            const std::size_t gi = rec.first_sample + i;
+            if (!accum[gi].hit) continue;
+            const qvec3f color{accum[gi].cr, accum[gi].cg, accum[gi].cb};
+            lightsample_t &sample = lightmap->samples[i];
+            sample.color += color;
+            // feeds the next pass's MakeBounceLights
+            lightmap->bounce_color += color;
+            hit = true;
+        }
+        if (hit) {
+            Lightmap_Save(bsp, rec.lightmaps, rec.lightsurf, lightmap, 0);
+        }
+    }
+
+    const std::uint64_t implicit_rays = GPU_IndirectBatch_ImplicitRayCount(batch);
+    logging::print("GPU indirect phase: flushed {} samples, {} sources, {} face-source refs = {} implicit rays in {:.3f} ms\n",
+        batch.samples.size(), g_gpu_indirect_sources.size(), batch.face_source_indices.size(), implicit_rays, gpu_ms);
+    return true;
+}
+
+// Decides whether the GPU will handle this face's bounce pass and, if so,
+// enqueues it. Unlike the direct phase there is no decision/enqueue split:
+// LightFace_SurfaceLight is the only work IndirectLightFace does, so a queued
+// face trivially has no outstanding CPU writes. Returns false to tell the
+// caller to run the CPU path.
+static bool GPU_IndirectQueue_AddFace(
+    const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t *lightmaps, size_t bounce_depth)
+{
+    if (!GPU_TraceAvailable() || g_gpu_indirect_disabled || !lightsurf || !lightmaps) {
+        return false;
+    }
+    // CPU path returns early for these too (LightFace_SurfaceLight channel check)
+    if (!(lightsurf->object_channel_mask & CHANNEL_MASK_DEFAULT)) {
+        return true;
+    }
+    const std::size_t sample_count = lightsurf->samples.size();
+    if (!sample_count) {
+        return true;
+    }
+
+    std::unique_lock<std::mutex> lock(g_gpu_indirect_queue_mutex);
+    if (!GPU_IndirectQueue_BuildSourcesLocked(bounce_depth)) {
+        return false;
+    }
+    if (g_gpu_indirect_sources.empty()) {
+        return true;
+    }
+
+    const float surflight_gate = GPU_Indirect_SurflightGate();
+
+    const std::uint32_t face_index = static_cast<std::uint32_t>(g_gpu_indirect_face_ranges.size());
+    gpu_light::direct_phase_face_range_t face_range{};
+    face_range.source_begin = static_cast<std::uint32_t>(g_gpu_indirect_face_source_indices.size());
+
+    // the CPU path's own culls, for bit-exact source selection
+    for (std::uint32_t source_index = 0; source_index < g_gpu_indirect_sources.size(); ++source_index) {
+        const lightsurf_t *emitter = g_gpu_indirect_source_surfs[source_index];
+        const surfacelight_t::per_style_t &setting = *g_gpu_indirect_source_settings[source_index];
+        if (SurfaceLight_SphereCull(emitter->vpl.get(), lightsurf, setting, surflight_gate, GPU_INDIRECT_HOTSPOT_CLAMP)) {
+            continue;
+        }
+        if (SurfaceLight_VisCull(bsp, &lightsurf->pvs, emitter)) {
+            continue;
+        }
+        g_gpu_indirect_face_source_indices.push_back(source_index);
+    }
+
+    face_range.source_count = static_cast<std::uint32_t>(g_gpu_indirect_face_source_indices.size()) - face_range.source_begin;
+    if (face_range.source_count == 0) {
+        return true;
+    }
+    g_gpu_indirect_face_ranges.push_back(face_range);
+
+    const std::size_t first_sample = g_gpu_indirect_samples.size();
+    g_gpu_indirect_faces.push_back(gpu_indirect_face_record_t{lightsurf, lightmaps, first_sample, sample_count});
+
+    for (const auto &sample : lightsurf->samples) {
+        gpu_light::direct_phase_sample_t s{};
+        s.face_index = face_index;
+        if (!sample.occluded) {
+            s.px = sample.point[0]; s.py = sample.point[1]; s.pz = sample.point[2];
+            s.nx = sample.normal[0]; s.ny = sample.normal[1]; s.nz = sample.normal[2];
+            s.occlusion = sample.occlusion;
+            s.twosided = lightsurf->twosided ? 1.0f : 0.0f;
+        } else {
+            s.twosided = -1.0f;
+        }
+        g_gpu_indirect_samples.push_back(s);
+    }
+
+    if (g_gpu_indirect_samples.size() >= GPU_INDIRECT_FLUSH_SAMPLES) {
+        gpu_indirect_batch_t batch = GPU_IndirectQueue_TakeBatchLocked();
+        lock.unlock();
+        GPU_IndirectQueue_DispatchBatch(bsp, batch);
+    }
+    return true;
+}
+} // namespace
+
+void GPU_IndirectQueue_Flush(const mbsp_t *bsp)
+{
+    gpu_indirect_batch_t batch;
+    {
+        std::lock_guard<std::mutex> lock(g_gpu_indirect_queue_mutex);
+        batch = GPU_IndirectQueue_TakeBatchLocked();
+    }
+    GPU_IndirectQueue_DispatchBatch(bsp, batch);
+}
 #endif
 
 /*
@@ -3272,10 +3573,23 @@ void IndirectLightFace(
         /* positive lights */
         if (!(modelinfo->lightignore.value() || extended_flags.light_ignore)) {
 
-            /* add bounce lighting */
-            // note: scale here is just to keep it close-ish to the old code
-            LightFace_SurfaceLight(bsp, &lightsurf, lightmaps, bounce_depth, cfg.bouncescale.value() * 0.5,
-                cfg.bouncescale.value(), 128.0f);
+            const auto cpu_indirect_light = [&]() {
+                /* add bounce lighting */
+                // note: scale here is just to keep it close-ish to the old code
+                LightFace_SurfaceLight(bsp, &lightsurf, lightmaps, bounce_depth, cfg.bouncescale.value() * 0.5,
+                    cfg.bouncescale.value(), 128.0f);
+            };
+
+#if defined(HAVE_GPU_LIGHT)
+            // AddFace both decides and enqueues: IndirectLightFace performs no
+            // other CPU writes, so there is no decision/enqueue split like the
+            // direct phase needs. false = GPU unavailable/disabled; run on CPU.
+            if (!GPU_IndirectQueue_AddFace(bsp, &lightsurf, lightmaps, bounce_depth)) {
+                cpu_indirect_light();
+            }
+#else
+            cpu_indirect_light();
+#endif
         }
     }
 }

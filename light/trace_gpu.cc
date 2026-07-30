@@ -28,6 +28,21 @@ bool trace_direct_phase_batch(
     std::size_t face_source_index_count,
     std::string &error);
 
+bool trace_surflight_batch(
+    const gpu_light::surflight_source_t *sources,
+    std::size_t source_count,
+    const gpu_light::surflight_point_t *points,
+    std::size_t point_count,
+    const gpu_light::direct_phase_sample_t *samples,
+    gpu_light::direct_phase_accum_t *accum,
+    std::size_t sample_count,
+    const gpu_light::direct_phase_face_range_t *face_ranges,
+    std::size_t face_range_count,
+    const std::uint32_t *face_source_indices,
+    std::size_t face_source_index_count,
+    const gpu_light::surflight_params_t &params,
+    std::string &error);
+
 bool trace_direct_accumulate_batch(
     const modelinfo_t *self,
     std::uint32_t shadow_mask,
@@ -181,6 +196,61 @@ bool trace_direct_phase_batch(
     const bool ok = vulkan_backend::trace_direct_phase_batch(
         sources, source_count, samples, accum, sample_count,
         face_ranges, face_range_count, face_source_indices, face_source_index_count, error);
+    std::lock_guard<std::mutex> lock(g_mutex);
+    if (ok) {
+        g_stats.gpu_batches++;
+        return true;
+    }
+    g_stats.fallback_batches++;
+    if (!error.empty()) {
+        g_last_error = error;
+    }
+    return false;
+#else
+    return false;
+#endif
+}
+
+
+bool trace_surflight_batch(
+    const surflight_source_t *sources,
+    std::size_t source_count,
+    const surflight_point_t *points,
+    std::size_t point_count,
+    const direct_phase_sample_t *samples,
+    direct_phase_accum_t *accum,
+    std::size_t sample_count,
+    const direct_phase_face_range_t *face_ranges,
+    std::size_t face_range_count,
+    const std::uint32_t *face_source_indices,
+    std::size_t face_source_index_count,
+    const surflight_params_t &params) {
+    if (!sources || !points || !samples || !accum || !face_ranges || !face_source_indices || source_count == 0 ||
+        point_count == 0 || sample_count == 0 || face_range_count == 0 || face_source_index_count == 0) {
+        return true;
+    }
+
+    // rough estimate for stats: sources-per-face refs times average samples per face
+    std::uint64_t implicit_rays = 0;
+    for (std::size_t i = 0; i < face_range_count; ++i) {
+        implicit_rays += face_ranges[i].source_count;
+    }
+    implicit_rays *= static_cast<std::uint64_t>(sample_count) / static_cast<std::uint64_t>(face_range_count);
+    {
+        std::lock_guard<std::mutex> lock(g_mutex);
+        g_stats.batches++;
+        g_stats.rays += implicit_rays;
+        if (g_state != backend_state_t::initialized) {
+            g_stats.fallback_batches++;
+            return false;
+        }
+    }
+
+#if defined(HAVE_GPU_LIGHT)
+    std::string error;
+    const bool ok = vulkan_backend::trace_surflight_batch(
+        sources, source_count, points, point_count, samples, accum, sample_count,
+        face_ranges, face_range_count, face_source_indices, face_source_index_count, params, error);
     std::lock_guard<std::mutex> lock(g_mutex);
     if (ok) {
         g_stats.gpu_batches++;

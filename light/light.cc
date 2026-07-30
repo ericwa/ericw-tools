@@ -884,6 +884,14 @@ static void LightWorld(bspdata_t *bspdata, const fs::path &source, bool forcedsc
                     IndirectLightFace(&bsp, light_surfaces[f], light_options, i);
                 }
             });
+
+#if defined(HAVE_GPU_LIGHT)
+            // must complete before the next pass's MakeBounceLights reads
+            // bounce_color (and before PostProcessLightFace after the last pass)
+            if (light_options.gpu.value()) {
+                GPU_IndirectQueue_Flush(&bsp);
+            }
+#endif
         }
     }
 

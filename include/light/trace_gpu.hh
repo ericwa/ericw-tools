@@ -88,6 +88,31 @@ struct direct_phase_source_t {
 
 using direct_phase_accum_t = direct_accum_t;
 
+// One record per (emissive surface, style) pair matching the bounce pass.
+// The shader loops the point range [point_begin, point_begin + point_count).
+struct surflight_source_t {
+    float nx = 0, ny = 0, nz = 1, intensity = 0;
+    float cr = 1, cg = 1, cb = 1, atten = 1;
+    std::uint32_t flags = 0; // bit 0: omnidirectional, bit 1: rescale
+    std::uint32_t point_begin = 0;
+    std::uint32_t point_count = 0;
+    std::uint32_t reserved0 = 0;
+};
+
+struct surflight_point_t {
+    float x = 0, y = 0, z = 0, pad0 = 0;
+};
+
+// Per-pass constants for LightFace_SurfaceLight's math (see GetSurfaceLighting
+// / SurfaceLight_ColorAtDist in ltface.cc).
+struct surflight_params_t {
+    float standard_scale = 0;
+    float sky_scale = 0;
+    float hotspot_clamp = 128.0f;
+    float gate = 0.01f;
+    float scaledist = 1.0f;
+    float surflightskydist = 0;
+};
 
 enum class backend_state_t {
     unavailable,
@@ -132,6 +157,20 @@ bool trace_direct_phase_batch(
     const std::uint32_t *face_source_indices,
     std::size_t face_source_index_count);
 
+bool trace_surflight_batch(
+    const surflight_source_t *sources,
+    std::size_t source_count,
+    const surflight_point_t *points,
+    std::size_t point_count,
+    const direct_phase_sample_t *samples,
+    direct_phase_accum_t *accum,
+    std::size_t sample_count,
+    const direct_phase_face_range_t *face_ranges,
+    std::size_t face_range_count,
+    const std::uint32_t *face_source_indices,
+    std::size_t face_source_index_count,
+    const surflight_params_t &params);
+
 bool trace_direct_accumulate_batch(
     const modelinfo_t *self,
     std::uint32_t shadow_mask,
@@ -150,3 +189,7 @@ const char *GPU_TraceLastError();
 
 // Flushes pending sample-driven direct-light work.
 void GPU_DirectQueue_Flush(const mbsp_t *bsp);
+
+// Flushes pending indirect (bounce) surflight work. Must be called after each
+// bounce pass's IndirectLightFace loop, before the next MakeBounceLights.
+void GPU_IndirectQueue_Flush(const mbsp_t *bsp);

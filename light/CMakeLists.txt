@@ -60,7 +60,7 @@ if (LIGHT_ENABLE_VULKAN_GPU)
     target_link_libraries(liblight PRIVATE Vulkan::Vulkan)
 
     set(GPU_SHADER_SPVS)
-    foreach(GPU_SHADER_NAME occlusion direct_phase)
+    foreach(GPU_SHADER_NAME occlusion direct_phase surflight)
         set(GPU_SHADER_SRC "${CMAKE_CURRENT_SOURCE_DIR}/gpu_shaders/${GPU_SHADER_NAME}.comp")
         set(GPU_SHADER_SPV "${CMAKE_CURRENT_BINARY_DIR}/gpu_shaders/${GPU_SHADER_NAME}.comp.spv")
         add_custom_command(

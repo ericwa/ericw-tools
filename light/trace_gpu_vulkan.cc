@@ -60,11 +60,18 @@ struct direct_slot_t {
     persistent_buffer_t face_ranges;
     persistent_buffer_t face_source_indices;
     persistent_buffer_t accum;
+    // surflight-only inputs; samples/face_ranges/face_source_indices/accum are
+    // shared with the direct kernel (a slot is owned for a whole batch, and the
+    // direct phase is fully flushed before the bounce passes start)
+    persistent_buffer_t surflight_sources;
+    persistent_buffer_t surflight_points;
     VkCommandPool command_pool = VK_NULL_HANDLE;
     VkCommandBuffer command_buffer = VK_NULL_HANDLE;
     VkFence fence = VK_NULL_HANDLE;
     VkDescriptorSet descriptor_set = VK_NULL_HANDLE;
+    VkDescriptorSet surflight_descriptor_set = VK_NULL_HANDLE;
     bool descriptors_dirty = true;
+    bool surflight_descriptors_dirty = true;
 };
 
 struct vertex_t {
@@ -150,6 +157,30 @@ struct direct_push_constants_t {
     float gate;
 };
 
+struct gpu_surflight_source_host_t {
+    float nx, ny, nz, intensity;
+    float cr, cg, cb, atten;
+    std::uint32_t flags;
+    std::uint32_t point_begin;
+    std::uint32_t point_count;
+    std::uint32_t reserved0;
+};
+
+struct gpu_surflight_point_host_t {
+    float x, y, z, pad0;
+};
+
+struct surflight_push_constants_t {
+    std::uint32_t sample_count;
+    std::uint32_t source_count;
+    float scaledist;
+    float gate;
+    float standard_scale;
+    float sky_scale;
+    float hotspot_clamp;
+    float surflightskydist;
+};
+
 static_assert(sizeof(gpu_ray_host_t) == 40, "GPU ray layout must match shader");
 static_assert(sizeof(gpu_result_host_t) == 20, "GPU result layout must match shader");
 static_assert(sizeof(gpu_direct_job_host_t) == 80, "GPU direct job layout must match shader");
@@ -158,12 +189,16 @@ static_assert(sizeof(gpu_direct_accum_host_t) == 48, "GPU direct accum layout mu
 static_assert(sizeof(gpu_direct_phase_sample_host_t) == 48, "GPU direct phase sample layout must match shader");
 static_assert(sizeof(gpu_direct_phase_face_range_host_t) == 8, "GPU direct phase face range layout must match shader");
 static_assert(sizeof(gpu_direct_phase_source_host_t) == 80, "GPU direct phase source layout must match shader");
+static_assert(sizeof(gpu_surflight_source_host_t) == 48, "GPU surflight source layout must match shader");
+static_assert(sizeof(gpu_surflight_point_host_t) == 16, "GPU surflight point layout must match shader");
 
 // the public API structs are memcpy'd straight into mapped GPU memory
 static_assert(sizeof(direct_phase_sample_t) == sizeof(gpu_direct_phase_sample_host_t), "API sample struct must match GPU layout");
 static_assert(sizeof(direct_phase_source_t) == sizeof(gpu_direct_phase_source_host_t), "API source struct must match GPU layout");
 static_assert(sizeof(direct_phase_face_range_t) == sizeof(gpu_direct_phase_face_range_host_t), "API face range struct must match GPU layout");
 static_assert(sizeof(direct_phase_accum_t) == sizeof(gpu_direct_accum_host_t), "API accum struct must match GPU layout");
+static_assert(sizeof(surflight_source_t) == sizeof(gpu_surflight_source_host_t), "API surflight source struct must match GPU layout");
+static_assert(sizeof(surflight_point_t) == sizeof(gpu_surflight_point_host_t), "API surflight point struct must match GPU layout");
 
 struct context_t {
     VkInstance instance = VK_NULL_HANDLE;
@@ -201,6 +236,11 @@ struct context_t {
     VkPipelineLayout direct_pipeline_layout = VK_NULL_HANDLE;
     VkPipeline direct_pipeline = VK_NULL_HANDLE;
     VkDescriptorPool direct_descriptor_pool = VK_NULL_HANDLE;
+
+    VkDescriptorSetLayout surflight_descriptor_set_layout = VK_NULL_HANDLE;
+    VkPipelineLayout surflight_pipeline_layout = VK_NULL_HANDLE;
+    VkPipeline surflight_pipeline = VK_NULL_HANDLE;
+    VkDescriptorPool surflight_descriptor_pool = VK_NULL_HANDLE;
 
     std::array<direct_slot_t, 2> direct_slots;
 
@@ -264,6 +304,11 @@ static void destroy_as(as_t &a) {
 static void destroy_locked() {
     if (g.device) vkDeviceWaitIdle(g.device);
 
+    if (g.surflight_pipeline) vkDestroyPipeline(g.device, g.surflight_pipeline, nullptr);
+    if (g.surflight_pipeline_layout) vkDestroyPipelineLayout(g.device, g.surflight_pipeline_layout, nullptr);
+    if (g.surflight_descriptor_pool) vkDestroyDescriptorPool(g.device, g.surflight_descriptor_pool, nullptr);
+    if (g.surflight_descriptor_set_layout) vkDestroyDescriptorSetLayout(g.device, g.surflight_descriptor_set_layout, nullptr);
+
     if (g.direct_pipeline) vkDestroyPipeline(g.device, g.direct_pipeline, nullptr);
     if (g.direct_pipeline_layout) vkDestroyPipelineLayout(g.device, g.direct_pipeline_layout, nullptr);
     if (g.direct_descriptor_pool) vkDestroyDescriptorPool(g.device, g.direct_descriptor_pool, nullptr);
@@ -281,6 +326,8 @@ static void destroy_locked() {
         destroy_buffer(slot.face_ranges.buf);
         destroy_buffer(slot.face_source_indices.buf);
         destroy_buffer(slot.accum.buf);
+        destroy_buffer(slot.surflight_sources.buf);
+        destroy_buffer(slot.surflight_points.buf);
         if (slot.fence) vkDestroyFence(g.device, slot.fence, nullptr);
         if (slot.command_pool) vkDestroyCommandPool(g.device, slot.command_pool, nullptr);
     }
@@ -1020,6 +1067,130 @@ static bool create_direct_pipeline(std::string &error) {
     return true;
 }
 
+// Second compute pipeline over the same slots: the surflight (bounce) kernel.
+// Reuses each slot's command pool/buffer/fence and the shared sample/range/
+// index/accum buffers; only the descriptor layout, pool, and sets are new.
+static bool create_surflight_pipeline(std::string &error) {
+    std::array<VkDescriptorSetLayoutBinding, 7> bindings{};
+    bindings[0].binding = 0;
+    bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+    bindings[0].descriptorCount = 1;
+    bindings[0].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    for (std::uint32_t i = 1; i < bindings.size(); ++i) {
+        bindings[i].binding = i;
+        bindings[i].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        bindings[i].descriptorCount = 1;
+        bindings[i].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    }
+
+    VkDescriptorSetLayoutCreateInfo dlci{};
+    dlci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    dlci.bindingCount = static_cast<std::uint32_t>(bindings.size());
+    dlci.pBindings = bindings.data();
+    if (!check(vkCreateDescriptorSetLayout(g.device, &dlci, nullptr, &g.surflight_descriptor_set_layout), "vkCreateDescriptorSetLayout(surflight)", error)) return false;
+
+    VkPushConstantRange pcr{};
+    pcr.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    pcr.offset = 0;
+    pcr.size = sizeof(surflight_push_constants_t);
+
+    VkPipelineLayoutCreateInfo plci{};
+    plci.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    plci.setLayoutCount = 1;
+    plci.pSetLayouts = &g.surflight_descriptor_set_layout;
+    plci.pushConstantRangeCount = 1;
+    plci.pPushConstantRanges = &pcr;
+    if (!check(vkCreatePipelineLayout(g.device, &plci, nullptr, &g.surflight_pipeline_layout), "vkCreatePipelineLayout(surflight)", error)) return false;
+
+    std::vector<std::uint32_t> spv;
+    const auto shader_path = exe_dir() / "gpu_shaders" / "surflight.comp.spv";
+    if (!read_file(shader_path, spv, error)) return false;
+
+    VkShaderModuleCreateInfo smci{};
+    smci.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    smci.codeSize = spv.size() * sizeof(std::uint32_t);
+    smci.pCode = spv.data();
+    VkShaderModule shader = VK_NULL_HANDLE;
+    if (!check(vkCreateShaderModule(g.device, &smci, nullptr, &shader), "vkCreateShaderModule(surflight)", error)) return false;
+
+    VkComputePipelineCreateInfo cpci{};
+    cpci.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+    cpci.stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    cpci.stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+    cpci.stage.module = shader;
+    cpci.stage.pName = "main";
+    cpci.layout = g.surflight_pipeline_layout;
+    bool ok = check(vkCreateComputePipelines(g.device, VK_NULL_HANDLE, 1, &cpci, nullptr, &g.surflight_pipeline), "vkCreateComputePipelines(surflight)", error);
+    vkDestroyShaderModule(g.device, shader, nullptr);
+    if (!ok) return false;
+
+    const std::uint32_t slot_count = static_cast<std::uint32_t>(g.direct_slots.size());
+
+    VkDescriptorPoolSize ps0{};
+    ps0.type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+    ps0.descriptorCount = slot_count;
+    VkDescriptorPoolSize ps1{};
+    ps1.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    ps1.descriptorCount = 6 * slot_count;
+    std::array<VkDescriptorPoolSize, 2> sizes{ps0, ps1};
+
+    VkDescriptorPoolCreateInfo dpci{};
+    dpci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    dpci.maxSets = slot_count;
+    dpci.poolSizeCount = static_cast<std::uint32_t>(sizes.size());
+    dpci.pPoolSizes = sizes.data();
+    if (!check(vkCreateDescriptorPool(g.device, &dpci, nullptr, &g.surflight_descriptor_pool), "vkCreateDescriptorPool(surflight)", error)) return false;
+
+    for (auto &slot : g.direct_slots) {
+        VkDescriptorSetAllocateInfo dsai{};
+        dsai.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        dsai.descriptorPool = g.surflight_descriptor_pool;
+        dsai.descriptorSetCount = 1;
+        dsai.pSetLayouts = &g.surflight_descriptor_set_layout;
+        if (!check(vkAllocateDescriptorSets(g.device, &dsai, &slot.surflight_descriptor_set), "vkAllocateDescriptorSets(surflight)", error)) return false;
+    }
+
+    return true;
+}
+
+static void update_surflight_descriptor_set(direct_slot_t &slot) {
+    VkWriteDescriptorSetAccelerationStructureKHR as_info{};
+    as_info.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR;
+    as_info.accelerationStructureCount = 1;
+    as_info.pAccelerationStructures = &g.tlas.as;
+
+    VkWriteDescriptorSet w0{};
+    w0.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    w0.pNext = &as_info;
+    w0.dstSet = slot.surflight_descriptor_set;
+    w0.dstBinding = 0;
+    w0.descriptorCount = 1;
+    w0.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+
+    const std::array<const buffer_t *, 6> buffers{
+        &slot.samples.buf, &slot.surflight_sources.buf, &slot.surflight_points.buf,
+        &slot.face_ranges.buf, &slot.face_source_indices.buf, &slot.accum.buf};
+
+    std::array<VkDescriptorBufferInfo, 6> buffer_infos{};
+    std::array<VkWriteDescriptorSet, 7> writes{};
+    writes[0] = w0;
+    for (std::size_t i = 0; i < buffers.size(); ++i) {
+        buffer_infos[i].buffer = buffers[i]->buffer;
+        buffer_infos[i].offset = 0;
+        buffer_infos[i].range = buffers[i]->size;
+
+        auto &w = writes[i + 1];
+        w.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        w.dstSet = slot.surflight_descriptor_set;
+        w.dstBinding = static_cast<std::uint32_t>(i + 1);
+        w.descriptorCount = 1;
+        w.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        w.pBufferInfo = &buffer_infos[i];
+    }
+
+    vkUpdateDescriptorSets(g.device, static_cast<std::uint32_t>(writes.size()), writes.data(), 0, nullptr);
+}
+
 static void update_direct_descriptor_set(direct_slot_t &slot) {
     VkWriteDescriptorSetAccelerationStructureKHR as_info{};
     as_info.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR;
@@ -1122,6 +1293,7 @@ bool init(const mbsp_t *bsp, std::string &error) {
     if (!build_tlas(error)) { destroy_locked(); return false; }
     if (!create_pipeline(error)) { destroy_locked(); return false; }
     if (!create_direct_pipeline(error)) { destroy_locked(); return false; }
+    if (!create_surflight_pipeline(error)) { destroy_locked(); return false; }
 
     logging::print("GPU light: Vulkan ray-query BLAS/TLAS ready ({} solid + {} sky triangles).\n",
         solid_index_count / 3, (indices.size() - solid_index_count) / 3);
@@ -1261,13 +1433,17 @@ bool trace_direct_phase_batch(
     std::lock_guard<std::mutex> slot_lock(g_direct_slot_locks[slot_index]);
     direct_slot_t &slot = g.direct_slots[slot_index];
 
-    if (!ensure_persistent_buffer(slot.samples, sizeof(gpu_direct_phase_sample_host_t) * sample_count, slot.descriptors_dirty, error) ||
-        !ensure_persistent_buffer(slot.sources, sizeof(gpu_direct_phase_source_host_t) * source_count, slot.descriptors_dirty, error) ||
-        !ensure_persistent_buffer(slot.face_ranges, sizeof(gpu_direct_phase_face_range_host_t) * face_range_count, slot.descriptors_dirty, error) ||
-        !ensure_persistent_buffer(slot.face_source_indices, sizeof(std::uint32_t) * face_source_index_count, slot.descriptors_dirty, error) ||
-        !ensure_persistent_buffer(slot.accum, sizeof(gpu_direct_accum_host_t) * sample_count, slot.descriptors_dirty, error, /*host_cached=*/true)) {
+    // shared buffers back both descriptor sets, so growth dirties both
+    bool buffers_grew = false;
+    if (!ensure_persistent_buffer(slot.samples, sizeof(gpu_direct_phase_sample_host_t) * sample_count, buffers_grew, error) ||
+        !ensure_persistent_buffer(slot.sources, sizeof(gpu_direct_phase_source_host_t) * source_count, buffers_grew, error) ||
+        !ensure_persistent_buffer(slot.face_ranges, sizeof(gpu_direct_phase_face_range_host_t) * face_range_count, buffers_grew, error) ||
+        !ensure_persistent_buffer(slot.face_source_indices, sizeof(std::uint32_t) * face_source_index_count, buffers_grew, error) ||
+        !ensure_persistent_buffer(slot.accum, sizeof(gpu_direct_accum_host_t) * sample_count, buffers_grew, error, /*host_cached=*/true)) {
         return false;
     }
+    slot.descriptors_dirty |= buffers_grew;
+    slot.surflight_descriptors_dirty |= buffers_grew;
 
     std::memcpy(slot.samples.mapped, samples, sizeof(gpu_direct_phase_sample_host_t) * sample_count);
     std::memcpy(slot.sources.mapped, sources, sizeof(gpu_direct_phase_source_host_t) * source_count);
@@ -1322,6 +1498,114 @@ bool trace_direct_phase_batch(
     // wait on this batch's fence without blocking the other slot
     if (!check(vkWaitForFences(g.device, 1, &slot.fence, VK_TRUE, UINT64_MAX), "vkWaitForFences(direct)", error)) return false;
     if (!check(vkResetFences(g.device, 1, &slot.fence), "vkResetFences(direct)", error)) return false;
+
+    std::memcpy(accum, slot.accum.mapped, sizeof(gpu_direct_accum_host_t) * sample_count);
+    return true;
+}
+
+bool trace_surflight_batch(
+    const gpu_light::surflight_source_t *sources,
+    std::size_t source_count,
+    const gpu_light::surflight_point_t *points,
+    std::size_t point_count,
+    const gpu_light::direct_phase_sample_t *samples,
+    gpu_light::direct_phase_accum_t *accum,
+    std::size_t sample_count,
+    const gpu_light::direct_phase_face_range_t *face_ranges,
+    std::size_t face_range_count,
+    const std::uint32_t *face_source_indices,
+    std::size_t face_source_index_count,
+    const gpu_light::surflight_params_t &params,
+    std::string &error) {
+    {
+        std::lock_guard<std::mutex> lock(g_mutex);
+        if (!g.device || !g.surflight_pipeline || !g.tlas.as) {
+            error = "Vulkan GPU surflight backend is not initialized";
+            return false;
+        }
+        if (g.has_filtered_embree_geometry) {
+            return false;
+        }
+    }
+    if (!sources || !points || !samples || !accum || !face_ranges || !face_source_indices || source_count == 0 ||
+        point_count == 0 || sample_count == 0 || face_range_count == 0 || face_source_index_count == 0) {
+        return true;
+    }
+
+    const std::uint32_t slot_index =
+        g_direct_slot_counter.fetch_add(1u, std::memory_order_relaxed) % static_cast<std::uint32_t>(g.direct_slots.size());
+    std::lock_guard<std::mutex> slot_lock(g_direct_slot_locks[slot_index]);
+    direct_slot_t &slot = g.direct_slots[slot_index];
+
+    // shared buffers back both descriptor sets, so growth dirties both
+    bool buffers_grew = false;
+    if (!ensure_persistent_buffer(slot.samples, sizeof(gpu_direct_phase_sample_host_t) * sample_count, buffers_grew, error) ||
+        !ensure_persistent_buffer(slot.surflight_sources, sizeof(gpu_surflight_source_host_t) * source_count, buffers_grew, error) ||
+        !ensure_persistent_buffer(slot.surflight_points, sizeof(gpu_surflight_point_host_t) * point_count, buffers_grew, error) ||
+        !ensure_persistent_buffer(slot.face_ranges, sizeof(gpu_direct_phase_face_range_host_t) * face_range_count, buffers_grew, error) ||
+        !ensure_persistent_buffer(slot.face_source_indices, sizeof(std::uint32_t) * face_source_index_count, buffers_grew, error) ||
+        !ensure_persistent_buffer(slot.accum, sizeof(gpu_direct_accum_host_t) * sample_count, buffers_grew, error, /*host_cached=*/true)) {
+        return false;
+    }
+    slot.descriptors_dirty |= buffers_grew;
+    slot.surflight_descriptors_dirty |= buffers_grew;
+
+    std::memcpy(slot.samples.mapped, samples, sizeof(gpu_direct_phase_sample_host_t) * sample_count);
+    std::memcpy(slot.surflight_sources.mapped, sources, sizeof(gpu_surflight_source_host_t) * source_count);
+    std::memcpy(slot.surflight_points.mapped, points, sizeof(gpu_surflight_point_host_t) * point_count);
+    std::memcpy(slot.face_ranges.mapped, face_ranges, sizeof(gpu_direct_phase_face_range_host_t) * face_range_count);
+    std::memcpy(slot.face_source_indices.mapped, face_source_indices, sizeof(std::uint32_t) * face_source_index_count);
+    // no accum pre-clear needed: the shader writes every accum slot below sample_count
+
+    // must happen before recording the bind: descriptor sets may not be updated
+    // between recording and execution
+    if (slot.surflight_descriptors_dirty) {
+        update_surflight_descriptor_set(slot);
+        slot.surflight_descriptors_dirty = false;
+    }
+
+    surflight_push_constants_t pc{};
+    pc.sample_count = static_cast<std::uint32_t>(sample_count);
+    pc.source_count = static_cast<std::uint32_t>(source_count);
+    pc.scaledist = params.scaledist;
+    pc.gate = params.gate;
+    pc.standard_scale = params.standard_scale;
+    pc.sky_scale = params.sky_scale;
+    pc.hotspot_clamp = params.hotspot_clamp;
+    pc.surflightskydist = params.surflightskydist;
+
+    if (!check(vkResetCommandBuffer(slot.command_buffer, 0), "vkResetCommandBuffer(surflight)", error)) return false;
+    VkCommandBufferBeginInfo bi{};
+    bi.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    bi.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    if (!check(vkBeginCommandBuffer(slot.command_buffer, &bi), "vkBeginCommandBuffer(surflight)", error)) return false;
+
+    vkCmdBindPipeline(slot.command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, g.surflight_pipeline);
+    vkCmdBindDescriptorSets(slot.command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, g.surflight_pipeline_layout, 0, 1, &slot.surflight_descriptor_set, 0, nullptr);
+    vkCmdPushConstants(slot.command_buffer, g.surflight_pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(pc), &pc);
+    vkCmdDispatch(slot.command_buffer, (pc.sample_count + 63u) / 64u, 1, 1);
+
+    // make the shader's accum writes visible to the persistently-mapped host readback
+    VkMemoryBarrier to_host{};
+    to_host.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+    to_host.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+    to_host.dstAccessMask = VK_ACCESS_HOST_READ_BIT;
+    vkCmdPipelineBarrier(slot.command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_HOST_BIT, 0,
+        1, &to_host, 0, nullptr, 0, nullptr);
+
+    if (!check(vkEndCommandBuffer(slot.command_buffer), "vkEndCommandBuffer(surflight)", error)) return false;
+
+    {
+        std::lock_guard<std::mutex> lock(g_mutex);
+        VkSubmitInfo si{};
+        si.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        si.commandBufferCount = 1;
+        si.pCommandBuffers = &slot.command_buffer;
+        if (!check(vkQueueSubmit(g.queue, 1, &si, slot.fence), "vkQueueSubmit(surflight)", error)) return false;
+    }
+
+    if (!check(vkWaitForFences(g.device, 1, &slot.fence, VK_TRUE, UINT64_MAX), "vkWaitForFences(surflight)", error)) return false;
+    if (!check(vkResetFences(g.device, 1, &slot.fence), "vkResetFences(surflight)", error)) return false;
 
     std::memcpy(accum, slot.accum.mapped, sizeof(gpu_direct_accum_host_t) * sample_count);
     return true;
