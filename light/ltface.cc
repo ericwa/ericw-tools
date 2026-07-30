@@ -2575,6 +2575,8 @@ struct gpu_direct_face_record_t {
 std::mutex g_gpu_direct_queue_mutex;
 std::vector<gpu_light::direct_phase_sample_t> g_gpu_direct_samples;
 std::vector<gpu_light::direct_phase_source_t> g_gpu_direct_sources;
+// entity behind each source (nullptr for suns), for the exact CPU-parity face culls
+std::vector<const light_t *> g_gpu_direct_source_entities;
 std::vector<gpu_light::direct_phase_face_range_t> g_gpu_direct_face_ranges;
 std::vector<std::uint32_t> g_gpu_direct_face_source_indices;
 std::vector<gpu_direct_face_record_t> g_gpu_direct_faces;
@@ -2693,7 +2695,8 @@ static void GPU_Direct_MergeInto(gpu_light::direct_phase_source_t &dst, const gp
 
 static void GPU_Direct_AddMergedSource(
     std::vector<gpu_direct_source_key_t> &keys,
-    const gpu_light::direct_phase_source_t &src)
+    const gpu_light::direct_phase_source_t &src,
+    const light_t *entity)
 {
     const auto key = GPU_Direct_SourceKey(src);
     for (std::size_t i = 0; i < keys.size(); ++i) {
@@ -2704,6 +2707,7 @@ static void GPU_Direct_AddMergedSource(
     }
     keys.push_back(key);
     g_gpu_direct_sources.push_back(src);
+    g_gpu_direct_source_entities.push_back(entity);
 }
 
 static float GPU_Direct_EffectivePointRadius(const gpu_light::direct_phase_source_t &src)
@@ -2803,6 +2807,47 @@ static bool GPU_Direct_SourceAffectsFace(
     return true;
 }
 
+// Exact replicas of the face-level culls in LightFace_Entity / LightFace_Sky,
+// so the GPU's per-face source list matches what the CPU path would process.
+static bool GPU_Direct_SourceReachesFace(
+    const mbsp_t *bsp, const gpu_light::direct_phase_source_t &src, const light_t *entity, const lightsurf_t *lightsurf)
+{
+    if (src.type == 1u) {
+        // LightFace_Sky: don't bother if surface facing away from sun
+        const qvec3f incoming{src.dx, src.dy, src.dz};
+        const float dp = qv::dot(incoming, lightsurf->plane.normal);
+        if (dp < -LIGHT_ANGLE_EPSILON && !lightsurf->curved && !lightsurf->twosided) {
+            return false;
+        }
+        return true;
+    }
+
+    if (!entity) {
+        return true;
+    }
+
+    // LightFace_Entity: vis cull
+    if (light_options.visapprox.value() == visapprox_t::VIS &&
+        entity->light_channel_mask.value() == CHANNEL_MASK_DEFAULT &&
+        entity->shadow_channel_mask.value() == CHANNEL_MASK_DEFAULT &&
+        VisCullEntity(bsp, lightsurf->pvs, entity->leaf)) {
+        return false;
+    }
+
+    // LightFace_Entity: don't bother with lights behind the surface
+    const float planedist = lightsurf->plane.distance_to(entity->origin.value());
+    if (planedist < 0 && !entity->bleed.value() && !lightsurf->curved && !lightsurf->twosided) {
+        return false;
+    }
+
+    // LightFace_Entity: sphere/gate cull (also covers the visapprox RAYS bounds cull)
+    if (CullLight(entity, lightsurf)) {
+        return false;
+    }
+
+    return true;
+}
+
 static bool GPU_DirectQueue_BuildSourcesLocked()
 {
     if (g_gpu_direct_sources_built) {
@@ -2810,7 +2855,14 @@ static bool GPU_DirectQueue_BuildSourcesLocked()
     }
     g_gpu_direct_sources_built = true;
     g_gpu_direct_sources.clear();
+    g_gpu_direct_source_entities.clear();
     std::vector<gpu_direct_source_key_t> unique_keys;
+
+    if (dirt_in_use) {
+        logging::print("GPU direct phase: dirt/AO is enabled; falling back to CPU direct path.\n");
+        g_gpu_direct_disabled = true;
+        return false;
+    }
 
     std::size_t raw_sources = 0;
     std::size_t raw_point_sources = 0;
@@ -2818,13 +2870,13 @@ static bool GPU_DirectQueue_BuildSourcesLocked()
     for (const auto &entity_ptr : GetLights()) {
         const light_t *entity = entity_ptr.get();
         if (entity->nostaticlight.value()) continue;
-        if (entity->light.value() <= 0) continue;
+        if (entity->light.value() == 0) continue;
         if (entity->sun.value()) continue;
 
         if (entity->style.value() != 0 ||
             entity->shadow_channel_mask.value() != CHANNEL_MASK_DEFAULT ||
             entity->light_channel_mask.value() != CHANNEL_MASK_DEFAULT ||
-            entity->spotlight || entity->projectedmip ||
+            entity->spotlight || entity->projectedmip || entity->bleed.value() ||
             entity->getFormula() == LF_LOCALMIN) {
             logging::print("GPU direct phase: unsupported entity light encountered; falling back to CPU direct path.\n");
             g_gpu_direct_disabled = true;
@@ -2847,7 +2899,7 @@ static bool GPU_DirectQueue_BuildSourcesLocked()
         src.falloff = entity->falloff.value();
         ++raw_sources;
         ++raw_point_sources;
-        GPU_Direct_AddMergedSource(unique_keys, src);
+        GPU_Direct_AddMergedSource(unique_keys, src, entity);
     }
 
     for (const sun_t &sun : GetSuns()) {
@@ -2871,7 +2923,7 @@ static bool GPU_DirectQueue_BuildSourcesLocked()
         src.dirt = sun.dirt ? 1.0f : 0.0f;
         ++raw_sources;
         ++raw_sun_sources;
-        GPU_Direct_AddMergedSource(unique_keys, src);
+        GPU_Direct_AddMergedSource(unique_keys, src, nullptr);
     }
 
     std::size_t merged_point_sources = 0;
@@ -3032,7 +3084,11 @@ static bool GPU_DirectQueue_AddFace(const mbsp_t *bsp, lightsurf_t *lightsurf, l
     face_range.source_begin = static_cast<std::uint32_t>(g_gpu_direct_face_source_indices.size());
 
     for (std::uint32_t source_index = 0; source_index < g_gpu_direct_sources.size(); ++source_index) {
-        if (GPU_Direct_SourceAffectsFace(g_gpu_direct_sources[source_index], mins, maxs, face_normal, lightsurf->twosided)) {
+        const auto &src = g_gpu_direct_sources[source_index];
+        if (!GPU_Direct_SourceReachesFace(bsp, src, g_gpu_direct_source_entities[source_index], lightsurf)) {
+            continue;
+        }
+        if (GPU_Direct_SourceAffectsFace(src, mins, maxs, face_normal, lightsurf->twosided)) {
             g_gpu_direct_face_source_indices.push_back(source_index);
         }
     }

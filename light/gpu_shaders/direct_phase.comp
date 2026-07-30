@@ -4,6 +4,10 @@
 
 layout(local_size_x = 64) in;
 
+// Geometry indices within the BLAS; must match gather_geometry in trace_gpu_vulkan.cc
+#define GEOMETRY_SOLID 0
+#define GEOMETRY_SKY 1
+
 struct GpuDirectPhaseSample {
     vec3 position;
     float occlusion;
@@ -58,8 +62,8 @@ layout(std430, set = 0, binding = 5) writeonly buffer Accum { GpuDirectAccum acc
 layout(push_constant) uniform PushConstants {
     uint sampleCount;
     uint sourceCount;
-    uint flags;
-    uint reserved0;
+    float scaledist;    // cfg.scaledist
+    float gate;         // light_options.gate
 } pc;
 
 bool occluded(vec3 origin, vec3 dir, float tmax) {
@@ -79,28 +83,61 @@ bool occluded(vec3 origin, vec3 dir, float tmax) {
     return rayQueryGetIntersectionTypeEXT(rq, true) != gl_RayQueryCommittedIntersectionNoneEXT;
 }
 
+// Matches LightFace_Sky: the ray's *closest* hit must be a sky face.
+// No hit at all (ray escapes the map) is NOT sunlit.
+bool sun_visible(vec3 origin, vec3 dir, float tmax) {
+    rayQueryEXT rq;
+    rayQueryInitializeEXT(
+        rq,
+        sceneAS,
+        gl_RayFlagsOpaqueEXT,
+        0xff,
+        origin,
+        0.01,
+        dir,
+        max(tmax, 0.02));
+
+    while (rayQueryProceedEXT(rq)) {}
+
+    if (rayQueryGetIntersectionTypeEXT(rq, true) == gl_RayQueryCommittedIntersectionNoneEXT) {
+        return false;
+    }
+    return rayQueryGetIntersectionGeometryIndexEXT(rq, true) == GEOMETRY_SKY;
+}
+
+// Mirrors GetLightValue in ltface.cc with hotspot_clamp = LF_SCALE = 128
+// (the value used for entity lights).
 float point_light_value(uint formula, float light, float atten, float dist, float falloff) {
-    float d = max(dist, 1.0);
-    float a = max(atten, 0.0001);
-
-    if (formula == 1u) {
-        return light * 128.0 / (d * a);
-    } else if (formula == 2u) {
-        return light * 128.0 * 128.0 / (d * d * a);
-    } else if (formula == 3u) {
+    if (formula == 3u || formula == 4u) { // LF_INFINITE / LF_LOCALMIN
         return light;
-    } else if (formula == 5u) {
-        float da = d + 128.0;
-        return light * 128.0 * 128.0 / (da * da * a);
-    } else if (formula == 6u) {
-        float qd = max(d, 16.0);
-        return light * 128.0 * 128.0 / (qd * qd * a);
     }
 
-    if (falloff > 0.0) {
-        return light * max(0.0, 1.0 - d / falloff);
+    if (falloff > 0.0 && formula == 0u) { // LF_LINEAR with falloff
+        if (falloff > dist) {
+            return light * (1.0 - (dist / falloff));
+        }
+        return 0.0;
     }
-    return light - d * a;
+
+    float value = pc.scaledist * atten * dist;
+
+    if (formula == 1u) { // LF_INVERSE
+        return light / (value / 128.0);
+    } else if (formula == 5u) { // LF_INVERSE2A
+        value += 128.0;
+        return light / ((value * value) / (128.0 * 128.0));
+    } else if (formula == 2u) { // LF_INVERSE2
+        return light / ((value * value) / (128.0 * 128.0));
+    } else if (formula == 6u) { // LF_QRAD3
+        float d = max(value, 128.0);
+        return light / (d * d);
+    }
+
+    // LF_LINEAR
+    if (light > 0.0) {
+        return max(light - value, 0.0);
+    }
+    return min(light + value, 0.0);
 }
 
 void clear_accum(uint sample_id) {
@@ -149,6 +186,7 @@ void main() {
         vec3 ncontrib_dir;
 
         if (l.type == 1u) {
+            // sun: matches LightFace_Sky per-sample math
             ray_dir = l.direction;
             ray_dist = l.dist;
             float angle = dot(ray_dir, s.normal);
@@ -158,34 +196,45 @@ void main() {
             value = l.light * angle;
             ncontrib_dir = ray_dir;
         } else {
+            // point: matches GetLightContrib / GetLightValueWithAngle
             vec3 to_light = l.position - s.position;
             ray_dist = length(to_light);
-            if (ray_dist <= 0.01) {
-                continue;
+            if (ray_dist < 0.1) {
+                ray_dist = 0.1;
+                ray_dir = vec3(0.0, 0.0, 1.0);
+            } else {
+                ray_dir = to_light / ray_dist;
             }
-            ray_dir = to_light / ray_dist;
             float angle = dot(ray_dir, s.normal);
             if (s.twosided > 0.5 && angle < 0.0) angle = -angle;
-            if (angle <= 0.0) {
+            if (angle < 0.0) {
                 continue;
             }
-            angle = (1.0 - l.anglescale) + l.anglescale * max(0.0, angle);
+            angle = (1.0 - l.anglescale) + l.anglescale * angle;
             value = point_light_value(l.formula, l.light, l.atten, ray_dist, l.falloff) * angle;
             ncontrib_dir = ray_dir;
         }
 
-        if (value <= 0.0) {
-            continue;
-        }
-
         float dirt_scale = ((l.flags & 1u) != 0u) ? clamp(s.occlusion, 0.0, 1.0) : 1.0;
         value *= dirt_scale;
-        if (value <= 0.0) {
+
+        vec3 contrib = l.color * (value / 255.0);
+
+        // matches fabs(LightSample_Brightness(color)) <= gate check
+        float brightness = (contrib.x + contrib.y + contrib.z) / 3.0;
+        if (abs(brightness) <= pc.gate) {
             continue;
         }
 
-        if (!occluded(s.position, ray_dir, ray_dist)) {
-            total_color += l.color * (value / 255.0);
+        bool visible;
+        if (l.type == 1u) {
+            visible = sun_visible(s.position, ray_dir, ray_dist);
+        } else {
+            visible = !occluded(s.position, ray_dir, ray_dist);
+        }
+
+        if (visible) {
+            total_color += contrib;
             total_normal += ncontrib_dir * value;
             any_hit = 1u;
         }

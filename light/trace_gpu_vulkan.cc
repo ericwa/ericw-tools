@@ -129,8 +129,8 @@ struct push_constants_t {
 struct direct_push_constants_t {
     std::uint32_t sample_count;
     std::uint32_t source_count;
-    std::uint32_t flags;
-    std::uint32_t reserved0;
+    float scaledist;
+    float gate;
 };
 
 static_assert(sizeof(gpu_ray_host_t) == 40, "GPU ray layout must match shader");
@@ -540,16 +540,8 @@ static bool create_device(std::string &error) {
     return true;
 }
 
-static bool gather_geometry(const mbsp_t *bsp, std::vector<vertex_t> &vertices, std::vector<std::uint32_t> &indices, std::string &error) {
-    vertices.clear();
-    indices.clear();
-
-    const auto &faces = ShadowCastingSolidFacesSet();
-    if (faces.empty()) {
-        error = "no shadow-casting solid faces found for GPU BLAS; call Embree_TraceInit before GPU_TraceInit";
-        return false;
-    }
-
+static void gather_face_triangles(
+    const mbsp_t *bsp, const std::set<const mface_t *> &faces, std::vector<vertex_t> &vertices, std::vector<std::uint32_t> &indices) {
     for (const mface_t *face : faces) {
         if (!face || face->numedges < 3) continue;
         const modelinfo_t *modelinfo = ModelInfoForFace(bsp, Face_GetNum(bsp, face));
@@ -572,6 +564,33 @@ static bool gather_geometry(const mbsp_t *bsp, std::vector<vertex_t> &vertices, 
             indices.push_back(base + 2);
         }
     }
+}
+
+// Gathers solid faces first, then sky faces. The split lets build_blas emit
+// them as BLAS geometry 0 (solid) and geometry 1 (sky) so the shader can
+// require sun rays to hit sky first, matching the Embree scene's semantics.
+static bool gather_geometry(const mbsp_t *bsp, std::vector<vertex_t> &vertices, std::vector<std::uint32_t> &indices,
+    std::size_t &solid_index_count, std::string &error) {
+    vertices.clear();
+    indices.clear();
+
+    const auto &faces = ShadowCastingSolidFacesSet();
+    if (faces.empty()) {
+        error = "no shadow-casting solid faces found for GPU BLAS; call Embree_TraceInit before GPU_TraceInit";
+        return false;
+    }
+
+    gather_face_triangles(bsp, faces, vertices, indices);
+    solid_index_count = indices.size();
+
+    // sky faces, deduped from the Embree sky scene's triangle list
+    std::set<const mface_t *> sky_faces;
+    for (const triinfo &ti : skygeom.triInfo) {
+        if (ti.face) {
+            sky_faces.insert(ti.face);
+        }
+    }
+    gather_face_triangles(bsp, sky_faces, vertices, indices);
 
     if (indices.empty()) {
         error = "GPU geometry gather produced zero triangles";
@@ -601,7 +620,8 @@ static bool create_acceleration_structure(VkAccelerationStructureTypeKHR type, V
     return true;
 }
 
-static bool build_blas(const std::vector<vertex_t> &vertices, const std::vector<std::uint32_t> &indices, std::string &error) {
+static bool build_blas(const std::vector<vertex_t> &vertices, const std::vector<std::uint32_t> &indices,
+    std::size_t solid_index_count, std::string &error) {
     if (!create_buffer(sizeof(vertex_t) * vertices.size(),
             VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -619,32 +639,42 @@ static bool build_blas(const std::vector<vertex_t> &vertices, const std::vector<
     VkDeviceAddress vertex_addr = buffer_address(g.vertices);
     VkDeviceAddress index_addr = buffer_address(g.indices);
 
-    VkAccelerationStructureGeometryKHR geom{};
-    geom.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
-    geom.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
-    geom.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
-    geom.geometry.triangles.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
-    geom.geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
-    geom.geometry.triangles.vertexData.deviceAddress = vertex_addr;
-    geom.geometry.triangles.vertexStride = sizeof(vertex_t);
-    geom.geometry.triangles.maxVertex = static_cast<std::uint32_t>(vertices.size() - 1);
-    geom.geometry.triangles.indexType = VK_INDEX_TYPE_UINT32;
-    geom.geometry.triangles.indexData.deviceAddress = index_addr;
+    const std::uint32_t solid_prims = static_cast<std::uint32_t>(solid_index_count / 3);
+    const std::uint32_t sky_prims = static_cast<std::uint32_t>((indices.size() - solid_index_count) / 3);
+    g.triangle_count = solid_prims + sky_prims;
 
-    const std::uint32_t prim_count = static_cast<std::uint32_t>(indices.size() / 3);
-    g.triangle_count = prim_count;
+    // geometry 0 = solid, geometry 1 = sky (GEOMETRY_SOLID/GEOMETRY_SKY in direct_phase.comp)
+    std::array<VkAccelerationStructureGeometryKHR, 2> geoms{};
+    std::array<std::uint32_t, 2> prim_counts{solid_prims, sky_prims};
+    std::array<VkAccelerationStructureBuildRangeInfoKHR, 2> ranges{};
+
+    for (std::size_t i = 0; i < 2; ++i) {
+        auto &geom = geoms[i];
+        geom.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
+        geom.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
+        geom.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
+        geom.geometry.triangles.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
+        geom.geometry.triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
+        geom.geometry.triangles.vertexData.deviceAddress = vertex_addr;
+        geom.geometry.triangles.vertexStride = sizeof(vertex_t);
+        geom.geometry.triangles.maxVertex = static_cast<std::uint32_t>(vertices.size() - 1);
+        geom.geometry.triangles.indexType = VK_INDEX_TYPE_UINT32;
+        geom.geometry.triangles.indexData.deviceAddress =
+            index_addr + (i == 0 ? 0 : sizeof(std::uint32_t) * solid_index_count);
+        ranges[i].primitiveCount = prim_counts[i];
+    }
 
     VkAccelerationStructureBuildGeometryInfoKHR build{};
     build.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
     build.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
     build.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
     build.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
-    build.geometryCount = 1;
-    build.pGeometries = &geom;
+    build.geometryCount = static_cast<std::uint32_t>(geoms.size());
+    build.pGeometries = geoms.data();
 
     VkAccelerationStructureBuildSizesInfoKHR sizes{};
     sizes.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
-    g.vkGetAccelerationStructureBuildSizesKHR_(g.device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &build, &prim_count, &sizes);
+    g.vkGetAccelerationStructureBuildSizesKHR_(g.device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &build, prim_counts.data(), &sizes);
 
     if (!create_acceleration_structure(VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR, sizes.accelerationStructureSize, g.blas, error)) return false;
 
@@ -658,9 +688,7 @@ static bool build_blas(const std::vector<vertex_t> &vertices, const std::vector<
     build.dstAccelerationStructure = g.blas.as;
     build.scratchData.deviceAddress = buffer_address(scratch);
 
-    VkAccelerationStructureBuildRangeInfoKHR range{};
-    range.primitiveCount = prim_count;
-    const VkAccelerationStructureBuildRangeInfoKHR *range_ptr = &range;
+    const VkAccelerationStructureBuildRangeInfoKHR *range_ptr = ranges.data();
 
     bool ok = one_time_submit([&](VkCommandBuffer cmd) {
         g.vkCmdBuildAccelerationStructuresKHR_(cmd, 1, &build, &range_ptr);
@@ -1089,13 +1117,15 @@ bool init(const mbsp_t *bsp, std::string &error) {
 
     std::vector<vertex_t> vertices;
     std::vector<std::uint32_t> indices;
-    if (!gather_geometry(bsp, vertices, indices, error)) { destroy_locked(); return false; }
-    if (!build_blas(vertices, indices, error)) { destroy_locked(); return false; }
+    std::size_t solid_index_count = 0;
+    if (!gather_geometry(bsp, vertices, indices, solid_index_count, error)) { destroy_locked(); return false; }
+    if (!build_blas(vertices, indices, solid_index_count, error)) { destroy_locked(); return false; }
     if (!build_tlas(error)) { destroy_locked(); return false; }
     if (!create_pipeline(error)) { destroy_locked(); return false; }
     if (!create_direct_pipeline(error)) { destroy_locked(); return false; }
 
-    logging::print("GPU light: Vulkan ray-query BLAS/TLAS ready ({} opaque triangles).\n", g.triangle_count);
+    logging::print("GPU light: Vulkan ray-query BLAS/TLAS ready ({} solid + {} sky triangles).\n",
+        solid_index_count / 3, (indices.size() - solid_index_count) / 3);
     return true;
 }
 
@@ -1245,8 +1275,8 @@ bool trace_direct_phase_batch(
     direct_push_constants_t pc{};
     pc.sample_count = static_cast<std::uint32_t>(sample_count);
     pc.source_count = static_cast<std::uint32_t>(source_count);
-    pc.flags = 0;
-    pc.reserved0 = 0;
+    pc.scaledist = light_options.scaledist.value();
+    pc.gate = light_options.gate.value();
 
     bool ok = one_time_submit([&](VkCommandBuffer cmd) {
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, g.direct_pipeline);
