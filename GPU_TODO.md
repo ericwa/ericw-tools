@@ -19,33 +19,23 @@ on cave.bsp). Remaining cost is roughly: ~55 MB upload memcpy, PCIe traffic
 during dispatch, synchronous `vkQueueWaitIdle`, and all of it serializes the
 lighting worker threads because the flush runs under `g_gpu_direct_queue_mutex`.
 
-## #3 — Dispatch outside the queue mutex + double-buffering
+## #3 — Dispatch outside the queue mutex + double-buffering — DONE
 
-Problem: `GPU_DirectQueue_FlushLocked` (light/ltface.cc) runs the whole GPU
-round-trip while holding `g_gpu_direct_queue_mutex`, so every worker thread
-calling `GPU_DirectQueue_AddFace` blocks for the full flush. The direct phase
-degenerates to the sum of flush times.
+Implemented: `GPU_DirectQueue_AddFace` swaps the queue into a `gpu_direct_batch_t`
+under the mutex and dispatches/applies it after releasing the lock; the Vulkan
+backend has two `direct_slot_t`s (own buffers, command pool, descriptor set,
+fence), submits under the global mutex only, and waits on per-batch fences.
 
-Plan:
-- In `AddFace`, when the threshold is hit, *swap* the queue vectors
-  (samples/sources refs/face ranges/records) into a local "batch" under the
-  mutex, then release the mutex before dispatching. Other workers keep filling
-  the fresh queue while the GPU traces.
-- Double-buffer the persistent Vulkan buffers (two sets + two fences) so batch
-  N+1 can upload while batch N traces; replace `vkQueueWaitIdle` with
-  `vkWaitForFences` on the batch's fence.
-- Applying results to lightmaps (`Lightmap_ForStyle`/`Lightmap_Save` loop) can
-  also happen outside the queue mutex, but see the race note below.
+The flush-vs-CPU-writes race was resolved by restructuring `DirectLightFace`:
+`GPU_DirectQueue_WillHandleFace` decides up front (so the CPU entity/sun loops
+are skipped), and the face is enqueued only at the *end* of the direct-phase
+CPU work — every queued face has finished its CPU-side lightmap writes, so a
+flush on any thread can apply results safely. If the GPU gets disabled mid-run,
+the face falls back to the CPU loops at the enqueue point.
 
-Race note (pre-existing, must be addressed as part of this redesign): the flush
-applies GPU accum into `lightmap->samples[i].color` for faces whose own
-`DirectLightFace` call may still be running CPU-side additive passes (surface
-lights, negative lights) on the *same* samples. Today the only reason this
-doesn't corrupt output on simple maps is that nothing else writes style-0
-lightmaps concurrently (no surface lights in the test map). Options: defer the
-CPU-side additive passes for GPU-queued faces until after their accum is
-applied, or add a per-face completion handshake, or have the owning thread
-apply its own face's accum.
+Also fixed while here: negative (anti-)lights are excluded from GPU sources —
+they are applied by `PostProcessLightFace` on the CPU, so queueing them would
+double-apply.
 
 ## #4 — Stop serializing AddFace on one global mutex
 

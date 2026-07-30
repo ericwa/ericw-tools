@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <cstdint>
 #include <cstring>
 #include <filesystem>
@@ -48,6 +49,22 @@ struct persistent_buffer_t {
     buffer_t buf;
     void *mapped = nullptr;
     VkDeviceSize capacity = 0;
+};
+
+// One in-flight unit for the direct phase. Two slots let one thread upload and
+// read back batch N+1 while another thread's batch N executes on the GPU, and
+// keep flush threads from blocking each other on a shared command buffer.
+struct direct_slot_t {
+    persistent_buffer_t samples;
+    persistent_buffer_t sources;
+    persistent_buffer_t face_ranges;
+    persistent_buffer_t face_source_indices;
+    persistent_buffer_t accum;
+    VkCommandPool command_pool = VK_NULL_HANDLE;
+    VkCommandBuffer command_buffer = VK_NULL_HANDLE;
+    VkFence fence = VK_NULL_HANDLE;
+    VkDescriptorSet descriptor_set = VK_NULL_HANDLE;
+    bool descriptors_dirty = true;
 };
 
 struct vertex_t {
@@ -184,14 +201,8 @@ struct context_t {
     VkPipelineLayout direct_pipeline_layout = VK_NULL_HANDLE;
     VkPipeline direct_pipeline = VK_NULL_HANDLE;
     VkDescriptorPool direct_descriptor_pool = VK_NULL_HANDLE;
-    VkDescriptorSet direct_descriptor_set = VK_NULL_HANDLE;
 
-    persistent_buffer_t direct_samples;
-    persistent_buffer_t direct_sources;
-    persistent_buffer_t direct_face_ranges;
-    persistent_buffer_t direct_face_source_indices;
-    persistent_buffer_t direct_accum;
-    bool direct_descriptors_dirty = true;
+    std::array<direct_slot_t, 2> direct_slots;
 
     std::size_t triangle_count = 0;
     bool has_filtered_embree_geometry = false;
@@ -199,6 +210,11 @@ struct context_t {
 
 std::mutex g_mutex;
 context_t g;
+
+// Slot ownership: a thread holds a slot's lock for its whole batch (upload,
+// submit, fence wait, readback). Kept outside context_t so `g = {}` stays valid.
+std::array<std::mutex, 2> g_direct_slot_locks;
+std::atomic<std::uint32_t> g_direct_slot_counter{0};
 
 static std::string vk_result_string(VkResult r) {
     switch (r) {
@@ -259,11 +275,15 @@ static void destroy_locked() {
     if (g.descriptor_set_layout) vkDestroyDescriptorSetLayout(g.device, g.descriptor_set_layout, nullptr);
 
     // vkFreeMemory implicitly unmaps the persistent mappings
-    destroy_buffer(g.direct_samples.buf);
-    destroy_buffer(g.direct_sources.buf);
-    destroy_buffer(g.direct_face_ranges.buf);
-    destroy_buffer(g.direct_face_source_indices.buf);
-    destroy_buffer(g.direct_accum.buf);
+    for (auto &slot : g.direct_slots) {
+        destroy_buffer(slot.samples.buf);
+        destroy_buffer(slot.sources.buf);
+        destroy_buffer(slot.face_ranges.buf);
+        destroy_buffer(slot.face_source_indices.buf);
+        destroy_buffer(slot.accum.buf);
+        if (slot.fence) vkDestroyFence(g.device, slot.fence, nullptr);
+        if (slot.command_pool) vkDestroyCommandPool(g.device, slot.command_pool, nullptr);
+    }
 
     destroy_as(g.tlas);
     destroy_as(g.blas);
@@ -348,11 +368,13 @@ static VkDeviceAddress buffer_address(const buffer_t &b) {
     return g.vkGetBufferDeviceAddressKHR_(g.device, &info);
 }
 
-// Grows (never shrinks) a persistently-mapped host-visible buffer. Only safe to
-// call while the queue is idle, which flush guarantees via vkQueueWaitIdle.
+// Grows (never shrinks) a persistently-mapped host-visible buffer. Only safe
+// while the owning slot's previous submission has completed (the slot lock plus
+// its fence wait guarantee this). Sets descriptors_dirty when recreated.
 // host_cached: request HOST_CACHED memory so CPU readback isn't crippled by
 // uncached/write-combined reads; falls back to plain coherent memory.
-static bool ensure_persistent_buffer(persistent_buffer_t &pb, VkDeviceSize needed, std::string &error, bool host_cached = false) {
+static bool ensure_persistent_buffer(
+    persistent_buffer_t &pb, VkDeviceSize needed, bool &descriptors_dirty, std::string &error, bool host_cached = false) {
     if (pb.buf.buffer && pb.capacity >= needed) return true;
 
     destroy_buffer(pb.buf); // implicitly unmaps
@@ -382,7 +404,7 @@ static bool ensure_persistent_buffer(persistent_buffer_t &pb, VkDeviceSize neede
     }
 
     pb.capacity = capacity;
-    g.direct_descriptors_dirty = true;
+    descriptors_dirty = true;
     return true;
 }
 
@@ -950,37 +972,55 @@ static bool create_direct_pipeline(std::string &error) {
     vkDestroyShaderModule(g.device, shader, nullptr);
     if (!ok) return false;
 
+    const std::uint32_t slot_count = static_cast<std::uint32_t>(g.direct_slots.size());
+
     VkDescriptorPoolSize ps0{};
     ps0.type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
-    ps0.descriptorCount = 1;
+    ps0.descriptorCount = slot_count;
     VkDescriptorPoolSize ps1{};
     ps1.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    ps1.descriptorCount = 5;
+    ps1.descriptorCount = 5 * slot_count;
     std::array<VkDescriptorPoolSize, 2> sizes{ps0, ps1};
 
     VkDescriptorPoolCreateInfo dpci{};
     dpci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    dpci.maxSets = 1;
+    dpci.maxSets = slot_count;
     dpci.poolSizeCount = static_cast<std::uint32_t>(sizes.size());
     dpci.pPoolSizes = sizes.data();
     if (!check(vkCreateDescriptorPool(g.device, &dpci, nullptr, &g.direct_descriptor_pool), "vkCreateDescriptorPool(direct)", error)) return false;
 
-    VkDescriptorSetAllocateInfo dsai{};
-    dsai.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    dsai.descriptorPool = g.direct_descriptor_pool;
-    dsai.descriptorSetCount = 1;
-    dsai.pSetLayouts = &g.direct_descriptor_set_layout;
-    if (!check(vkAllocateDescriptorSets(g.device, &dsai, &g.direct_descriptor_set), "vkAllocateDescriptorSets(direct)", error)) return false;
+    for (auto &slot : g.direct_slots) {
+        VkDescriptorSetAllocateInfo dsai{};
+        dsai.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        dsai.descriptorPool = g.direct_descriptor_pool;
+        dsai.descriptorSetCount = 1;
+        dsai.pSetLayouts = &g.direct_descriptor_set_layout;
+        if (!check(vkAllocateDescriptorSets(g.device, &dsai, &slot.descriptor_set), "vkAllocateDescriptorSets(direct)", error)) return false;
+
+        // per-slot command pool: lets two threads record concurrently without
+        // sharing pool state; only the queue submit needs global serialization
+        VkCommandPoolCreateInfo pci{};
+        pci.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        pci.queueFamilyIndex = g.queue_family;
+        pci.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+        if (!check(vkCreateCommandPool(g.device, &pci, nullptr, &slot.command_pool), "vkCreateCommandPool(direct slot)", error)) return false;
+
+        VkCommandBufferAllocateInfo cai{};
+        cai.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        cai.commandPool = slot.command_pool;
+        cai.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        cai.commandBufferCount = 1;
+        if (!check(vkAllocateCommandBuffers(g.device, &cai, &slot.command_buffer), "vkAllocateCommandBuffers(direct slot)", error)) return false;
+
+        VkFenceCreateInfo fci{};
+        fci.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+        if (!check(vkCreateFence(g.device, &fci, nullptr, &slot.fence), "vkCreateFence(direct slot)", error)) return false;
+    }
 
     return true;
 }
 
-static void update_direct_descriptor_set(
-    const buffer_t &sample_buffer,
-    const buffer_t &source_buffer,
-    const buffer_t &face_range_buffer,
-    const buffer_t &face_source_index_buffer,
-    const buffer_t &accum_buffer) {
+static void update_direct_descriptor_set(direct_slot_t &slot) {
     VkWriteDescriptorSetAccelerationStructureKHR as_info{};
     as_info.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR;
     as_info.accelerationStructureCount = 1;
@@ -989,72 +1029,31 @@ static void update_direct_descriptor_set(
     VkWriteDescriptorSet w0{};
     w0.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     w0.pNext = &as_info;
-    w0.dstSet = g.direct_descriptor_set;
+    w0.dstSet = slot.descriptor_set;
     w0.dstBinding = 0;
     w0.descriptorCount = 1;
     w0.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
 
-    VkDescriptorBufferInfo sample_info{};
-    sample_info.buffer = sample_buffer.buffer;
-    sample_info.offset = 0;
-    sample_info.range = sample_buffer.size;
-    VkWriteDescriptorSet w1{};
-    w1.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    w1.dstSet = g.direct_descriptor_set;
-    w1.dstBinding = 1;
-    w1.descriptorCount = 1;
-    w1.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    w1.pBufferInfo = &sample_info;
+    const std::array<const buffer_t *, 5> buffers{
+        &slot.samples.buf, &slot.sources.buf, &slot.face_ranges.buf, &slot.face_source_indices.buf, &slot.accum.buf};
 
-    VkDescriptorBufferInfo source_info{};
-    source_info.buffer = source_buffer.buffer;
-    source_info.offset = 0;
-    source_info.range = source_buffer.size;
-    VkWriteDescriptorSet w2{};
-    w2.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    w2.dstSet = g.direct_descriptor_set;
-    w2.dstBinding = 2;
-    w2.descriptorCount = 1;
-    w2.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    w2.pBufferInfo = &source_info;
+    std::array<VkDescriptorBufferInfo, 5> buffer_infos{};
+    std::array<VkWriteDescriptorSet, 6> writes{};
+    writes[0] = w0;
+    for (std::size_t i = 0; i < buffers.size(); ++i) {
+        buffer_infos[i].buffer = buffers[i]->buffer;
+        buffer_infos[i].offset = 0;
+        buffer_infos[i].range = buffers[i]->size;
 
-    VkDescriptorBufferInfo face_range_info{};
-    face_range_info.buffer = face_range_buffer.buffer;
-    face_range_info.offset = 0;
-    face_range_info.range = face_range_buffer.size;
-    VkWriteDescriptorSet w3{};
-    w3.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    w3.dstSet = g.direct_descriptor_set;
-    w3.dstBinding = 3;
-    w3.descriptorCount = 1;
-    w3.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    w3.pBufferInfo = &face_range_info;
+        auto &w = writes[i + 1];
+        w.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        w.dstSet = slot.descriptor_set;
+        w.dstBinding = static_cast<std::uint32_t>(i + 1);
+        w.descriptorCount = 1;
+        w.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        w.pBufferInfo = &buffer_infos[i];
+    }
 
-    VkDescriptorBufferInfo face_source_index_info{};
-    face_source_index_info.buffer = face_source_index_buffer.buffer;
-    face_source_index_info.offset = 0;
-    face_source_index_info.range = face_source_index_buffer.size;
-    VkWriteDescriptorSet w4{};
-    w4.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    w4.dstSet = g.direct_descriptor_set;
-    w4.dstBinding = 4;
-    w4.descriptorCount = 1;
-    w4.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    w4.pBufferInfo = &face_source_index_info;
-
-    VkDescriptorBufferInfo accum_info{};
-    accum_info.buffer = accum_buffer.buffer;
-    accum_info.offset = 0;
-    accum_info.range = accum_buffer.size;
-    VkWriteDescriptorSet w5{};
-    w5.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    w5.dstSet = g.direct_descriptor_set;
-    w5.dstBinding = 5;
-    w5.descriptorCount = 1;
-    w5.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    w5.pBufferInfo = &accum_info;
-
-    std::array<VkWriteDescriptorSet, 6> writes{w0, w1, w2, w3, w4, w5};
     vkUpdateDescriptorSets(g.device, static_cast<std::uint32_t>(writes.size()), writes.data(), 0, nullptr);
 }
 
@@ -1240,36 +1239,47 @@ bool trace_direct_phase_batch(
     const std::uint32_t *face_source_indices,
     std::size_t face_source_index_count,
     std::string &error) {
-    std::lock_guard<std::mutex> lock(g_mutex);
-    if (!g.device || !g.direct_pipeline || !g.tlas.as) {
-        error = "Vulkan GPU direct phase backend is not initialized";
-        return false;
-    }
-    if (g.has_filtered_embree_geometry) {
-        return false;
+    {
+        std::lock_guard<std::mutex> lock(g_mutex);
+        if (!g.device || !g.direct_pipeline || !g.tlas.as) {
+            error = "Vulkan GPU direct phase backend is not initialized";
+            return false;
+        }
+        if (g.has_filtered_embree_geometry) {
+            return false;
+        }
     }
     if (!sources || !samples || !accum || !face_ranges || !face_source_indices || source_count == 0 || sample_count == 0 || face_range_count == 0 || face_source_index_count == 0) {
         return true;
     }
 
-    if (!ensure_persistent_buffer(g.direct_samples, sizeof(gpu_direct_phase_sample_host_t) * sample_count, error) ||
-        !ensure_persistent_buffer(g.direct_sources, sizeof(gpu_direct_phase_source_host_t) * source_count, error) ||
-        !ensure_persistent_buffer(g.direct_face_ranges, sizeof(gpu_direct_phase_face_range_host_t) * face_range_count, error) ||
-        !ensure_persistent_buffer(g.direct_face_source_indices, sizeof(std::uint32_t) * face_source_index_count, error) ||
-        !ensure_persistent_buffer(g.direct_accum, sizeof(gpu_direct_accum_host_t) * sample_count, error, /*host_cached=*/true)) {
+    // Acquire a slot for the whole batch. With two slots, a second thread can
+    // upload/read back its batch while this one executes on the GPU; only the
+    // queue submit below takes the global mutex.
+    const std::uint32_t slot_index =
+        g_direct_slot_counter.fetch_add(1u, std::memory_order_relaxed) % static_cast<std::uint32_t>(g.direct_slots.size());
+    std::lock_guard<std::mutex> slot_lock(g_direct_slot_locks[slot_index]);
+    direct_slot_t &slot = g.direct_slots[slot_index];
+
+    if (!ensure_persistent_buffer(slot.samples, sizeof(gpu_direct_phase_sample_host_t) * sample_count, slot.descriptors_dirty, error) ||
+        !ensure_persistent_buffer(slot.sources, sizeof(gpu_direct_phase_source_host_t) * source_count, slot.descriptors_dirty, error) ||
+        !ensure_persistent_buffer(slot.face_ranges, sizeof(gpu_direct_phase_face_range_host_t) * face_range_count, slot.descriptors_dirty, error) ||
+        !ensure_persistent_buffer(slot.face_source_indices, sizeof(std::uint32_t) * face_source_index_count, slot.descriptors_dirty, error) ||
+        !ensure_persistent_buffer(slot.accum, sizeof(gpu_direct_accum_host_t) * sample_count, slot.descriptors_dirty, error, /*host_cached=*/true)) {
         return false;
     }
 
-    std::memcpy(g.direct_samples.mapped, samples, sizeof(gpu_direct_phase_sample_host_t) * sample_count);
-    std::memcpy(g.direct_sources.mapped, sources, sizeof(gpu_direct_phase_source_host_t) * source_count);
-    std::memcpy(g.direct_face_ranges.mapped, face_ranges, sizeof(gpu_direct_phase_face_range_host_t) * face_range_count);
-    std::memcpy(g.direct_face_source_indices.mapped, face_source_indices, sizeof(std::uint32_t) * face_source_index_count);
+    std::memcpy(slot.samples.mapped, samples, sizeof(gpu_direct_phase_sample_host_t) * sample_count);
+    std::memcpy(slot.sources.mapped, sources, sizeof(gpu_direct_phase_source_host_t) * source_count);
+    std::memcpy(slot.face_ranges.mapped, face_ranges, sizeof(gpu_direct_phase_face_range_host_t) * face_range_count);
+    std::memcpy(slot.face_source_indices.mapped, face_source_indices, sizeof(std::uint32_t) * face_source_index_count);
     // no accum pre-clear needed: the shader writes every accum slot below sample_count
 
-    if (g.direct_descriptors_dirty) {
-        update_direct_descriptor_set(g.direct_samples.buf, g.direct_sources.buf, g.direct_face_ranges.buf,
-            g.direct_face_source_indices.buf, g.direct_accum.buf);
-        g.direct_descriptors_dirty = false;
+    // must happen before recording the bind: descriptor sets may not be updated
+    // between recording and execution
+    if (slot.descriptors_dirty) {
+        update_direct_descriptor_set(slot);
+        slot.descriptors_dirty = false;
     }
 
     direct_push_constants_t pc{};
@@ -1278,25 +1288,43 @@ bool trace_direct_phase_batch(
     pc.scaledist = light_options.scaledist.value();
     pc.gate = light_options.gate.value();
 
-    bool ok = one_time_submit([&](VkCommandBuffer cmd) {
-        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, g.direct_pipeline);
-        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, g.direct_pipeline_layout, 0, 1, &g.direct_descriptor_set, 0, nullptr);
-        vkCmdPushConstants(cmd, g.direct_pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(pc), &pc);
-        vkCmdDispatch(cmd, (pc.sample_count + 63u) / 64u, 1, 1);
+    // record with the slot's own command pool; no global lock needed
+    if (!check(vkResetCommandBuffer(slot.command_buffer, 0), "vkResetCommandBuffer(direct)", error)) return false;
+    VkCommandBufferBeginInfo bi{};
+    bi.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    bi.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    if (!check(vkBeginCommandBuffer(slot.command_buffer, &bi), "vkBeginCommandBuffer(direct)", error)) return false;
 
-        // make the shader's accum writes visible to the persistently-mapped host readback
-        VkMemoryBarrier to_host{};
-        to_host.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
-        to_host.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-        to_host.dstAccessMask = VK_ACCESS_HOST_READ_BIT;
-        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_HOST_BIT, 0,
-            1, &to_host, 0, nullptr, 0, nullptr);
-    }, error);
+    vkCmdBindPipeline(slot.command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, g.direct_pipeline);
+    vkCmdBindDescriptorSets(slot.command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, g.direct_pipeline_layout, 0, 1, &slot.descriptor_set, 0, nullptr);
+    vkCmdPushConstants(slot.command_buffer, g.direct_pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(pc), &pc);
+    vkCmdDispatch(slot.command_buffer, (pc.sample_count + 63u) / 64u, 1, 1);
 
-    if (ok) {
-        std::memcpy(accum, g.direct_accum.mapped, sizeof(gpu_direct_accum_host_t) * sample_count);
+    // make the shader's accum writes visible to the persistently-mapped host readback
+    VkMemoryBarrier to_host{};
+    to_host.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+    to_host.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+    to_host.dstAccessMask = VK_ACCESS_HOST_READ_BIT;
+    vkCmdPipelineBarrier(slot.command_buffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_HOST_BIT, 0,
+        1, &to_host, 0, nullptr, 0, nullptr);
+
+    if (!check(vkEndCommandBuffer(slot.command_buffer), "vkEndCommandBuffer(direct)", error)) return false;
+
+    {
+        std::lock_guard<std::mutex> lock(g_mutex);
+        VkSubmitInfo si{};
+        si.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        si.commandBufferCount = 1;
+        si.pCommandBuffers = &slot.command_buffer;
+        if (!check(vkQueueSubmit(g.queue, 1, &si, slot.fence), "vkQueueSubmit(direct)", error)) return false;
     }
-    return ok;
+
+    // wait on this batch's fence without blocking the other slot
+    if (!check(vkWaitForFences(g.device, 1, &slot.fence, VK_TRUE, UINT64_MAX), "vkWaitForFences(direct)", error)) return false;
+    if (!check(vkResetFences(g.device, 1, &slot.fence), "vkResetFences(direct)", error)) return false;
+
+    std::memcpy(accum, slot.accum.mapped, sizeof(gpu_direct_accum_host_t) * sample_count);
+    return true;
 }
 
 bool trace_direct_accumulate_batch(
