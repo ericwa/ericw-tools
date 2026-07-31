@@ -20,6 +20,7 @@ bool trace_occlusion_batch(
 bool trace_direct_combined_batch(
     const gpu_light::direct_combined_batch_t &batch,
     gpu_light::direct_phase_accum_t *accum,
+    gpu_light::dispatch_stats_t *stats,
     std::string &error);
 
 bool trace_surflight_batch(
@@ -35,6 +36,7 @@ bool trace_surflight_batch(
     const std::uint32_t *face_source_indices,
     std::size_t face_source_index_count,
     const gpu_light::surflight_params_t &params,
+    gpu_light::dispatch_stats_t *stats,
     std::string &error);
 
 bool trace_direct_accumulate_batch(
@@ -161,7 +163,8 @@ bool trace_occlusion_batch(
 }
 
 
-bool trace_direct_combined_batch(const direct_combined_batch_t &batch, direct_phase_accum_t *accum) {
+bool trace_direct_combined_batch(
+    const direct_combined_batch_t &batch, direct_phase_accum_t *accum, dispatch_stats_t *stats) {
     const bool direct_work = batch.sources && batch.source_count && batch.face_ranges && batch.face_range_count &&
         batch.face_source_indices && batch.face_source_index_count;
     const bool surflight_work = batch.surflight_sources && batch.surflight_source_count && batch.surflight_points &&
@@ -199,7 +202,7 @@ bool trace_direct_combined_batch(const direct_combined_batch_t &batch, direct_ph
 
 #if defined(HAVE_GPU_LIGHT)
     std::string error;
-    const bool ok = vulkan_backend::trace_direct_combined_batch(batch, accum, error);
+    const bool ok = vulkan_backend::trace_direct_combined_batch(batch, accum, stats, error);
     std::lock_guard<std::mutex> lock(g_mutex);
     if (ok) {
         g_stats.gpu_batches++;
@@ -228,7 +231,8 @@ bool trace_surflight_batch(
     std::size_t face_range_count,
     const std::uint32_t *face_source_indices,
     std::size_t face_source_index_count,
-    const surflight_params_t &params) {
+    const surflight_params_t &params,
+    dispatch_stats_t *stats) {
     if (!sources || !points || !samples || !accum || !face_ranges || !face_source_indices || source_count == 0 ||
         point_count == 0 || sample_count == 0 || face_range_count == 0 || face_source_index_count == 0) {
         return true;
@@ -254,7 +258,7 @@ bool trace_surflight_batch(
     std::string error;
     const bool ok = vulkan_backend::trace_surflight_batch(
         sources, source_count, points, point_count, samples, accum, sample_count,
-        face_ranges, face_range_count, face_source_indices, face_source_index_count, params, error);
+        face_ranges, face_range_count, face_source_indices, face_source_index_count, params, stats, error);
     std::lock_guard<std::mutex> lock(g_mutex);
     if (ok) {
         g_stats.gpu_batches++;

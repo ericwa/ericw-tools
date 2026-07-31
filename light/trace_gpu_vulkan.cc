@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <chrono>
 #include <cstdint>
 #include <cstring>
 #include <filesystem>
@@ -259,6 +260,26 @@ context_t g;
 // submit, fence wait, readback). Kept outside context_t so `g = {}` stays valid.
 std::array<std::mutex, 2> g_direct_slot_locks;
 std::atomic<std::uint32_t> g_direct_slot_counter{0};
+
+// Pipeline accounting for the queue dispatch paths (dispatch_stats_t in
+// trace_gpu.hh). g_dispatch_inflight counts calls between batch takeover and
+// completion (uploading, blocked on a slot, or executing); g_submitted_inflight
+// counts submitted-but-unfenced batches, and when it drops to zero the GPU is
+// idle from our point of view — g_gpu_idle_since_us records when. Completion
+// is observed at fence-wait return, so idle gaps are a floor.
+std::atomic<std::uint32_t> g_dispatch_inflight{0};
+std::atomic<std::uint32_t> g_submitted_inflight{0};
+std::atomic<std::int64_t> g_gpu_idle_since_us{0};
+
+static std::int64_t steady_now_us() {
+    return std::chrono::duration_cast<std::chrono::microseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count();
+}
+
+struct dispatch_inflight_guard_t {
+    dispatch_inflight_guard_t() { g_dispatch_inflight.fetch_add(1u, std::memory_order_relaxed); }
+    ~dispatch_inflight_guard_t() { g_dispatch_inflight.fetch_sub(1u, std::memory_order_relaxed); }
+};
 
 static std::string vk_result_string(VkResult r) {
     switch (r) {
@@ -1302,6 +1323,8 @@ bool init(const mbsp_t *bsp, std::string &error) {
     if (!create_direct_pipeline(error)) { destroy_locked(); return false; }
     if (!create_surflight_pipeline(error)) { destroy_locked(); return false; }
 
+    g_gpu_idle_since_us.store(steady_now_us(), std::memory_order_relaxed);
+
     logging::print("GPU light: Vulkan ray-query BLAS/TLAS ready ({} solid + {} sky triangles).\n",
         solid_index_count / 3, (indices.size() - solid_index_count) / 3);
     return true;
@@ -1419,6 +1442,7 @@ bool trace_occlusion_batch(
 bool trace_direct_combined_batch(
     const gpu_light::direct_combined_batch_t &batch,
     gpu_light::direct_phase_accum_t *accum,
+    gpu_light::dispatch_stats_t *stats,
     std::string &error) {
     {
         std::lock_guard<std::mutex> lock(g_mutex);
@@ -1439,6 +1463,9 @@ bool trace_direct_combined_batch(
     if (!batch.samples || !accum || batch.sample_count == 0 || (!direct_work && !surflight_work)) {
         return true;
     }
+
+    dispatch_inflight_guard_t inflight_guard;
+    double idle_ms_before = 0.0;
 
     // Acquire a slot for the whole batch. With two slots, a second thread can
     // upload/read back its batch while this one executes on the GPU; only the
@@ -1548,16 +1575,29 @@ bool trace_direct_combined_batch(
 
     {
         std::lock_guard<std::mutex> lock(g_mutex);
+        if (g_submitted_inflight.fetch_add(1u, std::memory_order_relaxed) == 0u) {
+            idle_ms_before = (steady_now_us() - g_gpu_idle_since_us.load(std::memory_order_relaxed)) / 1000.0;
+        }
         VkSubmitInfo si{};
         si.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         si.commandBufferCount = 1;
         si.pCommandBuffers = &slot.command_buffer;
-        if (!check(vkQueueSubmit(g.queue, 1, &si, slot.fence), "vkQueueSubmit(direct)", error)) return false;
+        if (!check(vkQueueSubmit(g.queue, 1, &si, slot.fence), "vkQueueSubmit(direct)", error)) {
+            g_submitted_inflight.fetch_sub(1u, std::memory_order_relaxed);
+            return false;
+        }
     }
 
     // wait on this batch's fence without blocking the other slot
     if (!check(vkWaitForFences(g.device, 1, &slot.fence, VK_TRUE, UINT64_MAX), "vkWaitForFences(direct)", error)) return false;
     if (!check(vkResetFences(g.device, 1, &slot.fence), "vkResetFences(direct)", error)) return false;
+    if (g_submitted_inflight.fetch_sub(1u, std::memory_order_relaxed) == 1u) {
+        g_gpu_idle_since_us.store(steady_now_us(), std::memory_order_relaxed);
+    }
+    if (stats) {
+        stats->batches_behind = g_dispatch_inflight.load(std::memory_order_relaxed) - 1u; // exclude ourselves
+        stats->gpu_idle_ms_before_submit = idle_ms_before;
+    }
 
     if (direct_work) {
         std::memcpy(accum, slot.accum.mapped, sizeof(gpu_direct_accum_host_t) * batch.sample_count);
@@ -1594,6 +1634,7 @@ bool trace_surflight_batch(
     const std::uint32_t *face_source_indices,
     std::size_t face_source_index_count,
     const gpu_light::surflight_params_t &params,
+    gpu_light::dispatch_stats_t *stats,
     std::string &error) {
     {
         std::lock_guard<std::mutex> lock(g_mutex);
@@ -1609,6 +1650,9 @@ bool trace_surflight_batch(
         point_count == 0 || sample_count == 0 || face_range_count == 0 || face_source_index_count == 0) {
         return true;
     }
+
+    dispatch_inflight_guard_t inflight_guard;
+    double idle_ms_before = 0.0;
 
     const std::uint32_t slot_index =
         g_direct_slot_counter.fetch_add(1u, std::memory_order_relaxed) % static_cast<std::uint32_t>(g.direct_slots.size());
@@ -1675,15 +1719,28 @@ bool trace_surflight_batch(
 
     {
         std::lock_guard<std::mutex> lock(g_mutex);
+        if (g_submitted_inflight.fetch_add(1u, std::memory_order_relaxed) == 0u) {
+            idle_ms_before = (steady_now_us() - g_gpu_idle_since_us.load(std::memory_order_relaxed)) / 1000.0;
+        }
         VkSubmitInfo si{};
         si.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         si.commandBufferCount = 1;
         si.pCommandBuffers = &slot.command_buffer;
-        if (!check(vkQueueSubmit(g.queue, 1, &si, slot.fence), "vkQueueSubmit(surflight)", error)) return false;
+        if (!check(vkQueueSubmit(g.queue, 1, &si, slot.fence), "vkQueueSubmit(surflight)", error)) {
+            g_submitted_inflight.fetch_sub(1u, std::memory_order_relaxed);
+            return false;
+        }
     }
 
     if (!check(vkWaitForFences(g.device, 1, &slot.fence, VK_TRUE, UINT64_MAX), "vkWaitForFences(surflight)", error)) return false;
     if (!check(vkResetFences(g.device, 1, &slot.fence), "vkResetFences(surflight)", error)) return false;
+    if (g_submitted_inflight.fetch_sub(1u, std::memory_order_relaxed) == 1u) {
+        g_gpu_idle_since_us.store(steady_now_us(), std::memory_order_relaxed);
+    }
+    if (stats) {
+        stats->batches_behind = g_dispatch_inflight.load(std::memory_order_relaxed) - 1u; // exclude ourselves
+        stats->gpu_idle_ms_before_submit = idle_ms_before;
+    }
 
     std::memcpy(accum, slot.surflight_accum.mapped, sizeof(gpu_direct_accum_host_t) * sample_count);
     return true;

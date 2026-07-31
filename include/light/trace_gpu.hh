@@ -114,6 +114,24 @@ struct surflight_params_t {
     float surflightskydist = 0;
 };
 
+// Pipeline diagnostics for one queue dispatch, measured in the backend around
+// the actual GPU submit and fence wait (not the CPU-side upload/readback).
+// Completion is observed when the waiting thread returns from the fence wait,
+// so idle gaps are a floor on the true GPU idle time. Covers the direct/
+// indirect queue dispatch paths only, which never overlap the raystream
+// occlusion path.
+struct dispatch_stats_t {
+    // other queue dispatch calls in flight (uploading, blocked on a slot, or
+    // executing) at the moment this batch's fence wait returned — nonzero
+    // means the GPU had more work lined up when we finished (GPU-bound)
+    std::uint32_t batches_behind = 0;
+    // how long the GPU had been fully idle (no submitted-unfinished batch)
+    // when this batch was submitted; 0 when submitted while still busy. The
+    // first batch of a run reports the time since backend init (pipeline
+    // warmup while the CPU filled the first batch).
+    double gpu_idle_ms_before_submit = 0.0;
+};
+
 enum class backend_state_t {
     unavailable,
     initialized,
@@ -187,7 +205,8 @@ struct direct_combined_batch_t {
     std::size_t sample_count = 0;
 };
 
-bool trace_direct_combined_batch(const direct_combined_batch_t &batch, direct_phase_accum_t *accum);
+bool trace_direct_combined_batch(
+    const direct_combined_batch_t &batch, direct_phase_accum_t *accum, dispatch_stats_t *stats = nullptr);
 
 bool trace_surflight_batch(
     const surflight_source_t *sources,
@@ -201,7 +220,8 @@ bool trace_surflight_batch(
     std::size_t face_range_count,
     const std::uint32_t *face_source_indices,
     std::size_t face_source_index_count,
-    const surflight_params_t &params);
+    const surflight_params_t &params,
+    dispatch_stats_t *stats = nullptr);
 
 bool trace_direct_accumulate_batch(
     const modelinfo_t *self,

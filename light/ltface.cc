@@ -2603,9 +2603,45 @@ bool g_gpu_direct_surflight_disabled = false;
 static constexpr std::size_t GPU_DIRECT_FLUSH_SAMPLES = 1024ull * 1024ull;
 static constexpr float GPU_DIRECT_SURFLIGHT_HOTSPOT_CLAMP = 16.0f; // direct-pass hotspot_clamp
 
+// Inter-completion timing for the flush log lines: each flush prints the time
+// since the previous flush completed, so the printed values telescope — their
+// sum is the phase's wall-clock. The first flush measures from phase start
+// (stamped when the source list is first built), making the initial CPU-side
+// queue fill visible. Note this is pipeline throughput, not per-batch cost: a
+// flush that completes just after another prints a small delta even if its
+// own batch ran long — the [GPU-bound/CPU-bound] tag supplies that context.
+std::atomic<std::int64_t> g_gpu_direct_last_completion_us{0};
+
+static std::int64_t GPU_SteadyNowUs()
+{
+    return std::chrono::duration_cast<std::chrono::microseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count();
+}
+
 static float GPU_Surflight_Gate()
 {
     return light_options.emissivequality.value() == emissivequality_t::HIGH ? 0.0f : 0.01f;
+}
+
+// Classifies one dispatch for the flush log line. The two measurements are
+// taken at different moments (idle at submit, queue depth at completion), so
+// both can be nonzero for one batch — GPU-bound wins and the idle gap is
+// shown alongside. "balanced" = submitted while the GPU was still busy and
+// nothing was waiting behind us at completion (ideal overlap, or a phase-tail
+// batch with nothing left to queue).
+static std::string GPU_PipelineStateString(const gpu_light::dispatch_stats_t &stats)
+{
+    if (stats.batches_behind > 0) {
+        if (stats.gpu_idle_ms_before_submit >= 0.1) {
+            return fmt::format("GPU-bound: {} batches queued (GPU idle {:.1f} ms before submit)",
+                stats.batches_behind, stats.gpu_idle_ms_before_submit);
+        }
+        return fmt::format("GPU-bound: {} batches queued", stats.batches_behind);
+    }
+    if (stats.gpu_idle_ms_before_submit >= 0.1) {
+        return fmt::format("CPU-bound: GPU idle {:.1f} ms before submit", stats.gpu_idle_ms_before_submit);
+    }
+    return "balanced";
 }
 
 struct gpu_direct_source_key_t {
@@ -2877,6 +2913,9 @@ static bool GPU_DirectQueue_BuildSourcesLocked()
         return !g_gpu_direct_disabled;
     }
     g_gpu_direct_sources_built = true;
+    // first build = first face of the phase: the baseline for the flush log's
+    // inter-completion timing
+    g_gpu_direct_last_completion_us.store(GPU_SteadyNowUs(), std::memory_order_relaxed);
     g_gpu_direct_sources.clear();
     g_gpu_direct_source_entities.clear();
     std::vector<gpu_direct_source_key_t> unique_keys;
@@ -3122,7 +3161,6 @@ static bool GPU_DirectQueue_DispatchBatch(const mbsp_t *bsp, gpu_direct_batch_t 
         return true;
     }
 
-    const auto t0 = std::chrono::steady_clock::now();
     std::vector<gpu_light::direct_phase_accum_t> accum(batch.samples.size());
 
     gpu_light::direct_combined_batch_t in{};
@@ -3149,9 +3187,8 @@ static bool GPU_DirectQueue_DispatchBatch(const mbsp_t *bsp, gpu_direct_batch_t 
     in.samples = batch.samples.data();
     in.sample_count = batch.samples.size();
 
-    const bool ok = gpu_light::trace_direct_combined_batch(in, accum.data());
-    const auto t1 = std::chrono::steady_clock::now();
-    const double gpu_ms = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count() / 1000.0;
+    gpu_light::dispatch_stats_t dispatch_stats;
+    const bool ok = gpu_light::trace_direct_combined_batch(in, accum.data(), &dispatch_stats);
 
     if (!ok) {
         {
@@ -3163,6 +3200,11 @@ static bool GPU_DirectQueue_DispatchBatch(const mbsp_t *bsp, gpu_direct_batch_t 
         logging::print("ERROR: disabling GPU direct phase for the rest of this run. Re-run without -gpu for guaranteed CPU output.\n");
         return false;
     }
+
+    const std::int64_t now_us = GPU_SteadyNowUs();
+    const std::int64_t prev_us = g_gpu_direct_last_completion_us.exchange(now_us, std::memory_order_relaxed);
+    // concurrent completions can exchange out of timestamp order; clamp
+    const double since_last_ms = static_cast<double>(std::max<std::int64_t>(now_us - prev_us, 0)) / 1000.0;
 
     for (const auto &rec : batch.faces) {
         if (!rec.lightsurf || !rec.lightmaps || rec.sample_count == 0) {
@@ -3187,9 +3229,10 @@ static bool GPU_DirectQueue_DispatchBatch(const mbsp_t *bsp, gpu_direct_batch_t 
     }
 
     const std::uint64_t implicit_rays = GPU_DirectBatch_ImplicitRayCount(batch);
-    logging::print("GPU direct phase: flushed {} samples, {} entity/sun sources ({} refs), {} surflight sources ({} refs) = {} implicit rays in {:.3f} ms\n",
+    logging::print("GPU direct phase: flushed {} samples, {} entity/sun sources ({} refs), {} surflight sources ({} refs) = {} implicit rays, +{:.1f} ms since prior flush [{}]\n",
         batch.samples.size(), g_gpu_direct_sources.size(), batch.face_source_indices.size(),
-        g_gpu_direct_surflight_sources.size(), batch.surflight_face_source_indices.size(), implicit_rays, gpu_ms);
+        g_gpu_direct_surflight_sources.size(), batch.surflight_face_source_indices.size(), implicit_rays,
+        since_last_ms, GPU_PipelineStateString(dispatch_stats));
     return true;
 }
 } // namespace
@@ -3383,6 +3426,9 @@ std::vector<std::uint32_t> g_gpu_indirect_face_source_indices;
 std::vector<gpu_indirect_face_record_t> g_gpu_indirect_faces;
 std::optional<size_t> g_gpu_indirect_built_depth;
 bool g_gpu_indirect_disabled = false;
+// same inter-completion flush timing as the direct queue; re-baselined at
+// each pass rebuild so the first flush of a pass shows the pass's CPU fill
+std::atomic<std::int64_t> g_gpu_indirect_last_completion_us{0};
 
 constexpr std::size_t GPU_INDIRECT_FLUSH_SAMPLES = 1024ull * 1024ull;
 constexpr float GPU_INDIRECT_HOTSPOT_CLAMP = 128.0f; // bounce-pass hotspot_clamp
@@ -3399,6 +3445,7 @@ static bool GPU_IndirectQueue_BuildSourcesLocked(size_t bounce_depth)
         return true;
     }
     g_gpu_indirect_built_depth = bounce_depth;
+    g_gpu_indirect_last_completion_us.store(GPU_SteadyNowUs(), std::memory_order_relaxed);
     g_gpu_indirect_sources.clear();
     g_gpu_indirect_points.clear();
     g_gpu_indirect_source_surfs.clear();
@@ -3509,7 +3556,6 @@ static bool GPU_IndirectQueue_DispatchBatch(const mbsp_t *bsp, gpu_indirect_batc
         return true;
     }
 
-    const auto t0 = std::chrono::steady_clock::now();
     std::vector<gpu_light::direct_phase_accum_t> accum(batch.samples.size());
 
     gpu_light::surflight_params_t params{};
@@ -3520,6 +3566,7 @@ static bool GPU_IndirectQueue_DispatchBatch(const mbsp_t *bsp, gpu_indirect_batc
     params.scaledist = light_options.scaledist.value();
     params.surflightskydist = light_options.surflightskydist.value();
 
+    gpu_light::dispatch_stats_t dispatch_stats;
     const bool ok = gpu_light::trace_surflight_batch(
         g_gpu_indirect_sources.data(),
         g_gpu_indirect_sources.size(),
@@ -3532,9 +3579,8 @@ static bool GPU_IndirectQueue_DispatchBatch(const mbsp_t *bsp, gpu_indirect_batc
         batch.face_ranges.size(),
         batch.face_source_indices.data(),
         batch.face_source_indices.size(),
-        params);
-    const auto t1 = std::chrono::steady_clock::now();
-    const double gpu_ms = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count() / 1000.0;
+        params,
+        &dispatch_stats);
 
     if (!ok) {
         {
@@ -3545,6 +3591,11 @@ static bool GPU_IndirectQueue_DispatchBatch(const mbsp_t *bsp, gpu_indirect_batc
         logging::print("ERROR: disabling GPU indirect phase for the rest of this run. Re-run without -gpu for guaranteed CPU output.\n");
         return false;
     }
+
+    const std::int64_t now_us = GPU_SteadyNowUs();
+    const std::int64_t prev_us = g_gpu_indirect_last_completion_us.exchange(now_us, std::memory_order_relaxed);
+    // concurrent completions can exchange out of timestamp order; clamp
+    const double since_last_ms = static_cast<double>(std::max<std::int64_t>(now_us - prev_us, 0)) / 1000.0;
 
     for (const auto &rec : batch.faces) {
         if (!rec.lightsurf || !rec.lightmaps || rec.sample_count == 0) {
@@ -3568,8 +3619,9 @@ static bool GPU_IndirectQueue_DispatchBatch(const mbsp_t *bsp, gpu_indirect_batc
     }
 
     const std::uint64_t implicit_rays = GPU_IndirectBatch_ImplicitRayCount(batch);
-    logging::print("GPU indirect phase: flushed {} samples, {} sources, {} face-source refs = {} implicit rays in {:.3f} ms\n",
-        batch.samples.size(), g_gpu_indirect_sources.size(), batch.face_source_indices.size(), implicit_rays, gpu_ms);
+    logging::print("GPU indirect phase: flushed {} samples, {} sources, {} face-source refs = {} implicit rays, +{:.1f} ms since prior flush [{}]\n",
+        batch.samples.size(), g_gpu_indirect_sources.size(), batch.face_source_indices.size(), implicit_rays,
+        since_last_ms, GPU_PipelineStateString(dispatch_stats));
     return true;
 }
 

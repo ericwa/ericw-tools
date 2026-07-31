@@ -252,3 +252,26 @@ set and the GPU BLAS (validated via cave_test's func_wall, +6 solid faces,
   upload memcpy and AddFace mutex serialization — see GPU_TODO.md #4
   (sharded enqueue) and the shared-samples design in §1, which addresses the
   upload half for the direct phase.
+- Each flush line prints `+N ms since prior flush`: the time since the
+  previous flush of that queue completed (first flush: since the phase — or
+  bounce pass — started, so the initial CPU-side queue fill is visible). The
+  deltas telescope: summing them gives the phase's wall-clock. It is pipeline
+  throughput, not per-batch cost — a flush completing just after another
+  prints a small delta even if its own batch ran long. The line ends with a
+  pipeline tag measured in the backend around the actual submit/fence
+  (`dispatch_stats_t`, trace_gpu.hh): `[GPU-bound: N batches queued]`
+  (N dispatchers in flight/blocked when this batch's fence returned),
+  `[CPU-bound: GPU idle N ms before submit]`, or `[balanced]` (submitted
+  while busy, nothing waiting at completion). The tag's idle number is
+  measured from backend init for the first batch, so it can exceed the first
+  `+N ms` (which starts at the phase's first face). cave_test's direct phase
+  is decisively GPU-bound: ~240 ms initial fill, then steady ~155 ms per
+  1M-sample flush (~85M implicit rays each) with queue depth ramping to ~18;
+  only the phase-tail flush reads CPU-bound.
+- Batch-size sweep on that workload (GPU_DIRECT_FLUSH_SAMPLES 256k/1M/2M):
+  total elapsed 4.95/5.25/5.34 s, GPU service time ~125 ms per 1M samples at
+  every size — throughput is flat across 8×, so batch size does not
+  under-load the GPU (1M samples ≈ 15× the RTX 3070's ~70k resident threads,
+  and cross-batch overlap fills SMs during dispatch tails). Kernel-shape
+  headroom, if any, is in the serial per-thread ray loop / work imbalance /
+  ray-query occupancy — needs vkCmdWriteTimestamp + Nsight to quantify.
