@@ -8,6 +8,7 @@
 namespace gpu_light::vulkan_backend {
 bool init(const mbsp_t *bsp, std::string &error);
 void shutdown();
+bool has_filtered_geometry();
 bool trace_occlusion_batch(
     const modelinfo_t *self,
     std::uint32_t shadow_mask,
@@ -16,16 +17,9 @@ bool trace_occlusion_batch(
     std::size_t count,
     std::string &error);
 
-bool trace_direct_phase_batch(
-    const gpu_light::direct_phase_source_t *sources,
-    std::size_t source_count,
-    const gpu_light::direct_phase_sample_t *samples,
+bool trace_direct_combined_batch(
+    const gpu_light::direct_combined_batch_t &batch,
     gpu_light::direct_phase_accum_t *accum,
-    std::size_t sample_count,
-    const gpu_light::direct_phase_face_range_t *face_ranges,
-    std::size_t face_range_count,
-    const std::uint32_t *face_source_indices,
-    std::size_t face_source_index_count,
     std::string &error);
 
 bool trace_surflight_batch(
@@ -118,6 +112,14 @@ void shutdown() {
     g_state = backend_state_t::unavailable;
 }
 
+bool has_filtered_geometry() {
+#if defined(HAVE_GPU_LIGHT)
+    return vulkan_backend::has_filtered_geometry();
+#else
+    return false;
+#endif
+}
+
 bool trace_occlusion_batch(
     const modelinfo_t *self,
     std::uint32_t shadow_mask,
@@ -159,28 +161,32 @@ bool trace_occlusion_batch(
 }
 
 
-bool trace_direct_phase_batch(
-    const direct_phase_source_t *sources,
-    std::size_t source_count,
-    const direct_phase_sample_t *samples,
-    direct_phase_accum_t *accum,
-    std::size_t sample_count,
-    const direct_phase_face_range_t *face_ranges,
-    std::size_t face_range_count,
-    const std::uint32_t *face_source_indices,
-    std::size_t face_source_index_count) {
-    if (!sources || !samples || !accum || !face_ranges || !face_source_indices || source_count == 0 || sample_count == 0 || face_range_count == 0) {
+bool trace_direct_combined_batch(const direct_combined_batch_t &batch, direct_phase_accum_t *accum) {
+    const bool direct_work = batch.sources && batch.source_count && batch.face_ranges && batch.face_range_count &&
+        batch.face_source_indices && batch.face_source_index_count;
+    const bool surflight_work = batch.surflight_sources && batch.surflight_source_count && batch.surflight_points &&
+        batch.surflight_point_count && batch.surflight_face_ranges && batch.surflight_face_range_count &&
+        batch.surflight_face_source_indices && batch.surflight_face_source_index_count;
+    if (!accum || !batch.samples || batch.sample_count == 0 || (!direct_work && !surflight_work)) {
         return true;
     }
 
+    // rough estimate for stats: face-source refs times average samples per face
     std::uint64_t implicit_rays = 0;
-    for (std::size_t i = 0; i < face_range_count; ++i) {
-        implicit_rays += face_ranges[i].source_count;
+    if (direct_work) {
+        std::uint64_t refs = 0;
+        for (std::size_t i = 0; i < batch.face_range_count; ++i) {
+            refs += batch.face_ranges[i].source_count;
+        }
+        implicit_rays += refs * (batch.sample_count / batch.face_range_count);
     }
-    if (implicit_rays == 0 || face_source_index_count == 0) {
-        return true;
+    if (surflight_work) {
+        std::uint64_t refs = 0;
+        for (std::size_t i = 0; i < batch.surflight_face_range_count; ++i) {
+            refs += batch.surflight_face_ranges[i].source_count;
+        }
+        implicit_rays += refs * (batch.sample_count / batch.surflight_face_range_count);
     }
-    implicit_rays *= static_cast<std::uint64_t>(sample_count) / static_cast<std::uint64_t>(face_range_count);
     {
         std::lock_guard<std::mutex> lock(g_mutex);
         g_stats.batches++;
@@ -193,9 +199,7 @@ bool trace_direct_phase_batch(
 
 #if defined(HAVE_GPU_LIGHT)
     std::string error;
-    const bool ok = vulkan_backend::trace_direct_phase_batch(
-        sources, source_count, samples, accum, sample_count,
-        face_ranges, face_range_count, face_source_indices, face_source_index_count, error);
+    const bool ok = vulkan_backend::trace_direct_combined_batch(batch, accum, error);
     std::lock_guard<std::mutex> lock(g_mutex);
     if (ok) {
         g_stats.gpu_batches++;

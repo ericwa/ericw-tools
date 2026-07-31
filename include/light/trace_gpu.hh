@@ -133,6 +133,16 @@ const char *state_string();
 const char *last_error();
 stats_t stats();
 
+// True when Embree's filter scene is non-empty (translucent water/glass,
+// fence textures, _shadowself/_switchableshadow bmodels, non-default channel
+// masks). None of that geometry is in the GPU BLAS, so every GPU-traced ray
+// would ignore it. Callers that skip CPU work on the promise of a later GPU
+// flush (the ltface.cc queues) must check this at decision time, BEFORE any
+// face is enqueued — the backend entry points also refuse such batches, but
+// by then the queued faces' CPU work has already been skipped. Valid after
+// init().
+bool has_filtered_geometry();
+
 bool init(const mbsp_t *bsp);
 void shutdown();
 
@@ -146,16 +156,38 @@ bool trace_occlusion_batch(
     std::size_t count);
 
 
-bool trace_direct_phase_batch(
-    const direct_phase_source_t *sources,
-    std::size_t source_count,
-    const direct_phase_sample_t *samples,
-    direct_phase_accum_t *accum,
-    std::size_t sample_count,
-    const direct_phase_face_range_t *face_ranges,
-    std::size_t face_range_count,
-    const std::uint32_t *face_source_indices,
-    std::size_t face_source_index_count);
+// One direct-phase batch over a shared sample set: the entity/sun kernel and
+// the direct-surflight kernel are recorded into a single submission, each with
+// its own per-face source ranges. Either side may be empty (null/0). When both
+// range arrays are present they are parallel: sample.face_index selects the
+// same slot in each. Results are summed into accum (the surflight kernel
+// contributes color/hit only; its normal output is always zero).
+struct direct_combined_batch_t {
+    // entity/sun kernel inputs
+    const direct_phase_source_t *sources = nullptr;
+    std::size_t source_count = 0;
+    const direct_phase_face_range_t *face_ranges = nullptr;
+    std::size_t face_range_count = 0;
+    const std::uint32_t *face_source_indices = nullptr;
+    std::size_t face_source_index_count = 0;
+
+    // direct-surflight kernel inputs
+    const surflight_source_t *surflight_sources = nullptr;
+    std::size_t surflight_source_count = 0;
+    const surflight_point_t *surflight_points = nullptr;
+    std::size_t surflight_point_count = 0;
+    const direct_phase_face_range_t *surflight_face_ranges = nullptr;
+    std::size_t surflight_face_range_count = 0;
+    const std::uint32_t *surflight_face_source_indices = nullptr;
+    std::size_t surflight_face_source_index_count = 0;
+    surflight_params_t surflight_params;
+
+    // shared by both kernels; uploaded once
+    const direct_phase_sample_t *samples = nullptr;
+    std::size_t sample_count = 0;
+};
+
+bool trace_direct_combined_batch(const direct_combined_batch_t &batch, direct_phase_accum_t *accum);
 
 bool trace_surflight_batch(
     const surflight_source_t *sources,

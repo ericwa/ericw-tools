@@ -2583,7 +2583,30 @@ std::vector<gpu_direct_face_record_t> g_gpu_direct_faces;
 bool g_gpu_direct_sources_built = false;
 bool g_gpu_direct_disabled = false;
 
+// Direct-phase surface lights (radiosity VPLs with bounce_level == nullopt),
+// dispatched by the surflight kernel in the same batch as the entity/sun
+// kernel. Sources are built once per run: the nullopt VPL set never changes.
+// The face-range array is parallel to g_gpu_direct_face_ranges — a sample's
+// face_index selects the same slot in both.
+std::vector<gpu_light::surflight_source_t> g_gpu_direct_surflight_sources;
+std::vector<gpu_light::surflight_point_t> g_gpu_direct_surflight_points;
+// per-source emitting surface + style setting, for the exact CPU-parity culls.
+// Only valid during the direct phase: MakeBounceLights later grows the styles
+// vectors these settings point into.
+std::vector<const lightsurf_t *> g_gpu_direct_surflight_source_surfs;
+std::vector<const surfacelight_t::per_style_t *> g_gpu_direct_surflight_source_settings;
+std::vector<gpu_light::direct_phase_face_range_t> g_gpu_direct_surflight_face_ranges;
+std::vector<std::uint32_t> g_gpu_direct_surflight_face_source_indices;
+bool g_gpu_direct_surflight_sources_built = false;
+bool g_gpu_direct_surflight_disabled = false;
+
 static constexpr std::size_t GPU_DIRECT_FLUSH_SAMPLES = 1024ull * 1024ull;
+static constexpr float GPU_DIRECT_SURFLIGHT_HOTSPOT_CLAMP = 16.0f; // direct-pass hotspot_clamp
+
+static float GPU_Surflight_Gate()
+{
+    return light_options.emissivequality.value() == emissivequality_t::HIGH ? 0.0f : 0.01f;
+}
 
 struct gpu_direct_source_key_t {
     std::uint32_t type = 0;
@@ -2858,6 +2881,15 @@ static bool GPU_DirectQueue_BuildSourcesLocked()
     g_gpu_direct_source_entities.clear();
     std::vector<gpu_direct_source_key_t> unique_keys;
 
+    // decided here, before any face skips its CPU loops: the backend would
+    // refuse the batch at flush time, after the queued faces' CPU work was
+    // already skipped, silently dropping their light
+    if (gpu_light::has_filtered_geometry()) {
+        logging::print("GPU direct phase: filtered geometry (translucent water/glass, fences, switchable shadows) present; falling back to CPU direct path.\n");
+        g_gpu_direct_disabled = true;
+        return false;
+    }
+
     if (dirt_in_use) {
         logging::print("GPU direct phase: dirt/AO is enabled; falling back to CPU direct path.\n");
         g_gpu_direct_disabled = true;
@@ -2947,12 +2979,90 @@ static bool GPU_DirectQueue_BuildSourcesLocked()
     return true;
 }
 
+// Builds the direct-phase surflight source list (radiosity VPLs with
+// bounce_level == nullopt). Unlike an unsupported entity/sun light, an
+// unsupported source here is a soft fallback: DirectLightFace keeps calling
+// the CPU LightFace_SurfaceLight(nullopt) — which is additive and
+// order-commutative with the GPU entity/sun work — while the GPU still
+// handles entity/sun, and vice versa.
+static bool GPU_DirectQueue_BuildSurflightSourcesLocked()
+{
+    if (g_gpu_direct_surflight_sources_built) {
+        return !g_gpu_direct_surflight_disabled;
+    }
+    g_gpu_direct_surflight_sources_built = true;
+
+    if (gpu_light::has_filtered_geometry()) {
+        logging::print("GPU direct surflights: filtered geometry present; keeping surface lights on the CPU.\n");
+        g_gpu_direct_surflight_disabled = true;
+        return false;
+    }
+
+    if (dirt_in_use) {
+        logging::print("GPU direct surflights: dirt/AO is enabled; keeping surface lights on the CPU.\n");
+        g_gpu_direct_surflight_disabled = true;
+        return false;
+    }
+
+    // LightFace_LocalMin writes lightmaps after the GPU enqueue; that is only
+    // race-free because it writes nothing unless an LF_LOCALMIN entity exists.
+    // Such an entity disables the entity/sun sub-phase (BuildSourcesLocked),
+    // and must disable this one too since the deferrals are independent.
+    for (const auto &entity_ptr : GetLights()) {
+        if (entity_ptr->getFormula() == LF_LOCALMIN && !entity_ptr->nostaticlight.value()) {
+            logging::print("GPU direct surflights: LF_LOCALMIN entity present; keeping surface lights on the CPU.\n");
+            g_gpu_direct_surflight_disabled = true;
+            return false;
+        }
+    }
+
+    for (const lightsurf_t *surf_ptr : EmissiveLightSurfaces()) {
+        const surfacelight_t &vpl = *surf_ptr->vpl;
+        for (const auto &setting : vpl.styles) {
+            if (setting.bounce_level.has_value()) {
+                continue; // bounce VPLs belong to the indirect queue
+            }
+            if (setting.style != 0) {
+                logging::print("GPU direct surflights: styled surface light encountered; keeping surface lights on the CPU.\n");
+                g_gpu_direct_surflight_disabled = true;
+                g_gpu_direct_surflight_sources.clear();
+                g_gpu_direct_surflight_points.clear();
+                g_gpu_direct_surflight_source_surfs.clear();
+                g_gpu_direct_surflight_source_settings.clear();
+                return false;
+            }
+
+            gpu_light::surflight_source_t src{};
+            src.nx = vpl.surfnormal[0]; src.ny = vpl.surfnormal[1]; src.nz = vpl.surfnormal[2];
+            src.intensity = setting.intensity;
+            src.cr = setting.color[0]; src.cg = setting.color[1]; src.cb = setting.color[2];
+            src.atten = setting.atten;
+            src.flags = (setting.omnidirectional ? 1u : 0u) | (setting.rescale ? 2u : 0u);
+            src.point_begin = static_cast<std::uint32_t>(g_gpu_direct_surflight_points.size());
+            src.point_count = static_cast<std::uint32_t>(vpl.points.size());
+            for (const qvec3f &pt : vpl.points) {
+                g_gpu_direct_surflight_points.push_back(gpu_light::surflight_point_t{pt[0], pt[1], pt[2], 0.0f});
+            }
+            g_gpu_direct_surflight_sources.push_back(src);
+            g_gpu_direct_surflight_source_surfs.push_back(surf_ptr);
+            g_gpu_direct_surflight_source_settings.push_back(&setting);
+        }
+    }
+
+    logging::print("GPU direct surflights: {} sources ({} points).\n",
+        g_gpu_direct_surflight_sources.size(), g_gpu_direct_surflight_points.size());
+    return true;
+}
+
 // A snapshot of the queue, taken under the mutex and dispatched without it.
 // sample.face_index values index into this batch's face_ranges.
 struct gpu_direct_batch_t {
     std::vector<gpu_light::direct_phase_sample_t> samples;
     std::vector<gpu_light::direct_phase_face_range_t> face_ranges;
     std::vector<std::uint32_t> face_source_indices;
+    // parallel to face_ranges: the same face_index selects each kernel's range
+    std::vector<gpu_light::direct_phase_face_range_t> surflight_face_ranges;
+    std::vector<std::uint32_t> surflight_face_source_indices;
     std::vector<gpu_direct_face_record_t> faces;
 };
 
@@ -2963,21 +3073,38 @@ static gpu_direct_batch_t GPU_DirectQueue_TakeBatchLocked()
     batch.samples = std::move(g_gpu_direct_samples);
     batch.face_ranges = std::move(g_gpu_direct_face_ranges);
     batch.face_source_indices = std::move(g_gpu_direct_face_source_indices);
+    batch.surflight_face_ranges = std::move(g_gpu_direct_surflight_face_ranges);
+    batch.surflight_face_source_indices = std::move(g_gpu_direct_surflight_face_source_indices);
     batch.faces = std::move(g_gpu_direct_faces);
     g_gpu_direct_samples.clear();
     g_gpu_direct_face_ranges.clear();
     g_gpu_direct_face_source_indices.clear();
+    g_gpu_direct_surflight_face_ranges.clear();
+    g_gpu_direct_surflight_face_source_indices.clear();
     g_gpu_direct_faces.clear();
     return batch;
 }
 
 static std::uint64_t GPU_DirectBatch_ImplicitRayCount(const gpu_direct_batch_t &batch)
 {
+    // per-face ray weight = entity/sun refs + point counts of surflight refs
+    std::vector<std::uint64_t> face_weights(batch.face_ranges.size(), 0);
+    for (std::size_t f = 0; f < batch.face_ranges.size(); ++f) {
+        face_weights[f] = batch.face_ranges[f].source_count;
+    }
+    for (std::size_t f = 0; f < batch.surflight_face_ranges.size(); ++f) {
+        const auto &range = batch.surflight_face_ranges[f];
+        for (std::uint32_t i = 0; i < range.source_count; ++i) {
+            const std::uint32_t source_index = batch.surflight_face_source_indices[range.source_begin + i];
+            if (source_index < g_gpu_direct_surflight_sources.size()) {
+                face_weights[f] += g_gpu_direct_surflight_sources[source_index].point_count;
+            }
+        }
+    }
     std::uint64_t implicit_rays = 0;
     for (const auto &sample : batch.samples) {
-        const std::size_t face_index = sample.face_index;
-        if (face_index < batch.face_ranges.size()) {
-            implicit_rays += batch.face_ranges[face_index].source_count;
+        if (sample.face_index < face_weights.size()) {
+            implicit_rays += face_weights[sample.face_index];
         }
     }
     return implicit_rays;
@@ -2987,7 +3114,8 @@ static std::uint64_t GPU_DirectBatch_ImplicitRayCount(const gpu_direct_batch_t &
 // the queue mutex so workers keep queueing faces while the GPU traces. This is
 // safe because a face is only enqueued after DirectLightFace has finished all
 // CPU-side writes to its lightmaps, and each face appears in exactly one batch.
-// g_gpu_direct_sources is immutable once built, so it is read without the lock.
+// The source/point vectors are immutable once built, so they are read without
+// the lock.
 static bool GPU_DirectQueue_DispatchBatch(const mbsp_t *bsp, gpu_direct_batch_t &batch)
 {
     if (batch.samples.empty()) {
@@ -2996,16 +3124,32 @@ static bool GPU_DirectQueue_DispatchBatch(const mbsp_t *bsp, gpu_direct_batch_t 
 
     const auto t0 = std::chrono::steady_clock::now();
     std::vector<gpu_light::direct_phase_accum_t> accum(batch.samples.size());
-    const bool ok = gpu_light::trace_direct_phase_batch(
-        g_gpu_direct_sources.data(),
-        g_gpu_direct_sources.size(),
-        batch.samples.data(),
-        accum.data(),
-        batch.samples.size(),
-        batch.face_ranges.data(),
-        batch.face_ranges.size(),
-        batch.face_source_indices.data(),
-        batch.face_source_indices.size());
+
+    gpu_light::direct_combined_batch_t in{};
+    in.sources = g_gpu_direct_sources.data();
+    in.source_count = g_gpu_direct_sources.size();
+    in.face_ranges = batch.face_ranges.data();
+    in.face_range_count = batch.face_ranges.size();
+    in.face_source_indices = batch.face_source_indices.data();
+    in.face_source_index_count = batch.face_source_indices.size();
+    in.surflight_sources = g_gpu_direct_surflight_sources.data();
+    in.surflight_source_count = g_gpu_direct_surflight_sources.size();
+    in.surflight_points = g_gpu_direct_surflight_points.data();
+    in.surflight_point_count = g_gpu_direct_surflight_points.size();
+    in.surflight_face_ranges = batch.surflight_face_ranges.data();
+    in.surflight_face_range_count = batch.surflight_face_ranges.size();
+    in.surflight_face_source_indices = batch.surflight_face_source_indices.data();
+    in.surflight_face_source_index_count = batch.surflight_face_source_indices.size();
+    in.surflight_params.standard_scale = light_options.surflightscale.value();
+    in.surflight_params.sky_scale = light_options.surflightskyscale.value();
+    in.surflight_params.hotspot_clamp = GPU_DIRECT_SURFLIGHT_HOTSPOT_CLAMP;
+    in.surflight_params.gate = GPU_Surflight_Gate();
+    in.surflight_params.scaledist = light_options.scaledist.value();
+    in.surflight_params.surflightskydist = light_options.surflightskydist.value();
+    in.samples = batch.samples.data();
+    in.sample_count = batch.samples.size();
+
+    const bool ok = gpu_light::trace_direct_combined_batch(in, accum.data());
     const auto t1 = std::chrono::steady_clock::now();
     const double gpu_ms = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count() / 1000.0;
 
@@ -3013,6 +3157,7 @@ static bool GPU_DirectQueue_DispatchBatch(const mbsp_t *bsp, gpu_direct_batch_t 
         {
             std::lock_guard<std::mutex> lock(g_gpu_direct_queue_mutex);
             g_gpu_direct_disabled = true;
+            g_gpu_direct_surflight_disabled = true;
         }
         logging::print("ERROR: GPU direct phase dispatch failed: {}\n", GPU_TraceLastError());
         logging::print("ERROR: disabling GPU direct phase for the rest of this run. Re-run without -gpu for guaranteed CPU output.\n");
@@ -3042,8 +3187,9 @@ static bool GPU_DirectQueue_DispatchBatch(const mbsp_t *bsp, gpu_direct_batch_t 
     }
 
     const std::uint64_t implicit_rays = GPU_DirectBatch_ImplicitRayCount(batch);
-    logging::print("GPU direct phase: flushed {} samples, {} unique sources, {} face-source refs = {} implicit rays in {:.3f} ms\n",
-        batch.samples.size(), g_gpu_direct_sources.size(), batch.face_source_indices.size(), implicit_rays, gpu_ms);
+    logging::print("GPU direct phase: flushed {} samples, {} entity/sun sources ({} refs), {} surflight sources ({} refs) = {} implicit rays in {:.3f} ms\n",
+        batch.samples.size(), g_gpu_direct_sources.size(), batch.face_source_indices.size(),
+        g_gpu_direct_surflight_sources.size(), batch.surflight_face_source_indices.size(), implicit_rays, gpu_ms);
     return true;
 }
 } // namespace
@@ -3058,9 +3204,10 @@ void GPU_DirectQueue_Flush(const mbsp_t *bsp)
     GPU_DirectQueue_DispatchBatch(bsp, batch);
 }
 
-static bool GPU_DirectQueue_AddFace(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
+static bool GPU_DirectQueue_AddFace(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t *lightmaps,
+    bool want_direct, bool want_surflight)
 {
-    if (!GPU_TraceAvailable() || g_gpu_direct_disabled || !lightsurf || !lightmaps) {
+    if (!GPU_TraceAvailable() || !lightsurf || !lightmaps) {
         return false;
     }
     if (!(lightsurf->object_channel_mask & CHANNEL_MASK_DEFAULT)) {
@@ -3072,10 +3219,19 @@ static bool GPU_DirectQueue_AddFace(const mbsp_t *bsp, lightsurf_t *lightsurf, l
     }
 
     std::unique_lock<std::mutex> lock(g_gpu_direct_queue_mutex);
-    if (!GPU_DirectQueue_BuildSourcesLocked()) {
+    // a dispatch failure on another thread can disable the queue between the
+    // WillHandleFace decision and this call; the caller then CPU-lights the
+    // face (a failure disables both sub-phases, so one answer covers both)
+    if (want_direct && (g_gpu_direct_disabled || !GPU_DirectQueue_BuildSourcesLocked())) {
         return false;
     }
-    if (g_gpu_direct_sources.empty()) {
+    if (want_surflight && (g_gpu_direct_surflight_disabled || !GPU_DirectQueue_BuildSurflightSourcesLocked())) {
+        return false;
+    }
+
+    const bool direct_active = want_direct && !g_gpu_direct_sources.empty();
+    const bool surflight_active = want_surflight && !g_gpu_direct_surflight_sources.empty();
+    if (!direct_active && !surflight_active) {
         return true;
     }
 
@@ -3105,24 +3261,49 @@ static bool GPU_DirectQueue_AddFace(const mbsp_t *bsp, lightsurf_t *lightsurf, l
     }
 
     const std::uint32_t face_index = static_cast<std::uint32_t>(g_gpu_direct_face_ranges.size());
+
     gpu_light::direct_phase_face_range_t face_range{};
     face_range.source_begin = static_cast<std::uint32_t>(g_gpu_direct_face_source_indices.size());
-
-    for (std::uint32_t source_index = 0; source_index < g_gpu_direct_sources.size(); ++source_index) {
-        const auto &src = g_gpu_direct_sources[source_index];
-        if (!GPU_Direct_SourceReachesFace(bsp, src, g_gpu_direct_source_entities[source_index], lightsurf)) {
-            continue;
-        }
-        if (GPU_Direct_SourceAffectsFace(src, mins, maxs, face_normal, lightsurf->twosided)) {
-            g_gpu_direct_face_source_indices.push_back(source_index);
+    if (direct_active) {
+        for (std::uint32_t source_index = 0; source_index < g_gpu_direct_sources.size(); ++source_index) {
+            const auto &src = g_gpu_direct_sources[source_index];
+            if (!GPU_Direct_SourceReachesFace(bsp, src, g_gpu_direct_source_entities[source_index], lightsurf)) {
+                continue;
+            }
+            if (GPU_Direct_SourceAffectsFace(src, mins, maxs, face_normal, lightsurf->twosided)) {
+                g_gpu_direct_face_source_indices.push_back(source_index);
+            }
         }
     }
-
     face_range.source_count = static_cast<std::uint32_t>(g_gpu_direct_face_source_indices.size()) - face_range.source_begin;
-    if (face_range.source_count == 0) {
+
+    gpu_light::direct_phase_face_range_t surflight_range{};
+    surflight_range.source_begin = static_cast<std::uint32_t>(g_gpu_direct_surflight_face_source_indices.size());
+    if (surflight_active) {
+        // the CPU path's own culls, for bit-exact source selection
+        const float surflight_gate = GPU_Surflight_Gate();
+        for (std::uint32_t source_index = 0; source_index < g_gpu_direct_surflight_sources.size(); ++source_index) {
+            const lightsurf_t *emitter = g_gpu_direct_surflight_source_surfs[source_index];
+            const surfacelight_t::per_style_t &setting = *g_gpu_direct_surflight_source_settings[source_index];
+            if (SurfaceLight_SphereCull(
+                    emitter->vpl.get(), lightsurf, setting, surflight_gate, GPU_DIRECT_SURFLIGHT_HOTSPOT_CLAMP)) {
+                continue;
+            }
+            if (SurfaceLight_VisCull(bsp, &lightsurf->pvs, emitter)) {
+                continue;
+            }
+            g_gpu_direct_surflight_face_source_indices.push_back(source_index);
+        }
+    }
+    surflight_range.source_count =
+        static_cast<std::uint32_t>(g_gpu_direct_surflight_face_source_indices.size()) - surflight_range.source_begin;
+
+    if (face_range.source_count == 0 && surflight_range.source_count == 0) {
         return true;
     }
+    // both range arrays stay parallel: samples index them with one face_index
     g_gpu_direct_face_ranges.push_back(face_range);
+    g_gpu_direct_surflight_face_ranges.push_back(surflight_range);
 
     const std::size_t first_sample = g_gpu_direct_samples.size();
     g_gpu_direct_faces.push_back(gpu_direct_face_record_t{lightsurf, lightmaps, first_sample, sample_count});
@@ -3149,21 +3330,32 @@ static bool GPU_DirectQueue_AddFace(const mbsp_t *bsp, lightsurf_t *lightsurf, l
     return true;
 }
 
-// Decides up front whether the GPU direct queue will handle this face, without
-// enqueueing it. DirectLightFace uses this to skip the CPU entity/sun loops,
-// runs its remaining CPU-side passes, and only then calls GPU_DirectQueue_AddFace
-// — so any face in the queue has finished all CPU writes to its lightmaps, and
-// a flush on another thread can safely apply results concurrently.
-static bool GPU_DirectQueue_WillHandleFace(const lightsurf_t *lightsurf, const lightmapdict_t *lightmaps)
+// The two GPU direct-phase workloads defer independently: an unsupported
+// entity light falls the CPU entity/sun loops back without giving up the
+// surflight port, and a styled surflight keeps only LightFace_SurfaceLight on
+// the CPU. Both CPU calls are additive and order-commutative with the GPU
+// work, matching how the CPU-only tree interleaves them.
+struct gpu_direct_plan_t {
+    bool entity_sun = false;
+    bool surflight = false;
+};
+
+// Decides up front what the GPU direct queue will handle for this face,
+// without enqueueing it. DirectLightFace uses this to skip the corresponding
+// CPU loops, runs its remaining CPU-side passes, and only then calls
+// GPU_DirectQueue_AddFace — so any face in the queue has finished all CPU
+// writes to its lightmaps, and a flush on another thread can safely apply
+// results concurrently.
+static gpu_direct_plan_t GPU_DirectQueue_WillHandleFace(const lightsurf_t *lightsurf, const lightmapdict_t *lightmaps)
 {
+    gpu_direct_plan_t plan;
     if (!GPU_TraceAvailable() || !lightsurf || !lightmaps) {
-        return false;
+        return plan;
     }
     std::lock_guard<std::mutex> lock(g_gpu_direct_queue_mutex);
-    if (g_gpu_direct_disabled) {
-        return false;
-    }
-    return GPU_DirectQueue_BuildSourcesLocked();
+    plan.entity_sun = !g_gpu_direct_disabled && GPU_DirectQueue_BuildSourcesLocked();
+    plan.surflight = !g_gpu_direct_surflight_disabled && GPU_DirectQueue_BuildSurflightSourcesLocked();
+    return plan;
 }
 
 // ---------------------------------------------------------------------------
@@ -3195,11 +3387,6 @@ bool g_gpu_indirect_disabled = false;
 constexpr std::size_t GPU_INDIRECT_FLUSH_SAMPLES = 1024ull * 1024ull;
 constexpr float GPU_INDIRECT_HOTSPOT_CLAMP = 128.0f; // bounce-pass hotspot_clamp
 
-static float GPU_Indirect_SurflightGate()
-{
-    return light_options.emissivequality.value() == emissivequality_t::HIGH ? 0.0f : 0.01f;
-}
-
 // Builds the GPU source list for one bounce pass. The queue is empty at every
 // pass boundary (GPU_IndirectQueue_Flush runs after each pass's parallel
 // loop), so rebuilding here cannot orphan queued faces.
@@ -3216,6 +3403,14 @@ static bool GPU_IndirectQueue_BuildSourcesLocked(size_t bounce_depth)
     g_gpu_indirect_points.clear();
     g_gpu_indirect_source_surfs.clear();
     g_gpu_indirect_source_settings.clear();
+
+    // decided here, before any face skips its CPU pass, for the same reason
+    // as the direct queue: a flush-time refusal drops queued faces' light
+    if (gpu_light::has_filtered_geometry()) {
+        logging::print("GPU indirect phase: filtered geometry present; falling back to CPU indirect path.\n");
+        g_gpu_indirect_disabled = true;
+        return false;
+    }
 
     if (dirt_in_use) {
         logging::print("GPU indirect phase: dirt/AO is enabled; falling back to CPU indirect path.\n");
@@ -3321,7 +3516,7 @@ static bool GPU_IndirectQueue_DispatchBatch(const mbsp_t *bsp, gpu_indirect_batc
     params.standard_scale = light_options.bouncescale.value() * 0.5f;
     params.sky_scale = light_options.bouncescale.value();
     params.hotspot_clamp = GPU_INDIRECT_HOTSPOT_CLAMP;
-    params.gate = GPU_Indirect_SurflightGate();
+    params.gate = GPU_Surflight_Gate();
     params.scaledist = light_options.scaledist.value();
     params.surflightskydist = light_options.surflightskydist.value();
 
@@ -3406,7 +3601,7 @@ static bool GPU_IndirectQueue_AddFace(
         return true;
     }
 
-    const float surflight_gate = GPU_Indirect_SurflightGate();
+    const float surflight_gate = GPU_Surflight_Gate();
 
     const std::uint32_t face_index = static_cast<std::uint32_t>(g_gpu_indirect_face_ranges.size());
     gpu_light::direct_phase_face_range_t face_range{};
@@ -3513,28 +3708,38 @@ void DirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::
                         LightFace_Sky(bsp, &sun, &lightsurf, lightmaps);
             };
 
-#if defined(HAVE_GPU_LIGHT)
-            const bool gpu_direct_deferred = GPU_DirectQueue_WillHandleFace(&lightsurf, lightmaps);
-            if (!gpu_direct_deferred) {
-                cpu_direct_lights();
-            }
-#else
-            cpu_direct_lights();
-#endif
-
             // mxd. Add surface lights...
             // FIXME: negative surface lights
-            LightFace_SurfaceLight(bsp, &lightsurf, lightmaps, std::nullopt, cfg.surflightscale.value(),
-                cfg.surflightskyscale.value(), 16.0f);
+            const auto cpu_direct_surflights = [&]() {
+                LightFace_SurfaceLight(bsp, &lightsurf, lightmaps, std::nullopt, cfg.surflightscale.value(),
+                    cfg.surflightskyscale.value(), 16.0f);
+            };
 
 #if defined(HAVE_GPU_LIGHT)
+            const gpu_direct_plan_t gpu_plan = GPU_DirectQueue_WillHandleFace(&lightsurf, lightmaps);
+            if (!gpu_plan.entity_sun) {
+                cpu_direct_lights();
+            }
+            if (!gpu_plan.surflight) {
+                cpu_direct_surflights();
+            }
+
             // Enqueue only after every CPU-side direct-phase write to this face's
             // lightmaps is done: a flush on another thread may apply GPU results
             // to queued faces at any time.
-            if (gpu_direct_deferred && !GPU_DirectQueue_AddFace(bsp, &lightsurf, lightmaps)) {
+            if ((gpu_plan.entity_sun || gpu_plan.surflight) &&
+                !GPU_DirectQueue_AddFace(bsp, &lightsurf, lightmaps, gpu_plan.entity_sun, gpu_plan.surflight)) {
                 // the GPU path was disabled mid-run; light this face on the CPU instead
-                cpu_direct_lights();
+                if (gpu_plan.entity_sun) {
+                    cpu_direct_lights();
+                }
+                if (gpu_plan.surflight) {
+                    cpu_direct_surflights();
+                }
             }
+#else
+            cpu_direct_lights();
+            cpu_direct_surflights();
 #endif
         }
 

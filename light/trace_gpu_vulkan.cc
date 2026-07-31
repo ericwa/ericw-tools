@@ -60,11 +60,15 @@ struct direct_slot_t {
     persistent_buffer_t face_ranges;
     persistent_buffer_t face_source_indices;
     persistent_buffer_t accum;
-    // surflight-only inputs; samples/face_ranges/face_source_indices/accum are
-    // shared with the direct kernel (a slot is owned for a whole batch, and the
-    // direct phase is fully flushed before the bounce passes start)
+    // surflight-kernel buffers. Only `samples` is shared with the direct
+    // kernel: the combined direct-phase batch dispatches both kernels against
+    // one sample upload, so the surflight side needs its own ranges/indices/
+    // accum (the two kernels carry different per-face source lists).
     persistent_buffer_t surflight_sources;
     persistent_buffer_t surflight_points;
+    persistent_buffer_t surflight_face_ranges;
+    persistent_buffer_t surflight_face_source_indices;
+    persistent_buffer_t surflight_accum;
     VkCommandPool command_pool = VK_NULL_HANDLE;
     VkCommandBuffer command_buffer = VK_NULL_HANDLE;
     VkFence fence = VK_NULL_HANDLE;
@@ -328,6 +332,9 @@ static void destroy_locked() {
         destroy_buffer(slot.accum.buf);
         destroy_buffer(slot.surflight_sources.buf);
         destroy_buffer(slot.surflight_points.buf);
+        destroy_buffer(slot.surflight_face_ranges.buf);
+        destroy_buffer(slot.surflight_face_source_indices.buf);
+        destroy_buffer(slot.surflight_accum.buf);
         if (slot.fence) vkDestroyFence(g.device, slot.fence, nullptr);
         if (slot.command_pool) vkDestroyCommandPool(g.device, slot.command_pool, nullptr);
     }
@@ -1169,7 +1176,7 @@ static void update_surflight_descriptor_set(direct_slot_t &slot) {
 
     const std::array<const buffer_t *, 6> buffers{
         &slot.samples.buf, &slot.surflight_sources.buf, &slot.surflight_points.buf,
-        &slot.face_ranges.buf, &slot.face_source_indices.buf, &slot.accum.buf};
+        &slot.surflight_face_ranges.buf, &slot.surflight_face_source_indices.buf, &slot.surflight_accum.buf};
 
     std::array<VkDescriptorBufferInfo, 6> buffer_infos{};
     std::array<VkWriteDescriptorSet, 7> writes{};
@@ -1305,6 +1312,11 @@ void shutdown() {
     destroy_locked();
 }
 
+bool has_filtered_geometry() {
+    std::lock_guard<std::mutex> lock(g_mutex);
+    return g.has_filtered_embree_geometry;
+}
+
 bool trace_occlusion_batch(
     const modelinfo_t *self,
     std::uint32_t shadow_mask,
@@ -1400,20 +1412,17 @@ bool trace_occlusion_batch(
 }
 
 
-bool trace_direct_phase_batch(
-    const gpu_light::direct_phase_source_t *sources,
-    std::size_t source_count,
-    const gpu_light::direct_phase_sample_t *samples,
+// One submission for the whole direct phase of a batch: the entity/sun kernel
+// and the direct-surflight kernel run back to back against a single sample
+// upload, each writing its own accum buffer (no barrier needed between them),
+// and the results are summed at readback. Either side may be absent.
+bool trace_direct_combined_batch(
+    const gpu_light::direct_combined_batch_t &batch,
     gpu_light::direct_phase_accum_t *accum,
-    std::size_t sample_count,
-    const gpu_light::direct_phase_face_range_t *face_ranges,
-    std::size_t face_range_count,
-    const std::uint32_t *face_source_indices,
-    std::size_t face_source_index_count,
     std::string &error) {
     {
         std::lock_guard<std::mutex> lock(g_mutex);
-        if (!g.device || !g.direct_pipeline || !g.tlas.as) {
+        if (!g.device || !g.direct_pipeline || !g.surflight_pipeline || !g.tlas.as) {
             error = "Vulkan GPU direct phase backend is not initialized";
             return false;
         }
@@ -1421,7 +1430,13 @@ bool trace_direct_phase_batch(
             return false;
         }
     }
-    if (!sources || !samples || !accum || !face_ranges || !face_source_indices || source_count == 0 || sample_count == 0 || face_range_count == 0 || face_source_index_count == 0) {
+
+    const bool direct_work = batch.sources && batch.source_count && batch.face_ranges && batch.face_range_count &&
+        batch.face_source_indices && batch.face_source_index_count;
+    const bool surflight_work = batch.surflight_sources && batch.surflight_source_count && batch.surflight_points &&
+        batch.surflight_point_count && batch.surflight_face_ranges && batch.surflight_face_range_count &&
+        batch.surflight_face_source_indices && batch.surflight_face_source_index_count;
+    if (!batch.samples || !accum || batch.sample_count == 0 || (!direct_work && !surflight_work)) {
         return true;
     }
 
@@ -1433,36 +1448,56 @@ bool trace_direct_phase_batch(
     std::lock_guard<std::mutex> slot_lock(g_direct_slot_locks[slot_index]);
     direct_slot_t &slot = g.direct_slots[slot_index];
 
-    // shared buffers back both descriptor sets, so growth dirties both
+    // the samples buffer backs both descriptor sets, so growth dirties both
     bool buffers_grew = false;
-    if (!ensure_persistent_buffer(slot.samples, sizeof(gpu_direct_phase_sample_host_t) * sample_count, buffers_grew, error) ||
-        !ensure_persistent_buffer(slot.sources, sizeof(gpu_direct_phase_source_host_t) * source_count, buffers_grew, error) ||
-        !ensure_persistent_buffer(slot.face_ranges, sizeof(gpu_direct_phase_face_range_host_t) * face_range_count, buffers_grew, error) ||
-        !ensure_persistent_buffer(slot.face_source_indices, sizeof(std::uint32_t) * face_source_index_count, buffers_grew, error) ||
-        !ensure_persistent_buffer(slot.accum, sizeof(gpu_direct_accum_host_t) * sample_count, buffers_grew, error, /*host_cached=*/true)) {
+    if (!ensure_persistent_buffer(slot.samples, sizeof(gpu_direct_phase_sample_host_t) * batch.sample_count, buffers_grew, error)) {
         return false;
+    }
+    if (direct_work) {
+        if (!ensure_persistent_buffer(slot.sources, sizeof(gpu_direct_phase_source_host_t) * batch.source_count, buffers_grew, error) ||
+            !ensure_persistent_buffer(slot.face_ranges, sizeof(gpu_direct_phase_face_range_host_t) * batch.face_range_count, buffers_grew, error) ||
+            !ensure_persistent_buffer(slot.face_source_indices, sizeof(std::uint32_t) * batch.face_source_index_count, buffers_grew, error) ||
+            !ensure_persistent_buffer(slot.accum, sizeof(gpu_direct_accum_host_t) * batch.sample_count, buffers_grew, error, /*host_cached=*/true)) {
+            return false;
+        }
+    }
+    if (surflight_work) {
+        if (!ensure_persistent_buffer(slot.surflight_sources, sizeof(gpu_surflight_source_host_t) * batch.surflight_source_count, buffers_grew, error) ||
+            !ensure_persistent_buffer(slot.surflight_points, sizeof(gpu_surflight_point_host_t) * batch.surflight_point_count, buffers_grew, error) ||
+            !ensure_persistent_buffer(slot.surflight_face_ranges, sizeof(gpu_direct_phase_face_range_host_t) * batch.surflight_face_range_count, buffers_grew, error) ||
+            !ensure_persistent_buffer(slot.surflight_face_source_indices, sizeof(std::uint32_t) * batch.surflight_face_source_index_count, buffers_grew, error) ||
+            !ensure_persistent_buffer(slot.surflight_accum, sizeof(gpu_direct_accum_host_t) * batch.sample_count, buffers_grew, error, /*host_cached=*/true)) {
+            return false;
+        }
     }
     slot.descriptors_dirty |= buffers_grew;
     slot.surflight_descriptors_dirty |= buffers_grew;
 
-    std::memcpy(slot.samples.mapped, samples, sizeof(gpu_direct_phase_sample_host_t) * sample_count);
-    std::memcpy(slot.sources.mapped, sources, sizeof(gpu_direct_phase_source_host_t) * source_count);
-    std::memcpy(slot.face_ranges.mapped, face_ranges, sizeof(gpu_direct_phase_face_range_host_t) * face_range_count);
-    std::memcpy(slot.face_source_indices.mapped, face_source_indices, sizeof(std::uint32_t) * face_source_index_count);
-    // no accum pre-clear needed: the shader writes every accum slot below sample_count
+    std::memcpy(slot.samples.mapped, batch.samples, sizeof(gpu_direct_phase_sample_host_t) * batch.sample_count);
+    if (direct_work) {
+        std::memcpy(slot.sources.mapped, batch.sources, sizeof(gpu_direct_phase_source_host_t) * batch.source_count);
+        std::memcpy(slot.face_ranges.mapped, batch.face_ranges, sizeof(gpu_direct_phase_face_range_host_t) * batch.face_range_count);
+        std::memcpy(slot.face_source_indices.mapped, batch.face_source_indices, sizeof(std::uint32_t) * batch.face_source_index_count);
+    }
+    if (surflight_work) {
+        std::memcpy(slot.surflight_sources.mapped, batch.surflight_sources, sizeof(gpu_surflight_source_host_t) * batch.surflight_source_count);
+        std::memcpy(slot.surflight_points.mapped, batch.surflight_points, sizeof(gpu_surflight_point_host_t) * batch.surflight_point_count);
+        std::memcpy(slot.surflight_face_ranges.mapped, batch.surflight_face_ranges, sizeof(gpu_direct_phase_face_range_host_t) * batch.surflight_face_range_count);
+        std::memcpy(slot.surflight_face_source_indices.mapped, batch.surflight_face_source_indices, sizeof(std::uint32_t) * batch.surflight_face_source_index_count);
+    }
+    // no accum pre-clear needed: each shader writes every accum slot below sample_count
 
     // must happen before recording the bind: descriptor sets may not be updated
-    // between recording and execution
-    if (slot.descriptors_dirty) {
+    // between recording and execution. Only sets that will be bound are
+    // updated (a skipped side's buffers may not exist yet).
+    if (direct_work && slot.descriptors_dirty) {
         update_direct_descriptor_set(slot);
         slot.descriptors_dirty = false;
     }
-
-    direct_push_constants_t pc{};
-    pc.sample_count = static_cast<std::uint32_t>(sample_count);
-    pc.source_count = static_cast<std::uint32_t>(source_count);
-    pc.scaledist = light_options.scaledist.value();
-    pc.gate = light_options.gate.value();
+    if (surflight_work && slot.surflight_descriptors_dirty) {
+        update_surflight_descriptor_set(slot);
+        slot.surflight_descriptors_dirty = false;
+    }
 
     // record with the slot's own command pool; no global lock needed
     if (!check(vkResetCommandBuffer(slot.command_buffer, 0), "vkResetCommandBuffer(direct)", error)) return false;
@@ -1471,12 +1506,37 @@ bool trace_direct_phase_batch(
     bi.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     if (!check(vkBeginCommandBuffer(slot.command_buffer, &bi), "vkBeginCommandBuffer(direct)", error)) return false;
 
-    vkCmdBindPipeline(slot.command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, g.direct_pipeline);
-    vkCmdBindDescriptorSets(slot.command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, g.direct_pipeline_layout, 0, 1, &slot.descriptor_set, 0, nullptr);
-    vkCmdPushConstants(slot.command_buffer, g.direct_pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(pc), &pc);
-    vkCmdDispatch(slot.command_buffer, (pc.sample_count + 63u) / 64u, 1, 1);
+    if (direct_work) {
+        direct_push_constants_t pc{};
+        pc.sample_count = static_cast<std::uint32_t>(batch.sample_count);
+        pc.source_count = static_cast<std::uint32_t>(batch.source_count);
+        pc.scaledist = light_options.scaledist.value();
+        pc.gate = light_options.gate.value();
 
-    // make the shader's accum writes visible to the persistently-mapped host readback
+        vkCmdBindPipeline(slot.command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, g.direct_pipeline);
+        vkCmdBindDescriptorSets(slot.command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, g.direct_pipeline_layout, 0, 1, &slot.descriptor_set, 0, nullptr);
+        vkCmdPushConstants(slot.command_buffer, g.direct_pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(pc), &pc);
+        vkCmdDispatch(slot.command_buffer, (pc.sample_count + 63u) / 64u, 1, 1);
+    }
+
+    if (surflight_work) {
+        surflight_push_constants_t pc{};
+        pc.sample_count = static_cast<std::uint32_t>(batch.sample_count);
+        pc.source_count = static_cast<std::uint32_t>(batch.surflight_source_count);
+        pc.scaledist = batch.surflight_params.scaledist;
+        pc.gate = batch.surflight_params.gate;
+        pc.standard_scale = batch.surflight_params.standard_scale;
+        pc.sky_scale = batch.surflight_params.sky_scale;
+        pc.hotspot_clamp = batch.surflight_params.hotspot_clamp;
+        pc.surflightskydist = batch.surflight_params.surflightskydist;
+
+        vkCmdBindPipeline(slot.command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, g.surflight_pipeline);
+        vkCmdBindDescriptorSets(slot.command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, g.surflight_pipeline_layout, 0, 1, &slot.surflight_descriptor_set, 0, nullptr);
+        vkCmdPushConstants(slot.command_buffer, g.surflight_pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(pc), &pc);
+        vkCmdDispatch(slot.command_buffer, (pc.sample_count + 63u) / 64u, 1, 1);
+    }
+
+    // make the shaders' accum writes visible to the persistently-mapped host readback
     VkMemoryBarrier to_host{};
     to_host.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
     to_host.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
@@ -1499,7 +1559,25 @@ bool trace_direct_phase_batch(
     if (!check(vkWaitForFences(g.device, 1, &slot.fence, VK_TRUE, UINT64_MAX), "vkWaitForFences(direct)", error)) return false;
     if (!check(vkResetFences(g.device, 1, &slot.fence), "vkResetFences(direct)", error)) return false;
 
-    std::memcpy(accum, slot.accum.mapped, sizeof(gpu_direct_accum_host_t) * sample_count);
+    if (direct_work) {
+        std::memcpy(accum, slot.accum.mapped, sizeof(gpu_direct_accum_host_t) * batch.sample_count);
+    }
+    if (surflight_work) {
+        const auto *surf = static_cast<const gpu_direct_accum_host_t *>(slot.surflight_accum.mapped);
+        if (direct_work) {
+            // the surflight kernel contributes color/hit only (its normal
+            // output is always zero); summing single per-kernel totals here
+            // matches the CPU's sequential apply exactly
+            for (std::size_t i = 0; i < batch.sample_count; ++i) {
+                accum[i].cr += surf[i].cr;
+                accum[i].cg += surf[i].cg;
+                accum[i].cb += surf[i].cb;
+                accum[i].hit |= surf[i].hit;
+            }
+        } else {
+            std::memcpy(accum, surf, sizeof(gpu_direct_accum_host_t) * batch.sample_count);
+        }
+    }
     return true;
 }
 
@@ -1537,14 +1615,14 @@ bool trace_surflight_batch(
     std::lock_guard<std::mutex> slot_lock(g_direct_slot_locks[slot_index]);
     direct_slot_t &slot = g.direct_slots[slot_index];
 
-    // shared buffers back both descriptor sets, so growth dirties both
+    // the samples buffer backs both descriptor sets, so growth dirties both
     bool buffers_grew = false;
     if (!ensure_persistent_buffer(slot.samples, sizeof(gpu_direct_phase_sample_host_t) * sample_count, buffers_grew, error) ||
         !ensure_persistent_buffer(slot.surflight_sources, sizeof(gpu_surflight_source_host_t) * source_count, buffers_grew, error) ||
         !ensure_persistent_buffer(slot.surflight_points, sizeof(gpu_surflight_point_host_t) * point_count, buffers_grew, error) ||
-        !ensure_persistent_buffer(slot.face_ranges, sizeof(gpu_direct_phase_face_range_host_t) * face_range_count, buffers_grew, error) ||
-        !ensure_persistent_buffer(slot.face_source_indices, sizeof(std::uint32_t) * face_source_index_count, buffers_grew, error) ||
-        !ensure_persistent_buffer(slot.accum, sizeof(gpu_direct_accum_host_t) * sample_count, buffers_grew, error, /*host_cached=*/true)) {
+        !ensure_persistent_buffer(slot.surflight_face_ranges, sizeof(gpu_direct_phase_face_range_host_t) * face_range_count, buffers_grew, error) ||
+        !ensure_persistent_buffer(slot.surflight_face_source_indices, sizeof(std::uint32_t) * face_source_index_count, buffers_grew, error) ||
+        !ensure_persistent_buffer(slot.surflight_accum, sizeof(gpu_direct_accum_host_t) * sample_count, buffers_grew, error, /*host_cached=*/true)) {
         return false;
     }
     slot.descriptors_dirty |= buffers_grew;
@@ -1553,8 +1631,8 @@ bool trace_surflight_batch(
     std::memcpy(slot.samples.mapped, samples, sizeof(gpu_direct_phase_sample_host_t) * sample_count);
     std::memcpy(slot.surflight_sources.mapped, sources, sizeof(gpu_surflight_source_host_t) * source_count);
     std::memcpy(slot.surflight_points.mapped, points, sizeof(gpu_surflight_point_host_t) * point_count);
-    std::memcpy(slot.face_ranges.mapped, face_ranges, sizeof(gpu_direct_phase_face_range_host_t) * face_range_count);
-    std::memcpy(slot.face_source_indices.mapped, face_source_indices, sizeof(std::uint32_t) * face_source_index_count);
+    std::memcpy(slot.surflight_face_ranges.mapped, face_ranges, sizeof(gpu_direct_phase_face_range_host_t) * face_range_count);
+    std::memcpy(slot.surflight_face_source_indices.mapped, face_source_indices, sizeof(std::uint32_t) * face_source_index_count);
     // no accum pre-clear needed: the shader writes every accum slot below sample_count
 
     // must happen before recording the bind: descriptor sets may not be updated
@@ -1607,7 +1685,7 @@ bool trace_surflight_batch(
     if (!check(vkWaitForFences(g.device, 1, &slot.fence, VK_TRUE, UINT64_MAX), "vkWaitForFences(surflight)", error)) return false;
     if (!check(vkResetFences(g.device, 1, &slot.fence), "vkResetFences(surflight)", error)) return false;
 
-    std::memcpy(accum, slot.accum.mapped, sizeof(gpu_direct_accum_host_t) * sample_count);
+    std::memcpy(accum, slot.surflight_accum.mapped, sizeof(gpu_direct_accum_host_t) * sample_count);
     return true;
 }
 
@@ -1627,7 +1705,7 @@ bool trace_direct_accumulate_batch(
     (void)ranges;
     (void)accum;
     (void)sample_count;
-    error = "old direct job buffer path disabled in v5; use trace_direct_phase_batch";
+    error = "old direct job buffer path disabled in v5; use trace_direct_combined_batch";
     return false;
 }
 
