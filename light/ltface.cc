@@ -18,7 +18,6 @@
 */
 
 #include <light/ltface.hh>
-#include <limits>
 #include <chrono>
 #include <cstdint>
 #include <mutex>
@@ -2677,22 +2676,6 @@ static float GPU_Direct_SunMergeScale()
     return 16.0f * std::pow(256.0f, GPU_Direct_SunMergeQuality());
 }
 
-static float GPU_Direct_SourceCullQuality()
-{
-    float q = light_options.gpusourcecullquality.value();
-    if (!std::isfinite(q)) {
-        q = 1.0f;
-    }
-    if (q < 0.0f) q = 0.0f;
-    if (q > 1.0f) q = 1.0f;
-    return q;
-}
-
-static bool GPU_Direct_SourceCullEnabled()
-{
-    return light_options.gpusourcecull.value();
-}
-
 static int GPU_Direct_Quantize(float v, float scale = 4096.0f)
 {
     return static_cast<int>(std::lround(v * scale));
@@ -2767,103 +2750,6 @@ static void GPU_Direct_AddMergedSource(
     keys.push_back(key);
     g_gpu_direct_sources.push_back(src);
     g_gpu_direct_source_entities.push_back(entity);
-}
-
-static float GPU_Direct_EffectivePointRadius(const gpu_light::direct_phase_source_t &src)
-{
-    if (src.type == 1) {
-        return MAX_SKY_DIST;
-    }
-    if (src.formula == 3u) { // LF_INFINITE
-        return MAX_SKY_DIST;
-    }
-    if (src.falloff > 0.0f) {
-        return std::min(src.falloff, static_cast<float>(MAX_SKY_DIST));
-    }
-    // Conservative only for LF_LINEAR/default: value = light - distance * atten.
-    // Inverse formulas are treated as global unless they provide _falloff.
-    if (src.formula == 0u && src.atten > 0.0001f && src.light > 0.0f) {
-        return std::min(src.light / src.atten, static_cast<float>(MAX_SKY_DIST));
-    }
-    return MAX_SKY_DIST;
-}
-
-static float GPU_Direct_PointAABBDistance2(
-    const gpu_light::direct_phase_source_t &src,
-    const qvec3f &mins,
-    const qvec3f &maxs)
-{
-    const float p[3] = {src.px, src.py, src.pz};
-    float d2 = 0.0f;
-    for (int axis = 0; axis < 3; ++axis) {
-        if (p[axis] < mins[axis]) {
-            const float d = mins[axis] - p[axis];
-            d2 += d * d;
-        } else if (p[axis] > maxs[axis]) {
-            const float d = p[axis] - maxs[axis];
-            d2 += d * d;
-        }
-    }
-    return d2;
-}
-
-static bool GPU_Direct_SourceAffectsFace(
-    const gpu_light::direct_phase_source_t &src,
-    const qvec3f &mins,
-    const qvec3f &maxs,
-    const qvec3f &normal,
-    bool twosided)
-{
-    if (!GPU_Direct_SourceCullEnabled()) {
-        return true;
-    }
-    if (twosided) {
-        return true;
-    }
-
-    const float quality = GPU_Direct_SourceCullQuality();
-
-    if (src.type == 1) {
-        // Sun normal culling is the quality-sensitive part. At max quality we keep
-        // all sun jitter directions for every face. Lower quality progressively
-        // removes back-facing sun directions.
-        if (quality >= 0.999f) {
-            return true;
-        }
-        const qvec3f dir{src.dx, src.dy, src.dz};
-        const float threshold = -0.50f + (0.55f * (1.0f - quality)); // q=0 -> 0.05, q=1 -> -0.50
-        return qv::dot(normal, dir) > threshold;
-    }
-
-    const float radius = GPU_Direct_EffectivePointRadius(src);
-    if (radius < static_cast<float>(MAX_SKY_DIST) * 0.999f) {
-        // More quality = more radius padding = less chance of missing a faint edge case.
-        const float padded_radius = radius * (1.0f + 3.0f * quality) + 256.0f * quality;
-        const float d2 = GPU_Direct_PointAABBDistance2(src, mins, maxs);
-        if (d2 > padded_radius * padded_radius) {
-            return false;
-        }
-    }
-
-    // Conservative face-normal cull for point lights. At max quality this is disabled;
-    // lower quality allows removing back-facing points.
-    if (quality < 0.999f) {
-        const qvec3f center{
-            (mins[0] + maxs[0]) * 0.5f,
-            (mins[1] + maxs[1]) * 0.5f,
-            (mins[2] + maxs[2]) * 0.5f};
-        qvec3f to_light{src.px - center[0], src.py - center[1], src.pz - center[2]};
-        const float to_light_len2 = qv::dot(to_light, to_light);
-        if (to_light_len2 > 0.0001f) {
-            to_light = to_light * (1.0f / std::sqrt(to_light_len2));
-            const float threshold = -0.75f + (0.65f * (1.0f - quality)); // q=0 -> -0.10, q=1 -> -0.75
-            if (qv::dot(normal, to_light) <= threshold) {
-                return false;
-            }
-        }
-    }
-
-    return true;
 }
 
 // Exact replicas of the face-level culls in LightFace_Entity / LightFace_Sky,
@@ -3008,13 +2894,10 @@ static bool GPU_DirectQueue_BuildSourcesLocked()
     const bool sun_merge_enabled = light_options.gpusunmerge.value();
     const float sun_merge_quality = GPU_Direct_SunMergeQuality();
     const float sun_merge_scale = GPU_Direct_SunMergeScale();
-    const bool source_cull_enabled = GPU_Direct_SourceCullEnabled();
-    const float source_cull_quality = GPU_Direct_SourceCullQuality();
-    logging::print("GPU direct phase: queued {} direct sources ({} raw: {} point, {} sun; merged: {} point, {} sun; {} merged away; sun merge {}; quality {:.2f}; scale {:.1f}; source cull {}; quality {:.2f}).\n",
+    logging::print("GPU direct phase: queued {} direct sources ({} raw: {} point, {} sun; merged: {} point, {} sun; {} merged away; sun merge {}; quality {:.2f}; scale {:.1f}).\n",
         g_gpu_direct_sources.size(), raw_sources, raw_point_sources, raw_sun_sources,
         merged_point_sources, merged_sun_sources, raw_sources - g_gpu_direct_sources.size(),
-        sun_merge_enabled ? "on" : "off", sun_merge_quality, sun_merge_scale,
-        source_cull_enabled ? "on" : "off", source_cull_quality);
+        sun_merge_enabled ? "on" : "off", sun_merge_quality, sun_merge_scale);
     return true;
 }
 
@@ -3260,6 +3143,11 @@ static bool GPU_DirectQueue_AddFace(const mbsp_t *bsp, lightsurf_t *lightsurf, l
     if (!sample_count) {
         return true;
     }
+    const bool has_valid_sample = std::any_of(lightsurf->samples.begin(), lightsurf->samples.end(),
+        [](const auto &sample) { return !sample.occluded; });
+    if (!has_valid_sample) {
+        return true;
+    }
 
     std::unique_lock<std::mutex> lock(g_gpu_direct_queue_mutex);
     // a dispatch failure on another thread can disable the queue between the
@@ -3278,31 +3166,6 @@ static bool GPU_DirectQueue_AddFace(const mbsp_t *bsp, lightsurf_t *lightsurf, l
         return true;
     }
 
-    qvec3f mins{std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max()};
-    qvec3f maxs{-std::numeric_limits<float>::max(), -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max()};
-    qvec3f normal_sum{0, 0, 0};
-    std::size_t valid_samples = 0;
-    for (const auto &sample : lightsurf->samples) {
-        if (sample.occluded) {
-            continue;
-        }
-        for (int axis = 0; axis < 3; ++axis) {
-            mins[axis] = std::min(mins[axis], sample.point[axis]);
-            maxs[axis] = std::max(maxs[axis], sample.point[axis]);
-        }
-        normal_sum += sample.normal;
-        ++valid_samples;
-    }
-    if (valid_samples == 0) {
-        return true;
-    }
-
-    qvec3f face_normal = lightsurf->snormal;
-    const float normal_len2 = qv::dot(normal_sum, normal_sum);
-    if (normal_len2 > 0.0001f) {
-        face_normal = normal_sum * (1.0f / std::sqrt(normal_len2));
-    }
-
     const std::uint32_t face_index = static_cast<std::uint32_t>(g_gpu_direct_face_ranges.size());
 
     gpu_light::direct_phase_face_range_t face_range{};
@@ -3313,9 +3176,7 @@ static bool GPU_DirectQueue_AddFace(const mbsp_t *bsp, lightsurf_t *lightsurf, l
             if (!GPU_Direct_SourceReachesFace(bsp, src, g_gpu_direct_source_entities[source_index], lightsurf)) {
                 continue;
             }
-            if (GPU_Direct_SourceAffectsFace(src, mins, maxs, face_normal, lightsurf->twosided)) {
-                g_gpu_direct_face_source_indices.push_back(source_index);
-            }
+            g_gpu_direct_face_source_indices.push_back(source_index);
         }
     }
     face_range.source_count = static_cast<std::uint32_t>(g_gpu_direct_face_source_indices.size()) - face_range.source_begin;

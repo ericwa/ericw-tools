@@ -295,8 +295,6 @@ light_settings::light_settings()
       sunsamples{this, "sunsamples", 64, 8, 2048, &performance_group, "set samples for _sunlight2, default 64"},
       gpusunmerge{this, "gpusunmerge", false, &performance_group, "approximate-merge nearby GPU sun jitter rays"},
       gpusunmergequality{this, "gpusunmergequality", 0.75f, 0.0f, 1.0f, &performance_group, "GPU sun merge quality: 0 fast/rough, 1 slow/high quality"},
-      gpusourcecull{this, "gpusourcecull", false, &performance_group, "use approximate GPU per-face source culling"},
-      gpusourcecullquality{this, "gpusourcecullquality", 1.0f, 0.0f, 1.0f, &performance_group, "GPU source culling quality: 0 fast/aggressive, 1 safest/conservative"},
       gpu{this, "gpu", false, &performance_group, "use Vulkan GPU ray-query backend for batched visibility rays"},
       arghradcompat{this, "arghradcompat", false, &output_group, "enable compatibility for Arghrad-specific keys"},
       nolighting{this, "nolighting", false, &output_group, "don't output main world lighting (Q2RTX)"},

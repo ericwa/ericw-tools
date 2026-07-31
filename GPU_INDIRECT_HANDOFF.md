@@ -227,8 +227,8 @@ replicated. For v1:
   decision split).
 - **Exact culls beat approximate culls**: calling the CPU's own cull functions
   from AddFace gave bit-exact source selection *and* halved the ray count.
-  Don't invent approximations (the opt-in `-gpusourcecull` machinery predates
-  this and is effectively obsolete).
+  Don't invent additional approximate culls; the older opt-in GPU source-cull
+  machinery was removed after exact culling superseded it.
 - **HOST_CACHED for the readback buffer** — reading write-combined memory is
   ~150 ms per 50 MB. Already handled by `ensure_persistent_buffer(...,
   host_cached=true)`; keep using it for the new accum buffer.
