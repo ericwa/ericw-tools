@@ -635,6 +635,10 @@ void MainWindow::setupMenu()
         QClipboard *clipboard = QGuiApplication::clipboard();
         clipboard->setText(QString::fromStdString(cpp_str));
     });
+    QAction *clearSelection = editMenu->addAction(tr("Select None"), this, [this]() {
+        glView->clearSelectedFace();
+    });
+    clearSelection->setShortcut(QKeySequence("Esc"));
 
     // view menu
 

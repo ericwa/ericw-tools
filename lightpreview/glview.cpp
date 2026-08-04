@@ -2280,9 +2280,7 @@ void GLView::clickFace(QMouseEvent *event)
         emit selectedFaceChanged();
 
     } else {
-        m_selected_face = -1;
-        m_hasClick = false;
-        emit selectedFaceChanged();
+        clearSelectedFace();
         return;
     }
 
@@ -2425,4 +2423,13 @@ qvec3f GLView::cameraPosition() const
 qvec3f GLView::cameraForward() const
 {
     return qvec3f{m_cameraFwd[0], m_cameraFwd[1], m_cameraFwd[2]};
+}
+
+void GLView::clearSelectedFace()
+{
+    m_selected_face = -1;
+    m_hasClick = false;
+    emit selectedFaceChanged();
+
+    update();
 }
