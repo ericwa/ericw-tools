@@ -100,7 +100,7 @@ void FacePanel::updateWithBSP(
     addStat(QStringLiteral("plane"),
         QString::fromStdString(
             fmt::format("{} {}", bsp->dplanes[bestFace->planenum].normal, bsp->dplanes[bestFace->planenum].dist)));
-    addStat(QStringLiteral("texture"), QString::fromStdString(bsp->texinfo[bestFace->texinfo].texturename));
+    addStat(QStringLiteral("texture"), QString::fromStdString(std::string(Face_TextureNameView(bsp, bestFace))));
     addStat(QStringLiteral("lightofs"), bestFace->lightofs);
     addStat(QStringLiteral("flags"), QString::fromStdString(fmt::format(
                                          "{}", static_cast<int32_t>(bsp->texinfo[bestFace->texinfo].flags.native_q2))));
