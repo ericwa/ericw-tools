@@ -407,6 +407,7 @@ static node_t *FixupMarkFaces_ProcessCluster_FindStorageLeaf(node_t *node)
     return node;
 }
 
+// returns an invalid aabb if given an empty set
 static const aabb3d BoundFaces(const std::set<face_t *> &marfaces_to_add)
 {
     aabb3d result;
@@ -427,6 +428,7 @@ static void AddBoundsToNode(node_t *start, const aabb3d &bounds_to_add)
 
 static void FixupMarkFaces_AddFacesToLeaf(node_t *node, const std::set<face_t *> &marfaces_to_add)
 {
+    Q_assert(!marfaces_to_add.empty());
     Q_assert(FixupMarkFaces_IsUsableLeaf(node));
     auto *leafdata = node->get_leafdata();
 
@@ -465,6 +467,10 @@ static void FixupMarkFaces_ProcessCluster(node_t *node)
     // gather all marksurfaces of func_detail_fence containing leafs in the cluster into a std::set
     std::set<face_t *> marfaces_to_propagate;
     FixupDetailFence_FindDetailFenceFaces(&marfaces_to_propagate, node);
+    if (marfaces_to_propagate.empty()) {
+        // early exit if there are no markfaces to propagate (FixupMarkFaces_AddFacesToLeaf requires at least some work)
+        return;
+    }
 
     // start with the cluster...
     std::vector<node_t *> queue;

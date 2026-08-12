@@ -1619,6 +1619,20 @@ TEST(testmapsQ1, detailFence2)
     ASSERT_TRUE(storage_leaf_bounds.contains(func_detail_fence_box));
 }
 
+// corner case for FixupDetailFence; detail_fence brush but no faces inside to propagate
+// (broken in 2.0.0-alpha11, produced infinite mins/maxs)
+TEST(testmapsQ1, detailFence3)
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_detail_fence3.map");
+    EXPECT_TRUE(prt);
+
+    int headnode = bsp.dmodels[0].headnode[0];
+    const bsp2_dnode_t *node = BSP_GetNode(&bsp, headnode);
+
+    EXPECT_EQ(qvec3f(-120, -312, -72), node->mins);
+    EXPECT_EQ(qvec3f(232, 104, 344), node->maxs);
+}
+
 TEST(testmapsQ1, detailFenceWithoutExtendedContents)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_detail_fence.map", {"-noextendedcontentflags"});
