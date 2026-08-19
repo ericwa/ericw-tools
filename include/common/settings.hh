@@ -48,8 +48,8 @@ public:
     const char *what() const noexcept override;
 };
 
-// thrown after displaying `--help` text.
-// the command-line tools should catch this and exit with status 0.
+// thrown after a command line parsing error, after we display `--help` text.
+// the command-line tools should catch this and exit with status 1.
 // tests should let the test framework catch this and fail.
 // (previously, the `--help` code called exit(0); directly which caused
 // spurious test successes.)
