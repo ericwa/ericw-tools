@@ -1,37 +1,122 @@
 cmake_minimum_required (VERSION 3.14)
 cmake_policy(SET CMP0028 NEW)
 
-project (ericw-tools)
-
-list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
-list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/3rdparty/Catch2/extras")
-
-# Grab the git describe output and store it in GIT_DESCRIBE
-# Thanks to http://xit0.org/2013/04/cmake-use-git-branch-and-commit-details-in-project/
-execute_process(
-  COMMAND git describe --dirty
-  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-  OUTPUT_VARIABLE GIT_DESCRIBE
-  OUTPUT_STRIP_TRAILING_WHITESPACE
+project (ericw-tools
+	VERSION 2.0.0
+	LANGUAGES CXX C
+	HOMEPAGE_URL https://github.com/ericwa/ericw-tools
+	DESCRIPTION "Quake/Hexen 2 Map compiling tools - branch of http://disenchant.net/utils"
 )
-message(STATUS "git describe returned \"${GIT_DESCRIBE}\"")
 
-# git describe fails on GitHub Actions
-if(NOT GIT_DESCRIBE)
-	# See: https://docs.github.com/en/actions/reference/environment-variables#default-environment-variables
-	if(NOT ("$ENV{GITHUB_REF_NAME}" STREQUAL ""))
-		set(GIT_DESCRIBE "$ENV{GITHUB_REF_NAME}")
-		
-		message(STATUS "using version label \"${GIT_DESCRIBE}\" from GITHUB_REF_NAME")
+# set our C/C++ dialects
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS ON)
+
+set(CMAKE_C_STANDARD 23)
+set(CMAKE_C_STANDARD_REQUIRED OFF)
+set(CMAKE_C_EXTENSIONS ON)
+
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_DEBUG OFF)
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELWITHDEBINFO OFF)
+
+option(ENABLE_PREFIX_INSTALL "Enable Prefix install" OFF)
+
+if(NOT CMAKE_GENERATOR MATCHES "^VisualStudio")
+  include(GNUInstallDirs)
+endif()
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/3rdparty/Catch2/extras")
+include(GitDescribe)
+
+include_directories($<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>)
+
+string(TOUPPER "${CMAKE_SYSTEM_PROCESSOR}" SYSTEM_PROCESSOR_UPPER)
+message(STATUS "${CMAKE_HOST_SYSTEM_NAME} ${CMAKE_HOST_SYSTEM_PROCESSOR} ${CMAKE_C_COMPILER_ID}/${CMAKE_C_COMPILER_FRONTEND_VARIANT} => ${CMAKE_SYSTEM_NAME} ${CMAKE_SYSTEM_PROCESSOR} ${CMAKE_C_COMPILER_ID}/${CMAKE_C_COMPILER_FRONTEND_VARIANT}")
+
+if (CMAKE_CXX_COMPILER_FRONTEND_VARIANT MATCHES "GNU|AppleClang")
+	if (NOT CMAKE_CROSSCOMPILING)
+		add_compile_options(-march=native)
+		if (${SYSTEM_PROCESSOR_UPPER} MATCHES "X64|X86_64|AMD64")
+			add_compile_options(-mfpmath=sse)
+		endif()
+		if (${SYSTEM_PROCESSOR_UPPER} MATCHES "PPC|POWERPC|PPC64|PPC64LE")
+			include(CheckCSourceCompiles)
+
+			set(CMAKE_REQUIRED_FLAGS "-maltivec")
+			check_c_source_compiles("#include <altivec.h> int main() { vector int v = (vector int){0}; return 0; }" HAVE_ALTIVEC)
+
+			if(HAVE_ALTIVEC)
+				add_compile_options(-maltivec)
+			endif()
+		endif()
 	endif()
-endif()
-
-if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC")
-	add_compile_options(/EHsc)
+	add_compile_options(-ftree-vectorize)
+	add_compile_options(-fopenmp)
+	if (NOT CMAKE_CXX_COMPILER_FRONTEND_VARIANT MATCHES "AppleClang")
+		add_compile_options(-fopenmp-simd)
+		add_compile_options(-fexpensive-optimizations)
+	endif()
+	if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+		add_compile_options(-Wno-gnu-alignof-expression)
+	endif()
+	add_compile_options(-ffunction-sections)
+	add_compile_options(-fdata-sections)
+	add_compile_options(-fno-asynchronous-unwind-tables)
+	if (CMAKE_BUILD_TYPE MATCHES ReleaseStrip)
+		add_link_options(-Wl,--gc-sections)
+		add_link_options(-Wl,-s)
+	endif()
+	if (CMAKE_BUILD_TYPE MATCHES Debug)
+		        add_compile_options(-g)
+	else()
+		        add_compile_options(-O3)
+	endif()
+	link_libraries(m)
+elseif (CMAKE_CXX_COMPILER_FRONTEND_VARIANT MATCHES "MSVC")
 	message(STATUS "working around exceptions not being enabled by default on clang-cl")
-endif()
+	add_compile_options(/EHsc)
+        add_compile_options(/openmp:experimental)
+        add_compile_options(/Zc:__cplusplus)
+        add_compile_options(/std:c++latest)
+        add_compile_options(/Zc:preprocessor)
+        add_compile_options(/Z7)
+        add_compile_options(/Gy)                                        # Function-level linking (puts each function in its own section)
+        add_compile_options(/Gw)                                        # Optimize global data (puts each variable in its own section)
+	# request 8MB stack for all .exe's
+	set(STACKSIZE 16388608)
+	set(CMAKE_EXE_LINKER_FLAGS "/STACK:${STACKSIZE}")
 
-include_directories(include)
+	add_definitions("/wd4244") # disable "conversion from .. to .., possible loss of data" warning
+	add_definitions("/wd4018") # disable "signed/unsigned mismatch" warning
+	add_definitions("/wd4200") # disable "nonstandard extension used: zero-sized array in struct/union" warning
+	add_definitions("/wd4264") # disable "conversion from 'size_t' to 'int', possible loss of data" warning
+	add_definitions("/wd4267") # disable "conversion from 'size_t' to 'int', possible loss of data" warning
+	add_definitions("/wd4305") # disable "truncation from 'double' to 'float'" warning
+	add_definitions("/wd4250") # disable "inherits via dominance' warning (used in trace_embree.cc)
+        if (NOT CMAKE_CROSSCOMPILING)
+                add_compile_definitions(_CRT_SECURE_NO_WARNINGS _WIN32)
+                if (CMAKE_VS_PLATFORM_NAME MATCHES "x64|Win32")
+                        #add_compile_options(/Gv)
+                endif()
+        endif()
+        if (CMAKE_BUILD_TYPE MATCHES ReleaseStrip)
+                add_link_options(/DEBUG:NONE)
+                add_link_options(/OPT:REF)                              # Eliminate unreferenced functions and data
+                add_link_options(/VERBOSE:REF)                  # Print out everything the linker throws away
+        endif()
+        if (CMAKE_BUILD_TYPE MATCHES Debug)
+                add_compile_options(/Zi)
+                add_link_options(/DEBUG:FULL)
+        else()
+                add_compile_options(/O2)
+        endif()
+        add_link_options(/INCREMENTAL:NO)
+else()
+	message(FATAL_ERROR "Unsupported compiler frontend variant!")
+endif()
 
 find_package (Threads)
 
@@ -45,21 +130,10 @@ if (UNIX)
 	add_definitions(-DLINUX)
 endif (UNIX)
 
-# set our C/C++ dialects
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_C_STANDARD 99)
-
-set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
-set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_DEBUG OFF)
-set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELWITHDEBINFO OFF)
-
 if (UNIX AND NOT APPLE)
 	set(CMAKE_INSTALL_RPATH "$ORIGIN")
 	set(CMAKE_BUILD_WITH_INSTALL_RPATH YES)
 endif ()
-
-add_definitions(-DERICWTOOLS_VERSION="${GIT_DESCRIBE}")
 
 # MINGW stuff
 if(MINGW)
@@ -114,20 +188,6 @@ if (WIN32)
 
 	# TODO: remove these
 	add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
-
-	if (MSVC)
-		# request 8MB stack for all .exe's
-		set(STACKSIZE 16388608)
-		set(CMAKE_EXE_LINKER_FLAGS "/STACK:${STACKSIZE}")
-
-		add_definitions("/wd4244") # disable "conversion from .. to .., possible loss of data" warning
-		add_definitions("/wd4018") # disable "signed/unsigned mismatch" warning
-		add_definitions("/wd4200") # disable "nonstandard extension used: zero-sized array in struct/union" warning
-		add_definitions("/wd4264") # disable "conversion from 'size_t' to 'int', possible loss of data" warning
-		add_definitions("/wd4267") # disable "conversion from 'size_t' to 'int', possible loss of data" warning
-		add_definitions("/wd4305") # disable "truncation from 'double' to 'float'" warning
-		add_definitions("/wd4250") # disable "inherits via dominance' warning (used in trace_embree.cc)
-	endif (MSVC)
 endif (WIN32)
 
 # Pass -DERICWTOOLS_ASAN=YES to enable for all targets
@@ -142,9 +202,6 @@ if (ERICWTOOLS_TIMETRACE)
 	add_compile_options(-ftime-trace)
 endif()
 
-if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC")
-	add_compile_options(/EHsc)
-endif()
 
 # 10.9: minimum version that supports unordered_map
 # 10.14: required by tbb 2021.3.0 (due to use of alignas)
@@ -191,7 +248,11 @@ if(NOT DISABLE_DOCS)
 	add_subdirectory(docs)
 endif ()
 
-install(FILES README.md DESTINATION .)
+if(ENABLE_PREFIX_INSTALL)
+	install(FILES README.md DESTINATION ${CMAKE_INSTALL_FULL_DOCDIR})
+else()
+	install(FILES README.md DESTINATION .)
+endif ()
 
 #CPack configuration
 
