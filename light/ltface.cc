@@ -18,6 +18,11 @@
 */
 
 #include <light/ltface.hh>
+#include <limits>
+#include <chrono>
+#include <cstdint>
+#include <mutex>
+#include <light/trace_gpu.hh>
 
 #include <light/light.hh>
 #include <light/trace_embree.hh>
@@ -2556,6 +2561,512 @@ lightsurf_t CreateLightmapSurface(const mbsp_t *bsp, const mface_t *face, const 
     return Lightsurf_Init(modelinfo, cfg, face, bsp, facesup, facesup_decoupled);
 }
 
+
+
+#if defined(HAVE_GPU_LIGHT)
+namespace {
+struct gpu_direct_face_record_t {
+    lightsurf_t *lightsurf = nullptr;
+    lightmapdict_t *lightmaps = nullptr;
+    std::size_t first_sample = 0;
+    std::size_t sample_count = 0;
+};
+
+std::mutex g_gpu_direct_queue_mutex;
+std::vector<gpu_light::direct_phase_sample_t> g_gpu_direct_samples;
+std::vector<gpu_light::direct_phase_source_t> g_gpu_direct_sources;
+std::vector<gpu_light::direct_phase_face_range_t> g_gpu_direct_face_ranges;
+std::vector<std::uint32_t> g_gpu_direct_face_source_indices;
+std::vector<gpu_direct_face_record_t> g_gpu_direct_faces;
+bool g_gpu_direct_sources_built = false;
+bool g_gpu_direct_disabled = false;
+
+static constexpr std::size_t GPU_DIRECT_FLUSH_SAMPLES = 1024ull * 1024ull;
+
+struct gpu_direct_source_key_t {
+    std::uint32_t type = 0;
+    std::uint32_t formula = 0;
+    std::uint32_t flags = 0;
+    int px = 0, py = 0, pz = 0;
+    int dx = 0, dy = 0, dz = 0;
+    int atten = 0, anglescale = 0, falloff = 0;
+};
+
+// Optional approximate sun-direction merge. Disabled by default for final quality.
+// When enabled with -gpusunmerge, -gpusunmergequality maps to a direction quantization scale:
+//   0.00 => 16   fastest/roughest
+//   0.50 => 256  balanced preview
+//   1.00 => 4096 best quality/least merging
+static float GPU_Direct_SunMergeQuality()
+{
+    float q = light_options.gpusunmergequality.value();
+    if (!std::isfinite(q)) {
+        q = 0.75f;
+    }
+    if (q < 0.0f) q = 0.0f;
+    if (q > 1.0f) q = 1.0f;
+    return q;
+}
+
+static float GPU_Direct_SunMergeScale()
+{
+    if (!light_options.gpusunmerge.value()) {
+        return 65536.0f; // effectively exact; preserves final-quality sun jitter
+    }
+    return 16.0f * std::pow(256.0f, GPU_Direct_SunMergeQuality());
+}
+
+static float GPU_Direct_SourceCullQuality()
+{
+    float q = light_options.gpusourcecullquality.value();
+    if (!std::isfinite(q)) {
+        q = 1.0f;
+    }
+    if (q < 0.0f) q = 0.0f;
+    if (q > 1.0f) q = 1.0f;
+    return q;
+}
+
+static bool GPU_Direct_SourceCullEnabled()
+{
+    return light_options.gpusourcecull.value();
+}
+
+static int GPU_Direct_Quantize(float v, float scale = 4096.0f)
+{
+    return static_cast<int>(std::lround(v * scale));
+}
+
+static gpu_direct_source_key_t GPU_Direct_SourceKey(const gpu_light::direct_phase_source_t &s)
+{
+    gpu_direct_source_key_t k{};
+    k.type = s.type;
+    k.formula = s.formula;
+    k.flags = s.flags;
+    k.px = GPU_Direct_Quantize(s.px);
+    k.py = GPU_Direct_Quantize(s.py);
+    k.pz = GPU_Direct_Quantize(s.pz);
+    const float dir_scale = (s.type == 1u) ? GPU_Direct_SunMergeScale() : 4096.0f;
+    k.dx = GPU_Direct_Quantize(s.dx, dir_scale);
+    k.dy = GPU_Direct_Quantize(s.dy, dir_scale);
+    k.dz = GPU_Direct_Quantize(s.dz, dir_scale);
+    k.atten = GPU_Direct_Quantize(s.atten, 1024.0f);
+    k.anglescale = GPU_Direct_Quantize(s.anglescale, 1024.0f);
+    k.falloff = GPU_Direct_Quantize(s.falloff, 1024.0f);
+    return k;
+}
+
+static bool GPU_Direct_SourceKeyEquals(const gpu_direct_source_key_t &a, const gpu_direct_source_key_t &b)
+{
+    return a.type == b.type && a.formula == b.formula && a.flags == b.flags &&
+        a.px == b.px && a.py == b.py && a.pz == b.pz &&
+        a.dx == b.dx && a.dy == b.dy && a.dz == b.dz &&
+        a.atten == b.atten && a.anglescale == b.anglescale && a.falloff == b.falloff;
+}
+
+static void GPU_Direct_MergeInto(gpu_light::direct_phase_source_t &dst, const gpu_light::direct_phase_source_t &src)
+{
+    const float a = std::max(dst.light, 0.0f);
+    const float b = std::max(src.light, 0.0f);
+    const float total = a + b;
+    if (total <= 0.0f) {
+        return;
+    }
+
+    dst.cr = (dst.cr * a + src.cr * b) / total;
+    dst.cg = (dst.cg * a + src.cg * b) / total;
+    dst.cb = (dst.cb * a + src.cb * b) / total;
+
+    if (dst.type == 1u) {
+        qvec3f d{dst.dx * a + src.dx * b, dst.dy * a + src.dy * b, dst.dz * a + src.dz * b};
+        const float len2 = qv::dot(d, d);
+        if (len2 > 0.0001f) {
+            d = d * (1.0f / std::sqrt(len2));
+            dst.dx = d[0];
+            dst.dy = d[1];
+            dst.dz = d[2];
+        }
+    }
+
+    dst.light = total;
+}
+
+static void GPU_Direct_AddMergedSource(
+    std::vector<gpu_direct_source_key_t> &keys,
+    const gpu_light::direct_phase_source_t &src)
+{
+    const auto key = GPU_Direct_SourceKey(src);
+    for (std::size_t i = 0; i < keys.size(); ++i) {
+        if (GPU_Direct_SourceKeyEquals(keys[i], key)) {
+            GPU_Direct_MergeInto(g_gpu_direct_sources[i], src);
+            return;
+        }
+    }
+    keys.push_back(key);
+    g_gpu_direct_sources.push_back(src);
+}
+
+static float GPU_Direct_EffectivePointRadius(const gpu_light::direct_phase_source_t &src)
+{
+    if (src.type == 1) {
+        return MAX_SKY_DIST;
+    }
+    if (src.formula == 3u) { // LF_INFINITE
+        return MAX_SKY_DIST;
+    }
+    if (src.falloff > 0.0f) {
+        return std::min(src.falloff, static_cast<float>(MAX_SKY_DIST));
+    }
+    // Conservative only for LF_LINEAR/default: value = light - distance * atten.
+    // Inverse formulas are treated as global unless they provide _falloff.
+    if (src.formula == 0u && src.atten > 0.0001f && src.light > 0.0f) {
+        return std::min(src.light / src.atten, static_cast<float>(MAX_SKY_DIST));
+    }
+    return MAX_SKY_DIST;
+}
+
+static float GPU_Direct_PointAABBDistance2(
+    const gpu_light::direct_phase_source_t &src,
+    const qvec3f &mins,
+    const qvec3f &maxs)
+{
+    const float p[3] = {src.px, src.py, src.pz};
+    float d2 = 0.0f;
+    for (int axis = 0; axis < 3; ++axis) {
+        if (p[axis] < mins[axis]) {
+            const float d = mins[axis] - p[axis];
+            d2 += d * d;
+        } else if (p[axis] > maxs[axis]) {
+            const float d = p[axis] - maxs[axis];
+            d2 += d * d;
+        }
+    }
+    return d2;
+}
+
+static bool GPU_Direct_SourceAffectsFace(
+    const gpu_light::direct_phase_source_t &src,
+    const qvec3f &mins,
+    const qvec3f &maxs,
+    const qvec3f &normal,
+    bool twosided)
+{
+    if (!GPU_Direct_SourceCullEnabled()) {
+        return true;
+    }
+    if (twosided) {
+        return true;
+    }
+
+    const float quality = GPU_Direct_SourceCullQuality();
+
+    if (src.type == 1) {
+        // Sun normal culling is the quality-sensitive part. At max quality we keep
+        // all sun jitter directions for every face. Lower quality progressively
+        // removes back-facing sun directions.
+        if (quality >= 0.999f) {
+            return true;
+        }
+        const qvec3f dir{src.dx, src.dy, src.dz};
+        const float threshold = -0.50f + (0.55f * (1.0f - quality)); // q=0 -> 0.05, q=1 -> -0.50
+        return qv::dot(normal, dir) > threshold;
+    }
+
+    const float radius = GPU_Direct_EffectivePointRadius(src);
+    if (radius < static_cast<float>(MAX_SKY_DIST) * 0.999f) {
+        // More quality = more radius padding = less chance of missing a faint edge case.
+        const float padded_radius = radius * (1.0f + 3.0f * quality) + 256.0f * quality;
+        const float d2 = GPU_Direct_PointAABBDistance2(src, mins, maxs);
+        if (d2 > padded_radius * padded_radius) {
+            return false;
+        }
+    }
+
+    // Conservative face-normal cull for point lights. At max quality this is disabled;
+    // lower quality allows removing back-facing points.
+    if (quality < 0.999f) {
+        const qvec3f center{
+            (mins[0] + maxs[0]) * 0.5f,
+            (mins[1] + maxs[1]) * 0.5f,
+            (mins[2] + maxs[2]) * 0.5f};
+        qvec3f to_light{src.px - center[0], src.py - center[1], src.pz - center[2]};
+        const float to_light_len2 = qv::dot(to_light, to_light);
+        if (to_light_len2 > 0.0001f) {
+            to_light = to_light * (1.0f / std::sqrt(to_light_len2));
+            const float threshold = -0.75f + (0.65f * (1.0f - quality)); // q=0 -> -0.10, q=1 -> -0.75
+            if (qv::dot(normal, to_light) <= threshold) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+static bool GPU_DirectQueue_BuildSourcesLocked()
+{
+    if (g_gpu_direct_sources_built) {
+        return !g_gpu_direct_disabled;
+    }
+    g_gpu_direct_sources_built = true;
+    g_gpu_direct_sources.clear();
+    std::vector<gpu_direct_source_key_t> unique_keys;
+
+    std::size_t raw_sources = 0;
+    std::size_t raw_point_sources = 0;
+    std::size_t raw_sun_sources = 0;
+    for (const auto &entity_ptr : GetLights()) {
+        const light_t *entity = entity_ptr.get();
+        if (entity->nostaticlight.value()) continue;
+        if (entity->light.value() <= 0) continue;
+        if (entity->sun.value()) continue;
+
+        if (entity->style.value() != 0 ||
+            entity->shadow_channel_mask.value() != CHANNEL_MASK_DEFAULT ||
+            entity->light_channel_mask.value() != CHANNEL_MASK_DEFAULT ||
+            entity->spotlight || entity->projectedmip ||
+            entity->getFormula() == LF_LOCALMIN) {
+            logging::print("GPU direct phase: unsupported entity light encountered; falling back to CPU direct path.\n");
+            g_gpu_direct_disabled = true;
+            return false;
+        }
+
+        gpu_light::direct_phase_source_t src{};
+        const qvec3f origin = entity->origin.value();
+        const qvec3f color = entity->color.value();
+        src.px = origin[0]; src.py = origin[1]; src.pz = origin[2];
+        src.light = entity->light.value();
+        src.dx = 0; src.dy = 0; src.dz = 1; src.dist = 0;
+        src.cr = color[0]; src.cg = color[1]; src.cb = color[2];
+        src.atten = entity->atten.value();
+        src.type = 0;
+        src.formula = static_cast<std::uint32_t>(entity->getFormula());
+        src.flags = entity->dirt.value() ? 1u : 0u;
+        src.anglescale = entity->anglescale.value();
+        src.dirt = entity->dirt.value();
+        src.falloff = entity->falloff.value();
+        ++raw_sources;
+        ++raw_point_sources;
+        GPU_Direct_AddMergedSource(unique_keys, src);
+    }
+
+    for (const sun_t &sun : GetSuns()) {
+        if (sun.sunlight <= 0) continue;
+        if (sun.style != 0 || sun.suntexture_value) {
+            logging::print("GPU direct phase: unsupported sun style/texture encountered; falling back to CPU direct path.\n");
+            g_gpu_direct_disabled = true;
+            return false;
+        }
+        qvec3f incoming = qv::normalize(sun.sunvec);
+        gpu_light::direct_phase_source_t src{};
+        src.type = 1;
+        src.dx = incoming[0]; src.dy = incoming[1]; src.dz = incoming[2];
+        src.dist = MAX_SKY_DIST;
+        src.light = sun.sunlight;
+        src.cr = sun.sunlight_color[0]; src.cg = sun.sunlight_color[1]; src.cb = sun.sunlight_color[2];
+        src.atten = 1;
+        src.formula = 0;
+        src.flags = sun.dirt ? 1u : 0u;
+        src.anglescale = sun.anglescale;
+        src.dirt = sun.dirt ? 1.0f : 0.0f;
+        ++raw_sources;
+        ++raw_sun_sources;
+        GPU_Direct_AddMergedSource(unique_keys, src);
+    }
+
+    std::size_t merged_point_sources = 0;
+    std::size_t merged_sun_sources = 0;
+    for (const auto &src : g_gpu_direct_sources) {
+        if (src.type == 1u) ++merged_sun_sources;
+        else ++merged_point_sources;
+    }
+
+    const bool sun_merge_enabled = light_options.gpusunmerge.value();
+    const float sun_merge_quality = GPU_Direct_SunMergeQuality();
+    const float sun_merge_scale = GPU_Direct_SunMergeScale();
+    const bool source_cull_enabled = GPU_Direct_SourceCullEnabled();
+    const float source_cull_quality = GPU_Direct_SourceCullQuality();
+    logging::print("GPU direct phase: queued {} direct sources ({} raw: {} point, {} sun; merged: {} point, {} sun; {} merged away; sun merge {}; quality {:.2f}; scale {:.1f}; source cull {}; quality {:.2f}).\n",
+        g_gpu_direct_sources.size(), raw_sources, raw_point_sources, raw_sun_sources,
+        merged_point_sources, merged_sun_sources, raw_sources - g_gpu_direct_sources.size(),
+        sun_merge_enabled ? "on" : "off", sun_merge_quality, sun_merge_scale,
+        source_cull_enabled ? "on" : "off", source_cull_quality);
+    return true;
+}
+
+static std::uint64_t GPU_DirectQueue_ImplicitRayCountLocked()
+{
+    std::uint64_t implicit_rays = 0;
+    for (const auto &sample : g_gpu_direct_samples) {
+        const std::size_t face_index = sample.face_index;
+        if (face_index < g_gpu_direct_face_ranges.size()) {
+            implicit_rays += g_gpu_direct_face_ranges[face_index].source_count;
+        }
+    }
+    return implicit_rays;
+}
+
+static bool GPU_DirectQueue_FlushLocked(const mbsp_t *bsp)
+{
+    if (g_gpu_direct_samples.empty()) {
+        g_gpu_direct_faces.clear();
+        g_gpu_direct_face_ranges.clear();
+        g_gpu_direct_face_source_indices.clear();
+        return true;
+    }
+
+    const auto t0 = std::chrono::steady_clock::now();
+    std::vector<gpu_light::direct_phase_accum_t> accum(g_gpu_direct_samples.size());
+    const bool ok = gpu_light::trace_direct_phase_batch(
+        g_gpu_direct_sources.data(),
+        g_gpu_direct_sources.size(),
+        g_gpu_direct_samples.data(),
+        accum.data(),
+        g_gpu_direct_samples.size(),
+        g_gpu_direct_face_ranges.data(),
+        g_gpu_direct_face_ranges.size(),
+        g_gpu_direct_face_source_indices.data(),
+        g_gpu_direct_face_source_indices.size());
+    const auto t1 = std::chrono::steady_clock::now();
+    const double gpu_ms = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count() / 1000.0;
+
+    if (!ok) {
+        g_gpu_direct_disabled = true;
+        logging::print("ERROR: GPU direct phase dispatch failed: {}\n", GPU_TraceLastError());
+        logging::print("ERROR: disabling GPU direct phase for the rest of this run. Re-run without -gpu for guaranteed CPU output.\n");
+        g_gpu_direct_samples.clear();
+        g_gpu_direct_faces.clear();
+        g_gpu_direct_face_ranges.clear();
+        g_gpu_direct_face_source_indices.clear();
+        return false;
+    }
+
+    for (const auto &rec : g_gpu_direct_faces) {
+        if (!rec.lightsurf || !rec.lightmaps || rec.sample_count == 0) {
+            continue;
+        }
+        lightmap_t *lightmap = Lightmap_ForStyle(rec.lightmaps, 0, rec.lightsurf);
+        bool hit = false;
+        for (std::size_t i = 0; i < rec.sample_count; ++i) {
+            const std::size_t gi = rec.first_sample + i;
+            if (!accum[gi].hit) continue;
+            const qvec3f color{accum[gi].cr, accum[gi].cg, accum[gi].cb};
+            const qvec3f normalcontrib{accum[gi].nr, accum[gi].ng, accum[gi].nb};
+            lightsample_t &sample = lightmap->samples[i];
+            sample.color += color;
+            sample.direction += normalcontrib;
+            lightmap->bounce_color += color;
+            hit = true;
+        }
+        if (hit) {
+            Lightmap_Save(bsp, rec.lightmaps, rec.lightsurf, lightmap, 0);
+        }
+    }
+
+    const std::uint64_t implicit_rays = GPU_DirectQueue_ImplicitRayCountLocked();
+    logging::print("GPU direct phase: flushed {} samples, {} unique sources, {} face-source refs = {} implicit rays in {:.3f} ms\n",
+        g_gpu_direct_samples.size(), g_gpu_direct_sources.size(), g_gpu_direct_face_source_indices.size(), implicit_rays, gpu_ms);
+
+    g_gpu_direct_samples.clear();
+    g_gpu_direct_faces.clear();
+    g_gpu_direct_face_ranges.clear();
+    g_gpu_direct_face_source_indices.clear();
+    return true;
+}
+} // namespace
+
+void GPU_DirectQueue_Flush(const mbsp_t *bsp)
+{
+    std::lock_guard<std::mutex> lock(g_gpu_direct_queue_mutex);
+    GPU_DirectQueue_FlushLocked(bsp);
+}
+
+static bool GPU_DirectQueue_AddFace(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
+{
+    if (!GPU_TraceAvailable() || g_gpu_direct_disabled || !lightsurf || !lightmaps) {
+        return false;
+    }
+    if (!(lightsurf->object_channel_mask & CHANNEL_MASK_DEFAULT)) {
+        return true;
+    }
+    const std::size_t sample_count = lightsurf->samples.size();
+    if (!sample_count) {
+        return true;
+    }
+
+    std::lock_guard<std::mutex> lock(g_gpu_direct_queue_mutex);
+    if (!GPU_DirectQueue_BuildSourcesLocked()) {
+        return false;
+    }
+    if (g_gpu_direct_sources.empty()) {
+        return true;
+    }
+
+    qvec3f mins{std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max()};
+    qvec3f maxs{-std::numeric_limits<float>::max(), -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max()};
+    qvec3f normal_sum{0, 0, 0};
+    std::size_t valid_samples = 0;
+    for (const auto &sample : lightsurf->samples) {
+        if (sample.occluded) {
+            continue;
+        }
+        for (int axis = 0; axis < 3; ++axis) {
+            mins[axis] = std::min(mins[axis], sample.point[axis]);
+            maxs[axis] = std::max(maxs[axis], sample.point[axis]);
+        }
+        normal_sum += sample.normal;
+        ++valid_samples;
+    }
+    if (valid_samples == 0) {
+        return true;
+    }
+
+    qvec3f face_normal = lightsurf->snormal;
+    const float normal_len2 = qv::dot(normal_sum, normal_sum);
+    if (normal_len2 > 0.0001f) {
+        face_normal = normal_sum * (1.0f / std::sqrt(normal_len2));
+    }
+
+    const std::uint32_t face_index = static_cast<std::uint32_t>(g_gpu_direct_face_ranges.size());
+    gpu_light::direct_phase_face_range_t face_range{};
+    face_range.source_begin = static_cast<std::uint32_t>(g_gpu_direct_face_source_indices.size());
+
+    for (std::uint32_t source_index = 0; source_index < g_gpu_direct_sources.size(); ++source_index) {
+        if (GPU_Direct_SourceAffectsFace(g_gpu_direct_sources[source_index], mins, maxs, face_normal, lightsurf->twosided)) {
+            g_gpu_direct_face_source_indices.push_back(source_index);
+        }
+    }
+
+    face_range.source_count = static_cast<std::uint32_t>(g_gpu_direct_face_source_indices.size()) - face_range.source_begin;
+    if (face_range.source_count == 0) {
+        return true;
+    }
+    g_gpu_direct_face_ranges.push_back(face_range);
+
+    const std::size_t first_sample = g_gpu_direct_samples.size();
+    g_gpu_direct_faces.push_back(gpu_direct_face_record_t{lightsurf, lightmaps, first_sample, sample_count});
+
+    for (const auto &sample : lightsurf->samples) {
+        gpu_light::direct_phase_sample_t s{};
+        s.face_index = face_index;
+        if (!sample.occluded) {
+            s.px = sample.point[0]; s.py = sample.point[1]; s.pz = sample.point[2];
+            s.nx = sample.normal[0]; s.ny = sample.normal[1]; s.nz = sample.normal[2];
+            s.occlusion = sample.occlusion;
+            s.twosided = lightsurf->twosided ? 1.0f : 0.0f;
+        } else {
+            s.twosided = -1.0f;
+        }
+        g_gpu_direct_samples.push_back(s);
+    }
+
+    if (g_gpu_direct_samples.size() >= GPU_DIRECT_FLUSH_SAMPLES) {
+        GPU_DirectQueue_FlushLocked(bsp);
+    }
+    return true;
+}
+#endif
+
 /*
  * ============
  * LightFace
@@ -2587,7 +3098,10 @@ void DirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::
 
         /* positive lights */
         if (!(modelinfo->lightignore.value() || extended_flags.light_ignore)) {
-            for (const auto &entity : GetLights()) {
+            #if defined(HAVE_GPU_LIGHT)
+            if (!GPU_DirectQueue_AddFace(bsp, &lightsurf, lightmaps)) {
+#endif
+for (const auto &entity : GetLights()) {
                 if (entity->getFormula() == LF_LOCALMIN)
                     continue;
                 if (entity->nostaticlight.value())
@@ -2598,6 +3112,9 @@ void DirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::
             for (const sun_t &sun : GetSuns())
                 if (sun.sunlight > 0)
                     LightFace_Sky(bsp, &sun, &lightsurf, lightmaps);
+#if defined(HAVE_GPU_LIGHT)
+            }
+#endif
 
             // mxd. Add surface lights...
             // FIXME: negative surface lights

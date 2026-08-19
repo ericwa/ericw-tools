@@ -396,6 +396,11 @@ public:
     setting_bool novanilla;
     setting_scalar gate;
     setting_int32 sunsamples;
+    setting_bool gpusunmerge; // -gpusunmerge: approximate-merge nearby GPU sun jitter rays
+    setting_scalar gpusunmergequality; // -gpusunmergequality: 0 fast/rough, 1 slow/high quality
+    setting_bool gpusourcecull; // -gpusourcecull: use approximate GPU per-face source culling
+    setting_scalar gpusourcecullquality; // -gpusourcecullquality: 0 fast/aggressive, 1 safest/conservative
+    settings::setting_bool gpu; // -gpu: use Vulkan GPU ray-query backend when available
     setting_bool arghradcompat;
     setting_bool nolighting;
     setting_vec3 debugface;

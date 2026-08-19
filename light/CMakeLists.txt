@@ -1,3 +1,4 @@
+option(LIGHT_ENABLE_VULKAN_GPU "Enable Vulkan GPU ray-query backend for light" OFF)
 option(SKIP_TBB_INSTALL "Skip TBB Library Installation" OFF)
 option(SKIP_EMBREE_INSTALL "Skip Embree Library Installation" OFF)
 
@@ -9,7 +10,7 @@ set(LIGHT_INCLUDES
 	../include/light/bounce.hh
 	../include/light/surflight.hh
 	../include/light/ltface.hh
-	../include/light/trace.hh
+	../include/light/trace.hh ../include/light/trace_gpu.hh
 	../include/light/write.hh
 	../include/light/spatialindex.hh
 )
@@ -47,9 +48,40 @@ endif(embree_FOUND)
 
 add_library(liblight STATIC ${LIGHT_SOURCES})
 
+if (LIGHT_ENABLE_VULKAN_GPU)
+    find_package(Vulkan REQUIRED)
+    find_program(GLSLANG_VALIDATOR glslangValidator REQUIRED)
+
+    target_sources(liblight PRIVATE
+        trace_gpu.cc
+        trace_gpu_vulkan.cc
+    )
+    target_compile_definitions(liblight PRIVATE HAVE_GPU_LIGHT=1)
+    target_link_libraries(liblight PRIVATE Vulkan::Vulkan)
+
+    set(GPU_SHADER_SPVS)
+    foreach(GPU_SHADER_NAME occlusion direct_phase)
+        set(GPU_SHADER_SRC "${CMAKE_CURRENT_SOURCE_DIR}/gpu_shaders/${GPU_SHADER_NAME}.comp")
+        set(GPU_SHADER_SPV "${CMAKE_CURRENT_BINARY_DIR}/gpu_shaders/${GPU_SHADER_NAME}.comp.spv")
+        add_custom_command(
+            OUTPUT "${GPU_SHADER_SPV}"
+            COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/gpu_shaders"
+            COMMAND "${GLSLANG_VALIDATOR}" -V "${GPU_SHADER_SRC}" -o "${GPU_SHADER_SPV}"
+            DEPENDS "${GPU_SHADER_SRC}"
+            VERBATIM)
+        list(APPEND GPU_SHADER_SPVS "${GPU_SHADER_SPV}")
+    endforeach()
+    add_custom_target(light_gpu_shaders DEPENDS ${GPU_SHADER_SPVS})
+    add_dependencies(liblight light_gpu_shaders)
+endif()
+
 target_link_libraries(liblight PRIVATE common ${CMAKE_THREAD_LIBS_INIT} fmt::fmt jsoncpp_static)
 
 add_executable(light main.cc)
+if (LIGHT_ENABLE_VULKAN_GPU)
+    add_dependencies(light light_gpu_shaders)
+endif()
+
 target_link_libraries(light PRIVATE common liblight)
 
 if (embree_FOUND)

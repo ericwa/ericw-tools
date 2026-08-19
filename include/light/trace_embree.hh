@@ -18,6 +18,7 @@
  */
 
 #pragma once
+#include <light/trace_gpu.hh>
 
 #include <common/aligned_allocator.hh>
 #include <common/qvec.hh>
@@ -279,6 +280,52 @@ public:
     {
         if (!_rays.size())
             return;
+
+#if defined(HAVE_GPU_LIGHT)
+        // Optional large-batch occlusion path. v5 direct lighting uses
+        // direct_phase.comp; small fallback raystreams stay on Embree.
+        constexpr size_t GPU_OCCLUSION_MIN_BATCH = 262144;
+
+        if (_rays.size() >= GPU_OCCLUSION_MIN_BATCH && GPU_TraceAvailable()) {
+            std::vector<gpu_light::ray_t> gpu_rays;
+            std::vector<gpu_light::occlusion_result_t> gpu_results;
+
+            gpu_rays.resize(_rays.size());
+            gpu_results.resize(_rays.size());
+
+            for (size_t i = 0; i < _rays.size(); ++i) {
+                const auto &src = _rays[i].ray.ray;
+                auto &dst = gpu_rays[i];
+
+                dst.origin[0] = src.org_x;
+                dst.origin[1] = src.org_y;
+                dst.origin[2] = src.org_z;
+                dst.tmin = src.tnear;
+
+                dst.direction[0] = src.dir_x;
+                dst.direction[1] = src.dir_y;
+                dst.direction[2] = src.dir_z;
+                dst.tmax = src.tfar;
+
+                dst.shadow_mask = static_cast<std::uint32_t>(shadowmask);
+                dst.user_index = static_cast<std::uint32_t>(i);
+            }
+
+            if (gpu_light::trace_occlusion_batch(
+                    self,
+                    static_cast<std::uint32_t>(shadowmask),
+                    gpu_rays.data(),
+                    gpu_results.data(),
+                    gpu_rays.size())) {
+                for (size_t i = 0; i < _rays.size(); ++i) {
+                    if (gpu_results[i].occluded) {
+                        _rays[i].ray.ray.tfar = -std::abs(_rays[i].ray.ray.tfar);
+                    }
+                }
+                return;
+            }
+        }
+#endif
 
         ray_source_info ctx2(this, self, shadowmask);
         RTCOccludedArguments embree4_args = ctx2.setup_occluded_arguments();
