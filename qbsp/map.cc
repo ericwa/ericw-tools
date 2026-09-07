@@ -1666,6 +1666,21 @@ static mapbrush_t ParseBrush(const mapfile::brush_t &in, mapentity_t &entity, te
         }
     }
 
+    // detect all hintskip, and cancel
+    {
+        bool all_hintskip = std::ranges::all_of(brush.faces, [](const mapface_t &face) -> bool {
+            return face.get_texinfo().flags.is_hintskip();
+        });
+        if (all_hintskip) {
+            logging::print("WARNING: brush has all faces marked 'skip' at {}, which is invalid; ignoring this\n", brush.line);
+            for (mapface_t &face : brush.faces) {
+                auto copy = face.get_texinfo();
+                copy.flags.set_hintskip(false);
+                face.texinfo = FindTexinfo(copy, face.get_plane());
+            }
+        }
+    }
+
     brush.contents = Brush_GetContents(entity, brush);
 
     return brush;

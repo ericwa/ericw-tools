@@ -1,3 +1,5 @@
+#include "test_main.hh"
+
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
@@ -1315,4 +1317,7 @@ TEST(testmapsQ2, emptyBmodels)
     EXPECT_LT(model1.headnode[0], bsp.dnodes.size());
     EXPECT_LT(model2.headnode[0], bsp.dnodes.size());
     EXPECT_NE(model1.headnode[0], model2.headnode[1]);
+
+    EXPECT_THAT(
+        get_current_test_log(), testing::Contains(testing::StartsWith("WARNING: brush has all faces marked 'skip'")));
 }
