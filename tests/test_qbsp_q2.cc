@@ -1299,3 +1299,20 @@ TEST(testmapsQ2, nomergeOn)
     EXPECT_TRUE(top.directional_equal(expected_top));
     EXPECT_TRUE(bot.directional_equal(expected_bot));
 }
+
+TEST(testmapsQ2, emptyBmodels)
+{
+    SCOPED_TRACE("bmodels containing only skip+nodraw need to still output a valid bsp tree");
+
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_empty_bmodels.map");
+
+    ASSERT_EQ(3, bsp.dmodels.size());
+
+    auto &model1 = bsp.dmodels[1];
+    auto &model2 = bsp.dmodels[2];
+
+    // this is very bad if failing; will make the engine do an invalid read, potentially
+    EXPECT_LT(model1.headnode[0], bsp.dnodes.size());
+    EXPECT_LT(model2.headnode[0], bsp.dnodes.size());
+    EXPECT_NE(model1.headnode[0], model2.headnode[1]);
+}
