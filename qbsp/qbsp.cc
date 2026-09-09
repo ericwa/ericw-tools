@@ -550,7 +550,7 @@ qbsp_settings::qbsp_settings()
           "path to a texture definition file, which can transform textures in the .map into other textures."},
       lmscale{this, "lmscale", 1.0, &common_format_group,
           "change global lmscale (force _lmscale key on all entities). outputs the LMSCALE BSPX lump."},
-      filltype{this, "filltype", filltype_t::INSIDE,
+      filltype{this, "filltype", filltype_t::AUTO,
           {{"auto", filltype_t::AUTO}, {"inside", filltype_t::INSIDE}, {"outside", filltype_t::OUTSIDE}},
           &common_format_group,
           "whether to fill the map from the outside in (lenient), from the inside out (aggressive), or to automatically decide based on the hull being used."},

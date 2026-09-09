@@ -707,7 +707,7 @@ bool FillOutside(tree_t &tree, hull_index_t hullnum, bspbrush_t::container &brus
     settings::filltype_t filltype = qbsp_options.filltype.value();
 
     if (filltype == settings::filltype_t::AUTO) {
-        filltype = settings::filltype_t::INSIDE;
+        filltype = hullnum.value_or(0) ? settings::filltype_t::OUTSIDE : settings::filltype_t::INSIDE;
     }
 
     if (filltype == settings::filltype_t::INSIDE) {
@@ -828,6 +828,11 @@ void FillBrushEntity(tree_t &tree, hull_index_t hullnum, bspbrush_t::container &
 void FillDetail(tree_t &tree, hull_index_t hullnum, bspbrush_t::container &brushes)
 {
     logging::funcheader();
+
+    if (hullnum.value_or(0) && qbsp_options.filltype.value() == settings::filltype_t::AUTO) {
+        // skip this in hulls by default (settings::filltype_t::AUTO)
+        return;
+    }
 
     // Clear the outside filling state on all leafs
     ClearOccupied_r(tree.headnode);
