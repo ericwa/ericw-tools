@@ -1,0 +1,59 @@
+#version 460
+#extension GL_EXT_ray_query : require
+#extension GL_EXT_scalar_block_layout : require
+
+layout(local_size_x = 128) in;
+
+struct GpuRay {
+    float ox; float oy; float oz; float tmin;
+    float dx; float dy; float dz; float tmax;
+    uint shadowMask;
+    uint userIndex;
+};
+
+struct GpuOcclusionResult {
+    uint occluded;
+    uint reserved0;
+    float tr;
+    float tg;
+    float tb;
+};
+
+layout(push_constant) uniform PushConstants {
+    uint rayCount;
+    uint flags;
+} pc;
+
+layout(set = 0, binding = 0) uniform accelerationStructureEXT sceneAS;
+layout(scalar, set = 0, binding = 1) readonly buffer RayBuffer { GpuRay rays[]; } rayBuffer;
+layout(scalar, set = 0, binding = 2) writeonly buffer ResultBuffer { GpuOcclusionResult results[]; } resultBuffer;
+
+void main() {
+    uint i = gl_GlobalInvocationID.x;
+    if (i >= pc.rayCount) {
+        return;
+    }
+
+    GpuRay r = rayBuffer.rays[i];
+
+    rayQueryEXT rq;
+    rayQueryInitializeEXT(
+        rq,
+        sceneAS,
+        gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT,
+        0xff,
+        vec3(r.ox, r.oy, r.oz),
+        r.tmin,
+        normalize(vec3(r.dx, r.dy, r.dz)),
+        r.tmax);
+
+    while (rayQueryProceedEXT(rq)) {
+    }
+
+    bool hit = rayQueryGetIntersectionTypeEXT(rq, true) != gl_RayQueryCommittedIntersectionNoneEXT;
+    resultBuffer.results[i].occluded = hit ? 1u : 0u;
+    resultBuffer.results[i].reserved0 = 0u;
+    resultBuffer.results[i].tr = 1.0;
+    resultBuffer.results[i].tg = 1.0;
+    resultBuffer.results[i].tb = 1.0;
+}

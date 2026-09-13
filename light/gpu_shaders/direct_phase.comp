@@ -1,0 +1,202 @@
+#version 460
+#extension GL_EXT_ray_query : require
+#extension GL_EXT_scalar_block_layout : require
+
+layout(local_size_x = 64) in;
+
+struct GpuDirectPhaseSample {
+    vec3 position;
+    float occlusion;
+    vec3 normal;
+    float twosided;
+    uint faceIndex;
+    uint reserved0;
+    uint reserved1;
+    uint reserved2;
+};
+
+struct GpuDirectPhaseSource {
+    vec3 position;
+    float light;
+    vec3 direction;
+    float dist;
+    vec3 color;
+    float atten;
+    uint type;      // 0 = point, 1 = sun
+    uint formula;   // light_formula_t for point lights
+    uint flags;     // bit 0 = dirt
+    uint reserved0;
+    float anglescale;
+    float dirt;
+    float falloff;
+    float pad0;
+};
+
+struct GpuDirectPhaseFaceRange {
+    uint sourceBegin;
+    uint sourceCount;
+};
+
+struct GpuDirectAccum {
+    vec3 color;
+    float pad0;
+    vec3 normal;
+    float pad1;
+    uint hit;
+    uint reserved0;
+    uint reserved1;
+    uint reserved2;
+};
+
+layout(set = 0, binding = 0) uniform accelerationStructureEXT sceneAS;
+layout(std430, set = 0, binding = 1) readonly buffer Samples { GpuDirectPhaseSample samples[]; } sampleBuffer;
+layout(std430, set = 0, binding = 2) readonly buffer Sources { GpuDirectPhaseSource sources[]; } sourceBuffer;
+layout(std430, set = 0, binding = 3) readonly buffer FaceRanges { GpuDirectPhaseFaceRange ranges[]; } faceRangeBuffer;
+layout(std430, set = 0, binding = 4) readonly buffer FaceSourceIndices { uint indices[]; } faceSourceIndexBuffer;
+layout(std430, set = 0, binding = 5) writeonly buffer Accum { GpuDirectAccum accum[]; } accumBuffer;
+
+layout(push_constant) uniform PushConstants {
+    uint sampleCount;
+    uint sourceCount;
+    uint flags;
+    uint reserved0;
+} pc;
+
+bool occluded(vec3 origin, vec3 dir, float tmax) {
+    rayQueryEXT rq;
+    rayQueryInitializeEXT(
+        rq,
+        sceneAS,
+        gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT,
+        0xff,
+        origin,
+        0.01,
+        dir,
+        max(tmax, 0.02));
+
+    while (rayQueryProceedEXT(rq)) {}
+
+    return rayQueryGetIntersectionTypeEXT(rq, true) != gl_RayQueryCommittedIntersectionNoneEXT;
+}
+
+float point_light_value(uint formula, float light, float atten, float dist, float falloff) {
+    float d = max(dist, 1.0);
+    float a = max(atten, 0.0001);
+
+    if (formula == 1u) {
+        return light * 128.0 / (d * a);
+    } else if (formula == 2u) {
+        return light * 128.0 * 128.0 / (d * d * a);
+    } else if (formula == 3u) {
+        return light;
+    } else if (formula == 5u) {
+        float da = d + 128.0;
+        return light * 128.0 * 128.0 / (da * da * a);
+    } else if (formula == 6u) {
+        float qd = max(d, 16.0);
+        return light * 128.0 * 128.0 / (qd * qd * a);
+    }
+
+    if (falloff > 0.0) {
+        return light * max(0.0, 1.0 - d / falloff);
+    }
+    return light - d * a;
+}
+
+void clear_accum(uint sample_id) {
+    accumBuffer.accum[sample_id].color = vec3(0.0);
+    accumBuffer.accum[sample_id].pad0 = 0.0;
+    accumBuffer.accum[sample_id].normal = vec3(0.0);
+    accumBuffer.accum[sample_id].pad1 = 0.0;
+    accumBuffer.accum[sample_id].hit = 0u;
+    accumBuffer.accum[sample_id].reserved0 = 0u;
+    accumBuffer.accum[sample_id].reserved1 = 0u;
+    accumBuffer.accum[sample_id].reserved2 = 0u;
+}
+
+void main() {
+    uint sample_id = gl_GlobalInvocationID.x;
+    if (sample_id >= pc.sampleCount) {
+        return;
+    }
+
+    GpuDirectPhaseSample s = sampleBuffer.samples[sample_id];
+    if (s.twosided < -0.5) {
+        clear_accum(sample_id);
+        return;
+    }
+
+    GpuDirectPhaseFaceRange r = faceRangeBuffer.ranges[s.faceIndex];
+    if (r.sourceCount == 0u) {
+        clear_accum(sample_id);
+        return;
+    }
+
+    vec3 total_color = vec3(0.0);
+    vec3 total_normal = vec3(0.0);
+    uint any_hit = 0u;
+
+    for (uint local_i = 0u; local_i < r.sourceCount; ++local_i) {
+        uint source_id = faceSourceIndexBuffer.indices[r.sourceBegin + local_i];
+        if (source_id >= pc.sourceCount) {
+            continue;
+        }
+        GpuDirectPhaseSource l = sourceBuffer.sources[source_id];
+
+        vec3 ray_dir;
+        float ray_dist;
+        float value;
+        vec3 ncontrib_dir;
+
+        if (l.type == 1u) {
+            ray_dir = l.direction;
+            ray_dist = l.dist;
+            float angle = dot(ray_dir, s.normal);
+            if (s.twosided > 0.5 && angle < 0.0) angle = -angle;
+            angle = max(0.0, angle);
+            angle = (1.0 - l.anglescale) + l.anglescale * angle;
+            value = l.light * angle;
+            ncontrib_dir = ray_dir;
+        } else {
+            vec3 to_light = l.position - s.position;
+            ray_dist = length(to_light);
+            if (ray_dist <= 0.01) {
+                continue;
+            }
+            ray_dir = to_light / ray_dist;
+            float angle = dot(ray_dir, s.normal);
+            if (s.twosided > 0.5 && angle < 0.0) angle = -angle;
+            if (angle <= 0.0) {
+                continue;
+            }
+            angle = (1.0 - l.anglescale) + l.anglescale * max(0.0, angle);
+            value = point_light_value(l.formula, l.light, l.atten, ray_dist, l.falloff) * angle;
+            ncontrib_dir = ray_dir;
+        }
+
+        if (value <= 0.0) {
+            continue;
+        }
+
+        float dirt_scale = ((l.flags & 1u) != 0u) ? clamp(s.occlusion, 0.0, 1.0) : 1.0;
+        value *= dirt_scale;
+        if (value <= 0.0) {
+            continue;
+        }
+
+        if (!occluded(s.position, ray_dir, ray_dist)) {
+            total_color += l.color * (value / 255.0);
+            total_normal += ncontrib_dir * value;
+            any_hit = 1u;
+        }
+    }
+
+    accumBuffer.accum[sample_id].color = total_color;
+    accumBuffer.accum[sample_id].pad0 = 0.0;
+    accumBuffer.accum[sample_id].normal = total_normal;
+    accumBuffer.accum[sample_id].pad1 = 0.0;
+    accumBuffer.accum[sample_id].hit = any_hit;
+    accumBuffer.accum[sample_id].reserved0 = 0u;
+    accumBuffer.accum[sample_id].reserved1 = 0u;
+    accumBuffer.accum[sample_id].reserved2 = 0u;
+}

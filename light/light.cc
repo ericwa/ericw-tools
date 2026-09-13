@@ -31,6 +31,7 @@
 #include <light/ltface.hh>
 #include <light/write.hh> // for facesup_t
 #include <light/trace_embree.hh>
+#include <light/trace_gpu.hh>
 
 #include <common/log.hh>
 #include <common/bsputils.hh>
@@ -292,6 +293,11 @@ light_settings::light_settings()
       novanilla{this, "novanilla", false, &experimental_group, "implies -bspxlit; don't write vanilla lighting"},
       gate{this, "gate", LIGHT_EQUAL_EPSILON, &performance_group, "cutoff lights at this brightness level"},
       sunsamples{this, "sunsamples", 64, 8, 2048, &performance_group, "set samples for _sunlight2, default 64"},
+      gpusunmerge{this, "gpusunmerge", false, &performance_group, "approximate-merge nearby GPU sun jitter rays"},
+      gpusunmergequality{this, "gpusunmergequality", 0.75f, 0.0f, 1.0f, &performance_group, "GPU sun merge quality: 0 fast/rough, 1 slow/high quality"},
+      gpusourcecull{this, "gpusourcecull", false, &performance_group, "use approximate GPU per-face source culling"},
+      gpusourcecullquality{this, "gpusourcecullquality", 1.0f, 0.0f, 1.0f, &performance_group, "GPU source culling quality: 0 fast/aggressive, 1 safest/conservative"},
+      gpu{this, "gpu", false, &performance_group, "use Vulkan GPU ray-query backend for batched visibility rays"},
       arghradcompat{this, "arghradcompat", false, &output_group, "enable compatibility for Arghrad-specific keys"},
       nolighting{this, "nolighting", false, &output_group, "don't output main world lighting (Q2RTX)"},
       debugface{this, "debugface", std::numeric_limits<float>::quiet_NaN(), std::numeric_limits<float>::quiet_NaN(),
@@ -1339,6 +1345,16 @@ int light_main(int argc, const char **argv)
     FindDebugVert(&bsp);
 
     Embree_TraceInit(&bsp);
+#if defined(HAVE_GPU_LIGHT)
+    if (light_options.gpu.value()) {
+        if (!GPU_TraceInit(&bsp)) {
+            logging::print("WARNING: -gpu requested, but GPU trace init failed: {}\n", GPU_TraceLastError());
+        } else {
+            logging::print("GPU light tracing enabled.\n");
+        }
+    }
+#endif
+
 
     if (light_options.debugmode == debugmodes::phong_obj) {
         CalculateVertexNormals(&bsp);
@@ -1409,7 +1425,14 @@ int light_main(int argc, const char **argv)
     logging::print("{} empty lightmaps\n", static_cast<int>(fully_transparent_lightmaps));
     logging::close();
 
-    return 0;
+    
+#if defined(HAVE_GPU_LIGHT)
+    if (light_options.gpu.value()) {
+        GPU_DirectQueue_Flush(&bsp);
+        GPU_TraceShutdown();
+    }
+#endif
+return 0;
 }
 
 int light_main(const std::vector<std::string> &args)
