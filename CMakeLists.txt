@@ -3,6 +3,8 @@ cmake_policy(SET CMP0028 NEW)
 
 project (ericw-tools)
 
+include(GNUInstallDirs)
+
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/3rdparty/Catch2/extras")
 
@@ -159,6 +161,8 @@ set(TEST_QUAKE2_MAP_EXPORT_DIR "" CACHE PATH "When running unit tests, export Qu
 set(TEST_HEXEN2_MAP_EXPORT_DIR "" CACHE PATH "When running unit tests, export Hexen 2 maps to this directory (useful for testing in game)")
 set(TEST_HALFLIFE_MAP_EXPORT_DIR "" CACHE PATH "When running unit tests, export Half-Life maps to this directory (useful for testing in game)")
 
+option(ENABLE_PREFIX_INSTALL "Enable Prefix install" OFF)
+
 add_subdirectory(3rdparty)
 add_subdirectory(common)
 add_subdirectory(bspinfo)
@@ -191,7 +195,11 @@ if(NOT DISABLE_DOCS)
 	add_subdirectory(docs)
 endif ()
 
+if(ENABLE_PREFIX_INSTALL)
+install(FILES README.md DESTINATION ${CMAKE_INSTALL_DOCDIR})
+else()
 install(FILES README.md DESTINATION .)
+endif ()
 
 #CPack configuration
 
