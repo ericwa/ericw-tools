@@ -544,6 +544,8 @@ qbsp_settings::qbsp_settings()
           "add a path to the wad search paths; wads found in xwadpath's will not be embedded, otherwise they will be embedded (if not -notex)"},
       notriggermodels{this, "notriggermodels", false, &common_format_group,
           "for supported game code only: triggers will not write a model\nout, and will instead just write out their mins/maxs."},
+      keeptriggerfaces{this, "keeptriggerfaces", false, &common_format_group,
+          "Keep trigger brush faces, in the compiled BSP. Normally they are stripped, to reduce vertex count."},
       aliasdefs{this, "aliasdef", "\"path/to/file.def\" <multiple allowed>", &map_development_group,
           "path to an alias definition file, which can transform entities in the .map into other entities."},
       texturedefs{this, "texturedefs", "\"path/to/file.def\" <multiple allowed>", &map_development_group,
@@ -1028,7 +1030,7 @@ static void ProcessEntity(mapentity_t &entity, hull_index_t hullnum)
         return;
 
     // for notriggermodels: if we have at least one trigger-like texture, do special trigger stuff
-    bool discarded_trigger = !map.is_world_entity(entity) && qbsp_options.notriggermodels.value() && IsTrigger(entity);
+    bool discarded_trigger = !map.is_world_entity(entity) && !qbsp_options.keeptriggerfaces.value() && IsTrigger(entity);
 
     // Export a blank model struct, and reserve the index (only do this once, for all hulls)
     if (!discarded_trigger) {

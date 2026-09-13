@@ -221,6 +221,7 @@ public:
     setting_bool omitdetailfence;
     setting_wadpathset wadpaths;
     setting_bool notriggermodels;
+    setting_bool keeptriggerfaces;
     setting_set aliasdefs;
     setting_set texturedefs;
     setting_numeric<double> lmscale;

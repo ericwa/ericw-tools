@@ -321,6 +321,13 @@ Options
    For supported game code only: triggers will not write a model out,
    and will instead just write out their mins/maxs.
 
+.. option:: -keeptriggerfaces
+
+   Keep trigger brush faces, in the compiled BSP. Normally they are
+   stripped, to reduce vertex count.
+   
+   No effect if `-notriggermodels` is used.
+   
 .. option:: -notex
 
    Write only placeholder textures, to depend upon replacements. This
