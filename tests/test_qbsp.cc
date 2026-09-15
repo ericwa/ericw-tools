@@ -1769,19 +1769,17 @@ TEST(testmapsQ1, sealing)
     EXPECT_EQ(CONTENTS_SOLID, BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_void)->contents);
     EXPECT_EQ(CONTENTS_EMPTY, BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], connected_by_thin_gap)->contents);
 
-    // check leaf contents in hull 1
+    // check leaf contents in hull 1 (uses outside filling)
     EXPECT_EQ(CONTENTS_EMPTY, BSP_FindContentsAtPoint(&bsp, 1, &bsp.dmodels[0], in_start_room));
-    EXPECT_EQ(CONTENTS_SOLID, BSP_FindContentsAtPoint(&bsp, 1, &bsp.dmodels[0], in_emptyroom));
+    EXPECT_EQ(CONTENTS_EMPTY, BSP_FindContentsAtPoint(&bsp, 1, &bsp.dmodels[0], in_emptyroom));
     EXPECT_EQ(CONTENTS_SOLID, BSP_FindContentsAtPoint(&bsp, 1, &bsp.dmodels[0], in_void));
-    // ideally this wouldn't get sealed, but we need to do the "inside filling" for compatibility with complex
-    // maps using e.g. obj2map geometry, otherwise the clipnodes count explodes
-    EXPECT_EQ(CONTENTS_SOLID, BSP_FindContentsAtPoint(&bsp, 1, &bsp.dmodels[0], connected_by_thin_gap));
+    EXPECT_EQ(CONTENTS_EMPTY, BSP_FindContentsAtPoint(&bsp, 1, &bsp.dmodels[0], connected_by_thin_gap));
 
-    // check leaf contents in hull 2
+    // check leaf contents in hull 2 (uses outside filling)
     EXPECT_EQ(CONTENTS_EMPTY, BSP_FindContentsAtPoint(&bsp, 2, &bsp.dmodels[0], in_start_room));
-    EXPECT_EQ(CONTENTS_SOLID, BSP_FindContentsAtPoint(&bsp, 2, &bsp.dmodels[0], in_emptyroom));
+    EXPECT_EQ(CONTENTS_EMPTY, BSP_FindContentsAtPoint(&bsp, 2, &bsp.dmodels[0], in_emptyroom));
     EXPECT_EQ(CONTENTS_SOLID, BSP_FindContentsAtPoint(&bsp, 2, &bsp.dmodels[0], in_void));
-    EXPECT_EQ(CONTENTS_SOLID, BSP_FindContentsAtPoint(&bsp, 2, &bsp.dmodels[0], connected_by_thin_gap));
+    EXPECT_EQ(CONTENTS_EMPTY, BSP_FindContentsAtPoint(&bsp, 2, &bsp.dmodels[0], connected_by_thin_gap));
 
     EXPECT_EQ(prt->portals.size(), 2);
     EXPECT_EQ(prt->portalleafs, 3); // 2 connected rooms + gap (other room is filled in with solid)

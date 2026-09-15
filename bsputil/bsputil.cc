@@ -902,7 +902,7 @@ int bsputil_main(int _argc, const char **_argv)
                     face_ids.push_back(i);
                 }
 
-                std::sort(face_ids.begin(), face_ids.end(), [&bsp](size_t a, size_t b) {
+                std::ranges::stable_sort(face_ids, [&bsp](size_t a, size_t b) {
                     float za = std::numeric_limits<float>::lowest();
                     float zb = za;
                     auto &facea = bsp.dfaces[a];
@@ -975,7 +975,7 @@ int bsputil_main(int _argc, const char **_argv)
                 for (size_t f = 0; f < faces[i].faces.size(); f++)
                     face_ids.push_back(face_id_t{i, f});
 
-            std::sort(face_ids.begin(), face_ids.end(), [&bsp, &faces, yo](face_id_t a, face_id_t b) {
+            std::ranges::stable_sort(face_ids, [&bsp, &faces, yo](face_id_t a, face_id_t b) {
                 float za = yo;
                 float zb = yo;
                 auto facea = faces[a.model].faces[a.face];

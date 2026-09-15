@@ -1114,21 +1114,32 @@ void MainWindow::displayCameraPositionInfo()
 
     std::string leaf_type;
     int32_t area = -1;
-    {
-        const auto *bsp = std::get_if<mbsp_t>(&m_bspdata.bsp);
-        if (!bsp)
-            return;
 
-        const mleaf_t *leaf = BSP_FindLeafAtPoint(bsp, &bsp->dmodels[0], point);
-        if (leaf) {
-            auto *game = bsp->loadversion->game;
-            leaf_type = game->create_contents_from_native(leaf->contents).to_string();
+    const auto *bsp = std::get_if<mbsp_t>(&m_bspdata.bsp);
+    if (!bsp)
+        return;
 
-            area = leaf->area;
-        }
+    auto *game = bsp->loadversion->game;
+
+    const mleaf_t *leaf = BSP_FindLeafAtPoint(bsp, &bsp->dmodels[0], point);
+    if (leaf) {
+        leaf_type = game->create_contents_from_native(leaf->contents).to_string();
+
+        area = leaf->area;
     }
 
     std::string cpp_str = fmt::format("pos ({}) forward ({}) contents ({}) area ({})", point, forward, leaf_type, area);
+
+    // check collision hulls
+
+    const int num_hulls = game->get_hull_sizes().size();
+    for (int hullindex = 1; hullindex < num_hulls; ++hullindex) {
+        int contents = BSP_FindClipnodeAtPoint(bsp, hullindex, &bsp->dmodels[0], point).contents;
+
+        std::string hull_string = game->create_contents_from_native(contents).to_string();
+
+        cpp_str += fmt::format(" hull{} ({})", hullindex, hull_string);
+    }
 
     m_cameraStatus->setText(QString::fromStdString(cpp_str));
 }
