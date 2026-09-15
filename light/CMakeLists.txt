@@ -97,7 +97,11 @@ if (embree_FOUND)
 	endif()
 
 	if(NOT SKIP_EMBREE_INSTALL)
-		install(FILES $<TARGET_FILE:embree> DESTINATION .)
+		if(ENABLE_PREFIX_INSTALL)
+			install(FILES $<TARGET_FILE:embree> DESTINATION ${CMAKE_INSTALL_FULL_LIBDIR})
+		else()
+			install(FILES $<TARGET_FILE:embree> DESTINATION .)
+		endif()
 	endif()
 
 	# install TBB
@@ -117,7 +121,11 @@ if (embree_FOUND)
 		get_filename_component(TBB_SO_FILE "${TBB_SO_FILE_SYMLINK}" REALPATH)
 		message(STATUS "TBB .so file: ${TBB_SO_FILE}")
 
-		install(FILES ${TBB_SO_FILE} DESTINATION . RENAME "${TBB_SO_FILE_SYMLINK_NAME}")
+		if(ENABLE_PREFIX_INSTALL)
+			install(FILES ${TBB_SO_FILE} DESTINATION ${CMAKE_INSTALL_FULL_LIBDIR} RENAME "${TBB_SO_FILE_SYMLINK_NAME}")
+		else()
+			install(FILES ${TBB_SO_FILE} DESTINATION . RENAME "${TBB_SO_FILE_SYMLINK_NAME}")
+		endif()
 
 		# tbbmalloc
 		get_target_property(TBBMALLOC_SO_FILE_SYMLINK TBB::tbbmalloc IMPORTED_LOCATION_RELEASE)
@@ -130,7 +138,11 @@ if (embree_FOUND)
 
 		message(STATUS "TBBMALLOC .so file: ${TBBMALLOC_SO_FILE}")
 
-		install(FILES ${TBBMALLOC_SO_FILE} DESTINATION . RENAME "${TBBMALLOC_SO_FILE_SYMLINK_NAME}")
+		if(ENABLE_PREFIX_INSTALL)
+			install(FILES ${TBBMALLOC_SO_FILE} DESTINATION ${CMAKE_INSTALL_FULL_LIBDIR} RENAME "${TBBMALLOC_SO_FILE_SYMLINK_NAME}")
+		else()
+			install(FILES ${TBBMALLOC_SO_FILE} DESTINATION . RENAME "${TBBMALLOC_SO_FILE_SYMLINK_NAME}")
+		endif()
 	else()
 		# preferred method
 		install(FILES $<TARGET_FILE:TBB::tbb> DESTINATION .)
@@ -138,12 +150,21 @@ if (embree_FOUND)
 	endif()
 
 	if((NOT SKIP_EMBREE_INSTALL) AND (NOT EMBREE_LICENSE STREQUAL EMBREE_LICENSE-NOTFOUND))
-		install(FILES ${EMBREE_LICENSE} DESTINATION . RENAME LICENSE-embree.txt)
+		if(ENABLE_PREFIX_INSTALL)
+			install(FILES ${EMBREE_LICENSE} DESTINATION ${CMAKE_INSTALL_FULL_DOCDIR} RENAME LICENSE-embree.txt)
+		else()
+			install(FILES ${EMBREE_LICENSE} DESTINATION . RENAME LICENSE-embree.txt)
+		endif()
 	endif()
 endif(embree_FOUND)
 
 copy_mingw_dlls(light)
 add_loader_path_to_rpath(light)
 
-install(TARGETS light RUNTIME DESTINATION .)
-install(FILES ../gpl_v3.txt DESTINATION .)
+if(ENABLE_PREFIX_INSTALL)
+	install(TARGETS light RUNTIME DESTINATION ${CMAKE_INSTALL_FULL_BINDIR})
+	install(FILES ../gpl_v3.txt DESTINATION ${CMAKE_INSTALL_FULL_DOCDIR})
+else()
+	install(TARGETS light RUNTIME DESTINATION .)
+	install(FILES ../gpl_v3.txt DESTINATION .)
+endif()

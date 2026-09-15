@@ -31,4 +31,9 @@ add_custom_command(TARGET maputil POST_BUILD
 copy_mingw_dlls(maputil)
 add_loader_path_to_rpath(maputil)
 
-install(TARGETS maputil RUNTIME DESTINATION .)
+if(ENABLE_PREFIX_INSTALL)
+	install(TARGETS maputil RUNTIME DESTINATION ${CMAKE_INSTALL_FULL_BINDIR})
+else()
+	install(TARGETS maputil RUNTIME DESTINATION .)
+endif()
+
