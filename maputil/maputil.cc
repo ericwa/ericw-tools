@@ -400,13 +400,90 @@ static void maputil_make_brush_side(lua_State *state, const brush_side_t &side)
     if (std::holds_alternative<texinfo_quake2_t>(side.extended_info)) {
         auto &q2 = std::get<texinfo_quake2_t>(side.extended_info);
         // set info
-        lua_createtable(state, 0, 3);
+        lua_createtable(state, 0, 4);
+        lua_pushstring(state, "quake2");
+        lua_setfield(state, -2, "type");
         lua_pushnumber(state, q2.contents);
         lua_setfield(state, -2, "contents");
         lua_pushnumber(state, q2.value);
         lua_setfield(state, -2, "value");
         lua_pushnumber(state, q2.flags);
         lua_setfield(state, -2, "flags");
+
+        lua_setfield(state, -2, "info");
+    } else if (std::holds_alternative<texinfo_sin_t>(side.extended_info)) {
+        auto &sin = std::get<texinfo_sin_t>(side.extended_info);
+        // set info
+        lua_createtable(state, 0, 1);
+
+        lua_pushstring(state, "sin");
+        lua_setfield(state, -2, "type");
+
+        if (sin.objects.size()) {
+            lua_createtable(state, sin.objects.size(), 0);
+
+            size_t objnum = 0;
+
+            for (auto &object : sin.objects) {
+                lua_createtable(state, 2, 0);
+
+                if (std::holds_alternative<sin_modify_flag_t>(object)) {
+                    auto &flag = std::get<sin_modify_flag_t>(object);
+                    const char *type = "unknown";
+                    const char *name = "unknown";
+                    bool found = false;
+
+                    if (std::holds_alternative<sin_contents_t>(flag.flag)) {
+                        type = "contents";
+                        auto &contents = std::get<sin_contents_t>(flag.flag);
+                        for (auto &kf : sin_contents_names) {
+                            if (kf.flag == contents) {
+                                name = kf.name;
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (!found) {
+                            logging::print("WARNING: dunno what contents {}\n", (uint32_t)contents);
+                        }
+                    } else {
+                        type = "surface";
+                        auto &surfflags = std::get<sin_surfflags_t>(flag.flag);
+                        for (auto &kf : sin_surfflag_names) {
+                            if (kf.flag == surfflags) {
+                                name = kf.name;
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (!found) {
+                            logging::print("WARNING: dunno what surfflag {}\n", (uint32_t)surfflags);
+                        }
+                    }
+
+                    lua_pushstring(state, type);
+                    lua_setfield(state, -2, "type");
+                    lua_pushstring(state, name);
+                    lua_setfield(state, -2, "key");
+                    lua_pushboolean(state, flag.add);
+                    lua_setfield(state, -2, "value");
+
+                } else {
+                    auto &kvp = std::get<keyvalue_t>(object);
+                    lua_pushstring(state, "keyvalue");
+                    lua_setfield(state, -2, "type");
+                    lua_pushstring(state, kvp.first.c_str());
+                    lua_setfield(state, -2, "key");
+                    lua_pushstring(state, kvp.second.c_str());
+                    lua_setfield(state, -2, "value");
+                }
+
+                lua_rawseti(state, -2, objnum + 1);
+                objnum++;
+            }
+
+            lua_setfield(state, -2, "objects");
+        }
 
         lua_setfield(state, -2, "info");
     }
@@ -577,21 +654,106 @@ static void maputil_copy_side(lua_State *state, brush_side_t &side)
     lua_getfield(state, -1, "info");
 
     if (lua_type(state, -1) == LUA_TTABLE) {
-        texinfo_quake2_t q2;
-
-        lua_getfield(state, -1, "contents");
-        q2.contents = lua_tonumber(state, -1);
+        lua_getfield(state, -1, "type");
+        std::string type = lua_tostring(state, -1);
         lua_pop(state, 1);
 
-        lua_getfield(state, -1, "value");
-        q2.value = lua_tonumber(state, -1);
-        lua_pop(state, 1);
+        if (string_iequals(type, "quake2")) {
+            texinfo_quake2_t q2;
 
-        lua_getfield(state, -1, "flags");
-        q2.flags = lua_tonumber(state, -1);
-        lua_pop(state, 1);
+            lua_getfield(state, -1, "contents");
+            q2.contents = lua_tonumber(state, -1);
+            lua_pop(state, 1);
 
-        side.extended_info = q2;
+            lua_getfield(state, -1, "value");
+            q2.value = lua_tonumber(state, -1);
+            lua_pop(state, 1);
+
+            lua_getfield(state, -1, "flags");
+            q2.flags = lua_tonumber(state, -1);
+            lua_pop(state, 1);
+
+            side.extended_info = q2;
+        } else if (string_iequals(type, "sin")) {
+            texinfo_sin_t sin;
+
+            lua_getfield(state, -1, "objects");
+            if (lua_type(state, -1) == LUA_TTABLE) {
+                size_t n = 0;
+                std::string objtype;
+
+                while (true) {
+                    lua_rawgeti(state, -1, n + 1);
+
+                    if (lua_type(state, -1) == LUA_TNIL) {
+                        lua_pop(state, 1);
+                        break;
+                    }
+
+                    LUA_VERIFY_TOP_TYPE(LUA_TTABLE);
+                    n++;
+
+                    lua_getfield(state, -1, "type");
+                    objtype = lua_tostring(state, -1);
+                    lua_pop(state, 1);
+
+                    if (string_iequals(objtype, "keyvalue")) {
+                        keyvalue_t kvp;
+
+                        lua_getfield(state, -1, "key");
+                        kvp.first = lua_tostring(state, -1);
+                        lua_pop(state, 1);
+
+                        lua_getfield(state, -1, "value");
+                        kvp.second = lua_tostring(state, -1);
+                        lua_pop(state, 1);
+
+                        sin.objects.push_back(kvp);
+                    } else {
+                        sin_modify_flag_t flag;
+                        bool found = false;
+
+                        lua_getfield(state, -1, "key");
+                        const char *flag_name = lua_tostring(state, -1);
+                        if (string_iequals(objtype, "contents")) {
+                            for (auto &content : sin_contents_names) {
+                                if (string_iequals(content.name, flag_name)) {
+                                    flag.flag = content.flag;
+                                    found = true;
+                                    break;
+                                }
+                            }
+                        } else if (string_iequals(objtype, "surface")) {
+                            for (auto &surfflag : sin_surfflag_names) {
+                                if (string_iequals(surfflag.name, flag_name)) {
+                                    flag.flag = surfflag.flag;
+                                    found = true;
+                                    break;
+                                }
+                            }
+                        } else {
+                            logging::print("WARNING: dunno what objtype {}\n", objtype);
+                        }
+                        lua_pop(state, 1);
+
+                        if (found) {
+                            lua_getfield(state, -1, "value");
+                            flag.add = lua_toboolean(state, -1);
+                            lua_pop(state, 1);
+
+                            sin.objects.push_back(flag);
+                        } else {
+                            logging::print("WARNING: dunno what flag {}\n", flag_name);
+                        }
+                    }
+
+                    lua_pop(state, 1);
+                }
+            }
+            lua_pop(state, 1);
+
+            side.extended_info = sin;
+        }
     }
 
     lua_pop(state, 1);

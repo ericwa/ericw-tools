@@ -76,7 +76,7 @@ struct sin_dheader_t
 // multiple brushes can be in a single leaf
 
 // lower bits are stronger, and will eat weaker brushes completely
-enum sin_contents_t : int32_t
+enum sin_contents_flags_t : int32_t
 {
     SIN_CONTENTS_EMPTY = 0,
     SIN_CONTENTS_SOLID = nth_bit(0), // an eye is never valid in a solid
