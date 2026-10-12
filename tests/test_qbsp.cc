@@ -3209,6 +3209,757 @@ TEST(testmapsQ1, cliphullBevelDuplicatesFace)
     }
 }
 
+TEST(testmapsQ1, sliverFragmentPhantomSolid)
+{
+    // SplitBrush splits off a brush fragment thinner than 0.1 (see cliphull2ThinFragmentSplit), so
+    // CheckSplitBrush must accept the planes that bound such a fragment: if it refuses every plane
+    // that would cut the node volume thinner than 0.1, the fragment is never carved out of its
+    // node, and the whole leaf it ends up in becomes solid. That leaf is air above the pipe here
+    // (hull 0 only; the clip hulls were not affected), and the faces under it are not drawn.
+    // Exit status 0 and "no leak" both held while this was broken, so neither is tested alone.
+    // -tjunc none, as in cliphull2ThinFragmentSplit: with the default (mwt) two of the cells' faces
+    // get a 0.03-unit spike (a vertex visited twice), which CheckBsp reports. Upstream alpha11
+    // writes the same spikes on this map; they are not what is tested here.
+    for (const std::vector<std::string> &extra_args : {std::vector<std::string>{"-leaktest", "-tjunc", "none"},
+             std::vector<std::string>{"-leaktest", "-tjunc", "none", "-forcegoodtree"}}) {
+        SCOPED_TRACE(extra_args.back());
+
+        // -leaktest throws if any hull leaks
+        const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_brushbsp_sliver_fragment_phantom_solid.map", extra_args);
+        const dmodelh2_t *world = &bsp.dmodels[0];
+
+        // the centre of each of the four cells, 6 units inside every one of its planes
+        for (const qvec3d &inside : {qvec3d{1715.368212, -455.716266, -159.996169},
+                 qvec3d{1727.354891, -454.583845, -159.980881}, qvec3d{1739.181895, -452.329045, -159.950439},
+                 qvec3d{1750.744349, -448.971860, -159.905115}}) {
+            SCOPED_TRACE(fmt::format("inside {}", inside));
+            EXPECT_EQ(CONTENTS_SOLID, BSP_FindLeafAtPoint(&bsp, world, inside)->contents);
+            EXPECT_EQ(CONTENTS_SOLID, BSP_FindContentsAtPoint(&bsp, 1, world, inside));
+            EXPECT_EQ(CONTENTS_SOLID, BSP_FindContentsAtPoint(&bsp, 2, world, inside));
+        }
+
+        // air: 2 units above the top face of cells 1, 2 and 3 along that face's own normal, and two
+        // points 2.5 units from every brush beside cell 0. No brush of the map contains any of them.
+        for (const qvec3d &air : {qvec3d{1727.292385, -454.588701, -127.071320},
+                 qvec3d{1739.078334, -452.341728, -127.040984}, qvec3d{1750.600651, -448.996197, -126.995817},
+                 qvec3d{1721.72, -458.54, -126.54}, qvec3d{1721.72, -456.54, -126.54}}) {
+            SCOPED_TRACE(fmt::format("air {}", air));
+            EXPECT_EQ(CONTENTS_EMPTY, BSP_FindLeafAtPoint(&bsp, world, air)->contents);
+        }
+
+        // the top face of cells 1, 2 and 3 is drawn where the map puts it: centroid and outward normal
+        // of the source polygon. (cell 0's is the control: it was drawn while the others were not.)
+        const std::pair<qvec3d, qvec3d> tops[] = {
+            {{1715.348587, -455.717191, -129.086556}, {-0.000636, 0.000000, 1.000000}},
+            {{1727.296191, -454.588461, -129.071317}, {-0.001903, -0.000120, 0.999998}},
+            {{1739.084641, -452.341012, -129.040974}, {-0.003153, -0.000358, 0.999995}},
+            {{1750.609402, -448.994771, -128.995797}, {-0.004376, -0.000713, 0.999990}}};
+        for (const auto &[foot, normal] : tops) {
+            SCOPED_TRACE(fmt::format("top face at {}", foot));
+            EXPECT_NE(nullptr, BSP_FindFaceAtPoint(&bsp, world, foot, normal));
+        }
+
+        // the player start is in the open room in every hull
+        const qvec3d player_start{-3976, 599, -287};
+        EXPECT_EQ(CONTENTS_EMPTY, BSP_FindLeafAtPoint(&bsp, world, player_start)->contents);
+        EXPECT_EQ(CONTENTS_EMPTY, BSP_FindContentsAtPoint(&bsp, 1, world, player_start));
+        EXPECT_EQ(CONTENTS_EMPTY, BSP_FindContentsAtPoint(&bsp, 2, world, player_start));
+    }
+}
+
+TEST(testmapsQ1, fragmentLeafOutsideBrush)
+{
+    // a brush fragment gives a leaf its contents only if the leaf is in the brush. Here a fragment a
+    // hundredth of a unit thick is left in a leaf that no plane can split any further (the cut
+    // would be a winding thinner than 0.02) and that reaches 57 units past the fragment's brush:
+    // making that leaf solid puts a sheet of solid in open air above the cells, with a face drawn
+    // on each side of it. Nothing leaks and qbsp exits 0, so what is asked is what is drawn.
+    // -tjunc none: see sliverFragmentPhantomSolid.
+    for (const std::vector<std::string> &extra_args : {std::vector<std::string>{"-leaktest", "-tjunc", "none"},
+             std::vector<std::string>{"-leaktest", "-tjunc", "none", "-forcegoodtree"}}) {
+        SCOPED_TRACE(extra_args.back());
+
+        // -leaktest throws if any hull leaks
+        const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_brushbsp_fragment_leaf_outside_brush.map", extra_args);
+        const dmodelh2_t *world = &bsp.dmodels[0];
+
+        // the centre of each of the five cells, more than 5 units inside every one of its planes
+        for (const qvec3d &inside : {qvec3d{1739.181895, -452.329045, -159.950439},
+                 qvec3d{1750.744349, -448.971860, -159.905115}, qvec3d{1782.836262, -432.630905, -159.684499},
+                 qvec3d{1792.352129, -425.255171, -159.584920}, qvec3d{2701.680670, 427.198527, -148.079890}}) {
+            SCOPED_TRACE(fmt::format("inside {}", inside));
+            EXPECT_EQ(CONTENTS_SOLID, BSP_FindLeafAtPoint(&bsp, world, inside)->contents);
+            EXPECT_EQ(CONTENTS_SOLID, BSP_FindContentsAtPoint(&bsp, 1, world, inside));
+            EXPECT_EQ(CONTENTS_SOLID, BSP_FindContentsAtPoint(&bsp, 2, world, inside));
+        }
+
+        // two points in open air, 4.7 units from the nearest brush along the normal of the cell face
+        // below them: where the sheet was. No face of any kind is drawn there.
+        for (const qvec3d &air : {qvec3d{1744.848036, -432.155936, -129.067913},
+                 qvec3d{1772.348886, -418.114821, -128.819933}}) {
+            SCOPED_TRACE(fmt::format("air {}", air));
+            EXPECT_TRUE(BSP_FindFacesAtPoint(&bsp, world, air).empty());
+            EXPECT_EQ(CONTENTS_EMPTY, BSP_FindLeafAtPoint(&bsp, world, air + qvec3d{0, 0, 1})->contents);
+            EXPECT_EQ(CONTENTS_EMPTY, BSP_FindLeafAtPoint(&bsp, world, air - qvec3d{0, 0, 1})->contents);
+        }
+
+        // and the faces of the cells under it are drawn where the map puts them
+        const std::pair<qvec3d, qvec3d> faces[] = {
+            {{1735.495854, -437.327789, -133.188041}, {-0.119482, 0.486289, 0.865590}},
+            {{1745.629733, -434.385394, -133.148316}, {-0.165789, 0.472844, 0.865409}},
+            {{1773.756598, -420.063411, -132.954958}, {-0.294316, 0.407399, 0.864525}},
+            {{1782.096752, -413.598970, -132.867683}, {-0.332426, 0.377860, 0.864127}}};
+        for (const auto &[foot, normal] : faces) {
+            SCOPED_TRACE(fmt::format("cell face at {}", foot));
+            EXPECT_NE(nullptr, BSP_FindFaceAtPoint(&bsp, world, foot, normal));
+        }
+    }
+}
+
+TEST(testmapsQ1, leafGuardKeepsMaterial)
+{
+    // the other side of fragmentLeafOutsideBrush: LeafNode's rule (a brush fragment gives a leaf its
+    // contents only if the middle of the leaf is inside the fragment's brush) must not take away
+    // material the map has. One sealed room: fragments 0.012 thick of thicker brushes (a brick that
+    // closes a window to the void and stands proud of the wall, three overlapping boxes whose tops
+    // differ, a bank beside a pool) and whole brushes 0.06 thick (an oblique skin on a ramp, a plate
+    // that is the ONLY thing closing a second window, a free fin, a film of water). The rule drops
+    // five fragments here; every solid and liquid stays, the room stays sealed, and the air in the
+    // plane of each thin piece stays empty. Without the rule the air beside the proud brick is solid;
+    // releases 1.4502 / 1.4505 and upstream 2.0.0-alpha11 also put water above the film and a sheet
+    // of solid beside the fin. A whole brush thinner than 0.02 units is NOT claimed: see the README.
+    const double r = 0.03 * std::sqrt(2.0); // half the skin's thickness, measured along z
+    for (const std::vector<std::string> &extra_args :
+        {std::vector<std::string>{"-leaktest"}, std::vector<std::string>{"-leaktest", "-forcegoodtree"}}) {
+        SCOPED_TRACE(extra_args.back());
+
+        // -leaktest throws if any hull leaks: both windows are closed only by the thin pieces
+        const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_brushbsp_leaf_guard_keeps_material.map", extra_args);
+        const dmodelh2_t *world = &bsp.dmodels[0];
+        ASSERT_TRUE(prt.has_value());
+
+        // solid, more than 5 units inside its brush: all three hulls
+        for (const qvec3d &inside : {qvec3d{264, 160, 192}, qvec3d{16, -150, 60}, qvec3d{60, 60, 48},
+                 qvec3d{132, 132, 48}, qvec3d{210, 210, 90}, qvec3d{-62, 60, 24}}) {
+            SCOPED_TRACE(fmt::format("inside {}", inside));
+            EXPECT_EQ(CONTENTS_SOLID, BSP_FindLeafAtPoint(&bsp, world, inside)->contents);
+            EXPECT_EQ(CONTENTS_SOLID, BSP_FindContentsAtPoint(&bsp, 1, world, inside));
+            EXPECT_EQ(CONTENTS_SOLID, BSP_FindContentsAtPoint(&bsp, 2, world, inside));
+        }
+
+        // the thin material itself, in its middle: the plate, the skin, the 0.012 of box B above box A,
+        // the 0.012 of the bank above the water, the fin
+        for (const qvec3d &thin : {qvec3d{-160, 255.97, 192}, qvec3d{-40, -150, 96 + r}, qvec3d{210, 210, 96.006},
+                 qvec3d{-30, 60, 48.006}, qvec3d{120.03, -100, 112}}) {
+            SCOPED_TRACE(fmt::format("thin solid {}", thin));
+            EXPECT_EQ(CONTENTS_SOLID, BSP_FindLeafAtPoint(&bsp, world, thin)->contents);
+        }
+
+        // the pool, and the film of water in its middle
+        for (const qvec3d &water : {qvec3d{-174, 60, 24}, qvec3d{-174, 60, 47}, qvec3d{-78, 60, 48.042}}) {
+            SCOPED_TRACE(fmt::format("water {}", water));
+            EXPECT_EQ(CONTENTS_WATER, BSP_FindLeafAtPoint(&bsp, world, water)->contents);
+        }
+
+        // air: in the plane of each thin piece but past its outline, and a unit above each top
+        for (const qvec3d &air : {qvec3d{120.03, -28, 112}, qvec3d{120.03, 4, 112}, qvec3d{120.03, -100, 200},
+                 qvec3d{-40, -70, 96 + r}, qvec3d{-40, -94, 97}, qvec3d{-60, 255.97, 192}, qvec3d{-160, 255.97, 100},
+                 qvec3d{255.994, 60, 192}, qvec3d{60, 60, 97}, qvec3d{210, 210, 97}, qvec3d{-30, 60, 49},
+                 qvec3d{-78, 60, 49}, qvec3d{-78, 0, 48.042}, qvec3d{-174, 60, 49}}) {
+            SCOPED_TRACE(fmt::format("air {}", air));
+            EXPECT_EQ(CONTENTS_EMPTY, BSP_FindLeafAtPoint(&bsp, world, air)->contents);
+        }
+        // and nothing is drawn in the air beside the fin or beside the skin
+        EXPECT_TRUE(BSP_FindFacesAtPoint(&bsp, world, qvec3d{120.03, 4, 112}).empty());
+        EXPECT_TRUE(BSP_FindFacesAtPoint(&bsp, world, qvec3d{-40, -70, 96 + r}).empty());
+
+        // the faces of the thin pieces are drawn where the map puts them
+        const double s = std::sqrt(0.5);
+        const std::pair<qvec3d, qvec3d> faces[] = {
+            {{255.988, 160, 192}, {-1, 0, 0}}, // the proud face of the brick
+            {{-160, 255.94, 192}, {0, -1, 0}}, // the plate
+            {{-40, -150, 96 + 2 * r}, {-s, 0, s}}, // the skin
+            {{60, 60, 96}, {0, 0, 1}}, // box A
+            {{210, 210, 96.012}, {0, 0, 1}}, // box B, 0.012 higher
+            {{-30, 60, 48.012}, {0, 0, 1}}, // the bank beside the film
+            {{120, -100, 112}, {-1, 0, 0}}, // the fin, one side
+            {{120.06, -100, 112}, {1, 0, 0}}, // the fin, the other
+            {{-174, 60, 48}, {0, 0, 1}}, // the surface of the pool
+            {{-78, 60, 48.072}, {0, 0, 1}}}; // the surface of the film
+        for (const auto &[foot, normal] : faces) {
+            SCOPED_TRACE(fmt::format("face at {}", foot));
+            EXPECT_NE(nullptr, BSP_FindFaceAtPoint(&bsp, world, foot, normal));
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// A WHOLE brush thinner than 0.02 units (the "sub-0.02" cases). Every expectation below is read
+// off the source: the room is air x,y in [-256,256], z in [0,256] behind walls 16 thick, and each
+// test says where its thin brush is. None of them is what an earlier compiler happened to write.
+// ---------------------------------------------------------------------------------------------
+
+// a convex brush as half-spaces: a point p is inside when dot(n, p) <= d for every plane
+struct sub002_brush_t
+{
+    std::string texture;
+    std::vector<qplane3d> planes;
+};
+
+static sub002_brush_t Sub002Box(const qvec3d &lo, const qvec3d &hi, const std::string &texture = "bolt9")
+{
+    return {texture, {{{1, 0, 0}, hi[0]}, {{-1, 0, 0}, -lo[0]}, {{0, 1, 0}, hi[1]}, {{0, -1, 0}, -lo[1]},
+                         {{0, 0, 1}, hi[2]}, {{0, 0, -1}, -lo[2]}}};
+}
+
+// a rigid motion of the whole map: turn about z, then move. Thickness is unchanged by it.
+struct sub002_xform_t
+{
+    double yaw_degrees = 0;
+    qvec3d offset{0, 0, 0};
+
+    qvec3d turn(const qvec3d &v) const
+    {
+        const double a = yaw_degrees * Q_PI / 180.0;
+        return {v[0] * cos(a) - v[1] * sin(a), v[0] * sin(a) + v[1] * cos(a), v[2]};
+    }
+    qvec3d point(const qvec3d &p) const { return turn(p) + offset; }
+};
+
+enum class sub002_east_t
+{
+    WALL, // the east wall is whole
+    WINDOW // it has a window to the void: y 128..192, z 160..224
+};
+
+/**
+ * The text of a Quake 1 map: the room, `brushes` inside it, a player start and a light.
+ * Each face is written as three points, clockwise seen from outside, as the format wants.
+ */
+static std::string Sub002MapText(
+    std::vector<sub002_brush_t> brushes, sub002_east_t east = sub002_east_t::WALL, const sub002_xform_t &xform = {})
+{
+    std::vector<sub002_brush_t> all{Sub002Box({-272, -272, -16}, {272, 272, 0}),
+        Sub002Box({-272, -272, 256}, {272, 272, 272}), Sub002Box({-272, -272, -16}, {-256, 272, 272}),
+        Sub002Box({-272, -272, -16}, {272, -256, 272}), Sub002Box({-272, 256, -16}, {272, 272, 272})};
+    if (east == sub002_east_t::WALL) {
+        all.push_back(Sub002Box({256, -272, -16}, {272, 272, 272}));
+    } else {
+        all.push_back(Sub002Box({256, -272, -16}, {272, 128, 272}));
+        all.push_back(Sub002Box({256, 192, -16}, {272, 272, 272}));
+        all.push_back(Sub002Box({256, 128, -16}, {272, 192, 160}));
+        all.push_back(Sub002Box({256, 128, 224}, {272, 192, 272}));
+    }
+    for (auto &brush : brushes) {
+        all.push_back(std::move(brush));
+    }
+
+    const auto wad = (std::filesystem::path(testmaps_dir) / "deprecated" / "free_wad.wad").generic_string();
+    std::string text =
+        fmt::format("// Game: Quake\n// Format: Standard\n{{\n\"classname\" \"worldspawn\"\n\"wad\" \"{}\"\n", wad);
+    for (const auto &brush : all) {
+        text += "{\n";
+        for (const auto &plane : brush.planes) {
+            const qvec3d n = qv::normalize(plane.normal);
+            const qvec3d o = xform.point(n * (plane.dist / qv::length(plane.normal)));
+            const qvec3d a = fabs(n[2]) < 0.9 ? qvec3d{0, 0, 1} : qvec3d{1, 0, 0};
+            const qvec3d u = qv::normalize(qv::cross(n, a));
+            const qvec3d v = qv::cross(n, u);
+            // (p0 - p1) x (p2 - p1) is the outward normal: u x v = n
+            const qvec3d p0 = o + xform.turn(u) * 64.0;
+            const qvec3d p2 = o + xform.turn(v) * 64.0;
+            text += fmt::format(
+                "( {:.10f} {:.10f} {:.10f} ) ( {:.10f} {:.10f} {:.10f} ) ( {:.10f} {:.10f} {:.10f} ) {} 0 0 0 1 1\n",
+                p0[0], p0[1], p0[2], o[0], o[1], o[2], p2[0], p2[1], p2[2], brush.texture);
+        }
+        text += "}\n";
+    }
+    const qvec3d start = xform.point({-200, -200, 40});
+    const qvec3d light = xform.point({-200, -200, 200});
+    text += fmt::format(
+        "}}\n{{\n\"classname\" \"info_player_start\"\n\"origin\" \"{} {} {}\"\n}}\n", start[0], start[1], start[2]);
+    text += fmt::format(
+        "{{\n\"classname\" \"light\"\n\"origin\" \"{} {} {}\"\n\"light\" \"300\"\n}}\n", light[0], light[1], light[2]);
+    return text;
+}
+
+struct sub002_paths_t
+{
+    std::filesystem::path map, bsp, prt, pts;
+};
+
+// a directory nothing has compiled into: a .prt or .pts left by an earlier compile must not decide a
+// result. An earlier directory is removed when it can be; it cannot always (on Windows the log of the
+// compile before this one is still open inside it), so the directory is numbered and the first
+// number that is free is taken.
+static sub002_paths_t Sub002Paths(const std::string &name)
+{
+    static int serial = 0;
+    const auto base = std::filesystem::temp_directory_path() / "ericw-tools-tests-sub002";
+    std::filesystem::path dir;
+    do {
+        dir = base / fmt::format("{}-{}", name, serial++);
+        std::error_code ignored;
+        std::filesystem::remove_all(dir, ignored);
+    } while (std::filesystem::exists(dir));
+    std::filesystem::create_directories(dir);
+    return {dir / (name + ".map"), dir / (name + ".bsp"), dir / (name + ".prt"), dir / (name + ".pts")};
+}
+
+static std::tuple<mbsp_t, bspxentries_t, std::optional<prtfile_t>> Sub002Compile(
+    const std::string &name, const std::string &text, const std::vector<std::string> &extra_args)
+{
+    const auto paths = Sub002Paths(name);
+    std::ofstream(paths.map) << text;
+    return LoadTestmap(paths.map, paths.bsp, extra_args);
+}
+
+static const std::vector<std::vector<std::string>> sub002_tree_modes{{"-leaktest"}, {"-leaktest", "-forcegoodtree"}};
+
+static int Sub002Contents(const mbsp_t &bsp, int hullnum, const qvec3d &point)
+{
+    if (hullnum == 0) {
+        return BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], point)->contents;
+    }
+    return BSP_FindContentsAtPoint(&bsp, hullnum, &bsp.dmodels[0], point);
+}
+
+// every vertex the BSP wrote is a number, and is in or on the room's shell (which `reach` bounds)
+static void Sub002ExpectFiniteVertices(const mbsp_t &bsp, double reach = 273.0)
+{
+    ASSERT_FALSE(bsp.dvertexes.empty());
+    for (const auto &vertex : bsp.dvertexes) {
+        for (int axis = 0; axis < 3; axis++) {
+            ASSERT_TRUE(std::isfinite(vertex[axis])) << "vertex " << fmt::format("{}", vertex);
+            ASSERT_LE(fabs(vertex[axis]), reach) << "vertex " << fmt::format("{}", vertex);
+        }
+    }
+}
+
+// the 36 points of room air the fin defect was measured on: half of them read solid in release 1.4513
+static std::vector<qvec3d> Sub002RoomAirGrid()
+{
+    std::vector<qvec3d> points;
+    for (double x : {-192.0, -96.0, 96.0, 192.0}) {
+        for (double y : {-192.0, 0.0, 192.0}) {
+            for (double z : {32.0, 128.0, 224.0}) {
+                points.push_back({x, y, z});
+            }
+        }
+    }
+    return points;
+}
+
+/**
+ * A free fin `t` thick: x 0..t, y -64..64, z 64..160. It touches nothing and seals nothing.
+ * `xform` is the motion the map was written with; every point and normal here is given unmoved.
+ */
+static void Sub002CheckFin(
+    const mbsp_t &bsp, const std::optional<prtfile_t> &prt, double t, const sub002_xform_t &xform = {})
+{
+    const dmodelh2_t *world = &bsp.dmodels[0];
+    const bool moved = xform.yaw_degrees != 0 || xform.offset != qvec3d{0, 0, 0};
+
+    ASSERT_TRUE(prt.has_value());
+    EXPECT_FALSE(prt->portals.empty());
+    if (!moved) {
+        Sub002ExpectFiniteVertices(bsp);
+    }
+
+    // the room's air stays air, on both sides of the fin
+    for (const qvec3d &air : Sub002RoomAirGrid()) {
+        SCOPED_TRACE(fmt::format("room air {}", air));
+        EXPECT_EQ(CONTENTS_EMPTY, Sub002Contents(bsp, 0, xform.point(air)));
+    }
+
+    // the fin's material stays: its middle plane, well inside its outline
+    for (const qvec3d &inside :
+        {qvec3d{t / 2, 0, 112}, qvec3d{t / 2, -40, 80}, qvec3d{t / 2, 40, 144}, qvec3d{t / 2, 0, 150}}) {
+        SCOPED_TRACE(fmt::format("fin material {}", inside));
+        EXPECT_EQ(CONTENTS_SOLID, Sub002Contents(bsp, 0, xform.point(inside)));
+    }
+
+    // the same thin slab, past the fin's y ends and its z ends: air
+    for (const qvec3d &past :
+        {qvec3d{t / 2, 80, 112}, qvec3d{t / 2, -80, 112}, qvec3d{t / 2, 0, 48}, qvec3d{t / 2, 0, 176},
+            qvec3d{t / 2, 200, 112}, qvec3d{t / 2, -200, 32}, qvec3d{t / 2, 0, 240}, qvec3d{t / 2, 80, 176}}) {
+        SCOPED_TRACE(fmt::format("slab air {}", past));
+        EXPECT_EQ(CONTENTS_EMPTY, Sub002Contents(bsp, 0, xform.point(past)));
+    }
+
+    // both broad faces are drawn, each facing out, over the fin's outline and not past it
+    for (const auto &[x, normal] :
+        {std::pair<double, qvec3d>{0, {-1, 0, 0}}, std::pair<double, qvec3d>{t, {1, 0, 0}}}) {
+        for (const qvec3d &on : {qvec3d{x, 0, 112}, qvec3d{x, -62, 66}, qvec3d{x, 62, 158}, qvec3d{x, -62, 158}}) {
+            SCOPED_TRACE(fmt::format("fin face at {} facing {}", on, normal));
+            EXPECT_NE(nullptr, BSP_FindFaceAtPoint(&bsp, world, xform.point(on), xform.turn(normal)));
+        }
+        for (const qvec3d &off : {qvec3d{x, -70, 112}, qvec3d{x, 70, 112}, qvec3d{x, 0, 58}, qvec3d{x, 0, 166}}) {
+            SCOPED_TRACE(fmt::format("no face at {}", off));
+            EXPECT_TRUE(BSP_FindFacesAtPoint(&bsp, world, xform.point(off)).empty());
+        }
+    }
+
+    if (moved) {
+        return; // the clip hulls are boxes along the axes: their expectations below are for the unmoved map
+    }
+
+    // hull 1 is the fin grown by (-16 -16 -24)..(16 16 32): solid for x in (-16, t + 16), y in (-80, 80),
+    // z in (32, 184). hull 2 by (-32 -32 -24)..(32 32 64): x in (-32, t + 32), y in (-96, 96), z in (0, 184).
+    // The floor grows to z 24 in both, the ceiling down to z 224 and z 192. Every point is 4 units or more
+    // from each of those bounds.
+    const std::pair<qvec3d, std::array<int, 2>> clip[] = {{{t / 2, 0, 112}, {CONTENTS_SOLID, CONTENTS_SOLID}},
+        {{-12, 0, 112}, {CONTENTS_SOLID, CONTENTS_SOLID}}, {{12, 70, 40}, {CONTENTS_SOLID, CONTENTS_SOLID}},
+        {{-24, 0, 112}, {CONTENTS_EMPTY, CONTENTS_SOLID}}, {{24, 88, 112}, {CONTENTS_EMPTY, CONTENTS_SOLID}},
+        {{t / 2, 0, 28}, {CONTENTS_EMPTY, CONTENTS_SOLID}}, {{-40, 0, 112}, {CONTENTS_EMPTY, CONTENTS_EMPTY}},
+        {{40, 0, 112}, {CONTENTS_EMPTY, CONTENTS_EMPTY}}, {{t / 2, 104, 112}, {CONTENTS_EMPTY, CONTENTS_EMPTY}},
+        {{t / 2, -104, 112}, {CONTENTS_EMPTY, CONTENTS_EMPTY}}, {{t / 2, 0, 188}, {CONTENTS_EMPTY, CONTENTS_EMPTY}},
+        {{-200, -200, 40}, {CONTENTS_EMPTY, CONTENTS_EMPTY}}, {{200, 200, 40}, {CONTENTS_EMPTY, CONTENTS_EMPTY}},
+        {{200, -200, 100}, {CONTENTS_EMPTY, CONTENTS_EMPTY}}};
+    for (const auto &[point, expected] : clip) {
+        SCOPED_TRACE(fmt::format("clip hulls at {}", point));
+        EXPECT_EQ(expected[0], Sub002Contents(bsp, 1, point));
+        EXPECT_EQ(expected[1], Sub002Contents(bsp, 2, point));
+    }
+    EXPECT_EQ(CONTENTS_EMPTY, Sub002Contents(bsp, 0, {-200, -200, 40})); // the player start
+}
+
+/**
+ * The east wall (x 256..272) has a window to the void, y 128..192, z 160..224, closed ONLY by a
+ * plate `t` thick on the inside of the wall: x 256-t..256, y 112..208, z 144..240.
+ */
+static void Sub002CheckPlate(const mbsp_t &bsp, const std::optional<prtfile_t> &prt, double t)
+{
+    const dmodelh2_t *world = &bsp.dmodels[0];
+    const double mid = 256 - t / 2;
+
+    // sealed: -leaktest did not throw, and the portal file is this compile's own
+    ASSERT_TRUE(prt.has_value());
+    EXPECT_FALSE(prt->portals.empty());
+    Sub002ExpectFiniteVertices(bsp);
+
+    // the player start has room around it: empty in all three hulls
+    for (int hullnum = 0; hullnum < 3; hullnum++) {
+        EXPECT_EQ(CONTENTS_EMPTY, Sub002Contents(bsp, hullnum, {-200, -200, 40})) << "hull " << hullnum;
+    }
+
+    // the plate's own material, in its middle plane: over the window and over the wall around it
+    for (const qvec3d &inside : {qvec3d{mid, 160, 192}, qvec3d{mid, 132, 164}, qvec3d{mid, 188, 220},
+             qvec3d{mid, 120, 150}, qvec3d{mid, 200, 232}}) {
+        SCOPED_TRACE(fmt::format("plate material {}", inside));
+        EXPECT_EQ(CONTENTS_SOLID, Sub002Contents(bsp, 0, inside));
+    }
+
+    // a room sealed by filling it with solid is not sealed: the air in front of the plate, the air
+    // of the same thin slab past the plate's outline, and the room, are all still air
+    std::vector<qvec3d> airs{{256 - t - 0.5, 160, 192}, {255 - t, 160, 192}, {240, 160, 192}, {mid, 100, 192},
+        {mid, 220, 192}, {mid, 160, 130}, {mid, 160, 250}, {mid, 0, 128}, {mid, -200, 32}, {mid, 240, 16}};
+    for (const qvec3d &air : Sub002RoomAirGrid()) {
+        airs.push_back(air);
+    }
+    for (const qvec3d &air : airs) {
+        SCOPED_TRACE(fmt::format("air {}", air));
+        EXPECT_EQ(CONTENTS_EMPTY, Sub002Contents(bsp, 0, air));
+    }
+
+    // the wall is still a wall, and the void behind the window is filled
+    EXPECT_EQ(CONTENTS_SOLID, Sub002Contents(bsp, 0, {264, 0, 128}));
+    EXPECT_EQ(CONTENTS_SOLID, Sub002Contents(bsp, 0, {264, 160, 192}));
+
+    // the plate's inner face is drawn in its own plane, facing the room, over the plate's outline
+    for (const qvec3d &on :
+        {qvec3d{256 - t, 160, 192}, qvec3d{256 - t, 114, 146}, qvec3d{256 - t, 206, 238}, qvec3d{256 - t, 114, 238}}) {
+        SCOPED_TRACE(fmt::format("plate face at {}", on));
+        EXPECT_NE(nullptr, BSP_FindFaceAtPoint(&bsp, world, on, {-1, 0, 0}));
+    }
+    // past the outline the wall's face is the one drawn, in the wall's plane
+    for (const qvec3d &on : {qvec3d{256, 100, 192}, qvec3d{256, 160, 130}, qvec3d{256, 0, 128}}) {
+        SCOPED_TRACE(fmt::format("wall face at {}", on));
+        const mface_t *face = BSP_FindFaceAtPoint(&bsp, world, on, {-1, 0, 0});
+        ASSERT_NE(nullptr, face);
+        EXPECT_NEAR(256.0, Face_Centroid(&bsp, face)[0], 0.001);
+    }
+}
+
+TEST(testmapsQ1, sub002FreeFin)
+{
+    // a WHOLE brush 0.012 units thick, free in a room. Its side planes cut the 0.012 slab it lies
+    // in by a strip 0.012 wide and as long as the room: SplitBrush and CheckSplitBrush used to call
+    // that strip "tiny" (fewer than three edges over 0.02) and refuse the cut, so the slab stayed
+    // one leaf from wall to wall and the fin's contents were given to all of it. Release 1.4513:
+    // exit 0, no leak, and 18 of the 36 room-air points solid, in both tree modes.
+    for (const auto &extra_args : sub002_tree_modes) {
+        SCOPED_TRACE(extra_args.back());
+        const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_brushbsp_sub002_free_fin.map", extra_args);
+        Sub002CheckFin(bsp, prt, 0.012);
+    }
+}
+
+TEST(testmapsQ1, sub002PlateSealsWindow)
+{
+    // a WHOLE brush 0.012 units thick that is the only thing between the room and the void. With
+    // the slab left as one leaf (see sub002FreeFin), LeafNode's leaf-in-brush rule found the middle
+    // of that leaf outside the plate and dropped it: release 1.4513 reports a leak, exit 1.
+    // -leaktest throws if any hull leaks, so loading the map at all is the first assertion.
+    for (const auto &extra_args : sub002_tree_modes) {
+        SCOPED_TRACE(extra_args.back());
+        std::filesystem::remove(std::filesystem::path(testmaps_dir) / "q1_brushbsp_sub002_plate_seals_window.prt");
+        const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_brushbsp_sub002_plate_seals_window.map", extra_args);
+        Sub002CheckPlate(bsp, prt, 0.012);
+    }
+}
+
+TEST(testmapsQ1, sub002ThicknessLadder)
+{
+    // the same fin and the same plate, from under the old 0.02 bound to an ordinary brush. 0.0199 and
+    // 0.0201 are either side of that bound; 0.03125 is one step of a 1/32 grid.
+    for (double t : {0.006, 0.012, 0.0199, 0.0201, 0.03125, 0.06, 1.0}) {
+        for (const auto &extra_args : sub002_tree_modes) {
+            SCOPED_TRACE(fmt::format("thickness {} {}", t, extra_args.back()));
+            {
+                SCOPED_TRACE("fin");
+                const auto [bsp, bspx, prt] =
+                    Sub002Compile("ladder_fin", Sub002MapText({Sub002Box({0, -64, 64}, {t, 64, 160})}), extra_args);
+                Sub002CheckFin(bsp, prt, t);
+            }
+            {
+                SCOPED_TRACE("plate");
+                std::optional<std::tuple<mbsp_t, bspxentries_t, std::optional<prtfile_t>>> compiled;
+                try {
+                    compiled = Sub002Compile("ladder_plate",
+                        Sub002MapText({Sub002Box({256 - t, 112, 144}, {256, 208, 240})}, sub002_east_t::WINDOW),
+                        extra_args);
+                } catch (const std::exception &e) {
+                    ADD_FAILURE() << "the plate does not seal its window: " << e.what();
+                    continue;
+                }
+                Sub002CheckPlate(std::get<0>(*compiled), std::get<2>(*compiled), t);
+            }
+        }
+    }
+}
+
+TEST(testmapsQ1, sub002SplitTolerance)
+{
+    // where the claim stops, on both sides of PLANESIDE_EPSILON (0.001). Just over it a whole brush
+    // is still carved exactly. Under it the brush does not reach past its own far plane and is
+    // dropped; that must be an honest loss: the fin puts no solid in the room's air, and the plate's
+    // window is reported as the leak it then is, with no portal file. It must never seal by filling.
+    for (const auto &extra_args : sub002_tree_modes) {
+        SCOPED_TRACE(extra_args.back());
+        for (double t : {0.0015, 0.002}) {
+            SCOPED_TRACE(fmt::format("thickness {}", t));
+            {
+                const auto [bsp, bspx, prt] =
+                    Sub002Compile("tolerance_fin", Sub002MapText({Sub002Box({0, -64, 64}, {t, 64, 160})}), extra_args);
+                Sub002CheckFin(bsp, prt, t);
+            }
+            const auto [bsp, bspx, prt] = Sub002Compile("tolerance_plate",
+                Sub002MapText({Sub002Box({256 - t, 112, 144}, {256, 208, 240})}, sub002_east_t::WINDOW), extra_args);
+            Sub002CheckPlate(bsp, prt, t);
+        }
+
+        const double under = 0.0005;
+        {
+            const auto [bsp, bspx, prt] =
+                Sub002Compile("under_fin", Sub002MapText({Sub002Box({0, -64, 64}, {under, 64, 160})}), extra_args);
+            ASSERT_TRUE(prt.has_value());
+            std::vector<qvec3d> airs{
+                {under / 2, 80, 112}, {under / 2, 0, 48}, {under / 2, 200, 112}, {-1, 0, 112}, {1, 0, 112}};
+            for (const qvec3d &air : Sub002RoomAirGrid()) {
+                airs.push_back(air);
+            }
+            for (const qvec3d &air : airs) {
+                SCOPED_TRACE(fmt::format("air {}", air));
+                EXPECT_EQ(CONTENTS_EMPTY, Sub002Contents(bsp, 0, air));
+            }
+        }
+        const auto paths = Sub002Paths("under_plate");
+        std::ofstream(paths.map) << Sub002MapText(
+            {Sub002Box({256 - under, 112, 144}, {256, 208, 240})}, sub002_east_t::WINDOW);
+        auto compile = [&]() { LoadTestmap(paths.map, paths.bsp, extra_args); };
+        EXPECT_THAT(compile,
+            testing::ThrowsMessage<std::exception>(testing::HasSubstr("Aborting because -leaktest was used.")));
+        EXPECT_FALSE(std::filesystem::exists(paths.prt));
+    }
+}
+
+TEST(testmapsQ1, sub002MovedFin)
+{
+    // the fin again, 0.012 thick, with the whole map turned 30 degrees about z and moved off the
+    // grid: no plane of the fin or of the room is axial, so an axis-aligned shortcut cannot be what
+    // makes the fin right. Hull 0 only (the clip hulls grow along the axes).
+    const sub002_xform_t xform{30.0, {40.5, -17.25, 8}};
+    for (const auto &extra_args : sub002_tree_modes) {
+        SCOPED_TRACE(extra_args.back());
+        const auto [bsp, bspx, prt] = Sub002Compile("moved_fin",
+            Sub002MapText({Sub002Box({0, -64, 64}, {0.012, 64, 160})}, sub002_east_t::WALL, xform), extra_args);
+        Sub002CheckFin(bsp, prt, 0.012, xform);
+    }
+}
+
+TEST(testmapsQ1, sub002CrossingFins)
+{
+    // two fins 0.012 thick crossing at right angles: x 0..0.012, y -64..64 and x -64..64, y 0..0.012,
+    // both z 64..160. Each is carved out of its slab, and the room's air, both fins' material and the
+    // air of each slab past the fin's ends are asserted.
+    //
+    // NOT claimed, and read here without being asserted: the column 0.012 x 0.012 where the two slabs
+    // cross, above and below the fins. BrushBSP carves it correctly (it reads EMPTY with -nofill); it
+    // is then filled, because every portal of a leaf thinner than 0.2 units in two directions is
+    // "tiny" to the portal code (WindingIsTiny, EDGE_LENGTH_EPSILON) and dropped, so the leaf cannot
+    // be reached from the player. That is the outside filling's rule, not the split's; see the README.
+    for (const auto &extra_args : sub002_tree_modes) {
+        SCOPED_TRACE(extra_args.back());
+        const double t = 0.012;
+        const auto [bsp, bspx, prt] = Sub002Compile("crossing_fins",
+            Sub002MapText({Sub002Box({0, -64, 64}, {t, 64, 160}), Sub002Box({-64, 0, 64}, {64, t, 160})}), extra_args);
+        const dmodelh2_t *world = &bsp.dmodels[0];
+        ASSERT_TRUE(prt.has_value());
+        Sub002ExpectFiniteVertices(bsp);
+
+        for (const qvec3d &air : Sub002RoomAirGrid()) {
+            SCOPED_TRACE(fmt::format("room air {}", air));
+            EXPECT_EQ(CONTENTS_EMPTY, Sub002Contents(bsp, 0, air));
+        }
+        for (const qvec3d &inside : {qvec3d{t / 2, 40, 112}, qvec3d{t / 2, -40, 80}, qvec3d{40, t / 2, 112},
+                 qvec3d{-40, t / 2, 144}, qvec3d{t / 2, t / 2, 112}}) {
+            SCOPED_TRACE(fmt::format("fin material {}", inside));
+            EXPECT_EQ(CONTENTS_SOLID, Sub002Contents(bsp, 0, inside));
+        }
+        for (const qvec3d &past :
+            {qvec3d{t / 2, 80, 112}, qvec3d{t / 2, -80, 112}, qvec3d{80, t / 2, 112}, qvec3d{-80, t / 2, 112},
+                qvec3d{t / 2, 40, 48}, qvec3d{t / 2, -40, 176}, qvec3d{40, t / 2, 48}, qvec3d{-40, t / 2, 176}}) {
+            SCOPED_TRACE(fmt::format("slab air {}", past));
+            EXPECT_EQ(CONTENTS_EMPTY, Sub002Contents(bsp, 0, past));
+        }
+        EXPECT_NE(nullptr, BSP_FindFaceAtPoint(&bsp, world, {0, 40, 112}, {-1, 0, 0}));
+        EXPECT_NE(nullptr, BSP_FindFaceAtPoint(&bsp, world, {t, -40, 112}, {1, 0, 0}));
+        EXPECT_NE(nullptr, BSP_FindFaceAtPoint(&bsp, world, {40, 0, 112}, {0, -1, 0}));
+        EXPECT_NE(nullptr, BSP_FindFaceAtPoint(&bsp, world, {-40, t, 112}, {0, 1, 0}));
+        EXPECT_TRUE(BSP_FindFacesAtPoint(&bsp, world, {0, 40, 48}).empty());
+
+        // the known limit, recorded with the result so a change in it is seen
+        testing::Test::RecordProperty(
+            fmt::format("column_under_the_crossing{}", extra_args.size() > 1 ? "_forcegoodtree" : ""),
+            Sub002Contents(bsp, 0, {t / 2, t / 2, 48}) == CONTENTS_EMPTY ? "EMPTY" : "not EMPTY (source: air)");
+    }
+}
+
+TEST(testmapsQ1, sub002ObliqueSkin)
+{
+    // a thin brush none of whose broad planes is axial, lying on another solid: a ramp under the
+    // plane z - x = 96 (x -96..96, y -64..64) and a skin `t` thick on its slope (x -64..64, y -48..48).
+    // It seals nothing. Release 1.4513 at 0.012: 53,568 of the room's 131,072 grid points solid.
+    const double s = std::sqrt(0.5);
+    for (double t : {0.012, 0.06}) {
+        for (const auto &extra_args : sub002_tree_modes) {
+            SCOPED_TRACE(fmt::format("thickness {} {}", t, extra_args.back()));
+            const sub002_brush_t ramp{
+                "bolt9", {{{-1, 0, 1}, 96}, {{0, 0, -1}, 0}, {{1, 0, 0}, 96}, {{0, 1, 0}, 64}, {{0, -1, 0}, 64}}};
+            const sub002_brush_t skin{"bolt9", {{{-s, 0, s}, 96 * s + t}, {{s, 0, -s}, -96 * s}, {{1, 0, 0}, 64},
+                                                   {{-1, 0, 0}, 64}, {{0, 1, 0}, 48}, {{0, -1, 0}, 48}}};
+            const auto [bsp, bspx, prt] = Sub002Compile("oblique_skin", Sub002MapText({ramp, skin}), extra_args);
+            const dmodelh2_t *world = &bsp.dmodels[0];
+            ASSERT_TRUE(prt.has_value());
+            Sub002ExpectFiniteVertices(bsp);
+
+            const double r = t * s; // half the skin's thickness, measured along z
+            for (const qvec3d &inside : {qvec3d{-40, 0, 56 + r}, qvec3d{0, -30, 96 + r}, qvec3d{40, 30, 136 + r}}) {
+                SCOPED_TRACE(fmt::format("skin material {}", inside));
+                EXPECT_EQ(CONTENTS_SOLID, Sub002Contents(bsp, 0, inside));
+            }
+            EXPECT_EQ(CONTENTS_SOLID, Sub002Contents(bsp, 0, {0, 0, 48})); // the ramp under it
+
+            // above the skin, and in the skin's own slab past its outline (still above the ramp)
+            std::vector<qvec3d> airs{{-40, 0, 57 + 2 * r}, {40, 30, 137 + 2 * r}, {-40, 56, 56 + r}, {-40, -56, 56 + r},
+                {-80, 0, 16 + r}, {80, 0, 176 + r}, {-40, 100, 56 + r}, {-150, 0, 20}};
+            for (const qvec3d &air : Sub002RoomAirGrid()) {
+                if (!(fabs(air[1]) <= 64 && air[0] <= 96 && air[2] - air[0] <= 96)) { // not in the ramp
+                    airs.push_back(air);
+                }
+            }
+            for (const qvec3d &air : airs) {
+                SCOPED_TRACE(fmt::format("air {}", air));
+                EXPECT_EQ(CONTENTS_EMPTY, Sub002Contents(bsp, 0, air));
+            }
+
+            // the skin's top is drawn in its own plane; the ramp beside it in the ramp's
+            EXPECT_NE(nullptr, BSP_FindFaceAtPoint(&bsp, world, {-40, 0, 56 + 2 * r}, {-s, 0, s}));
+            EXPECT_NE(nullptr, BSP_FindFaceAtPoint(&bsp, world, {40, 30, 136 + 2 * r}, {-s, 0, s}));
+            EXPECT_NE(nullptr, BSP_FindFaceAtPoint(&bsp, world, {-40, 56, 56}, {-s, 0, s}));
+            EXPECT_TRUE(BSP_FindFacesAtPoint(&bsp, world, {-40, 100, 56 + r}).empty());
+        }
+    }
+}
+
+TEST(testmapsQ1, sub002LiquidFilm)
+{
+    // a thin brush of WATER: a pool (x -128..0, y -64..64, z 0..48), a bank level with it (x 0..96)
+    // and a film of water `t` thick over part of the bank (x 0..64, y -48..48, z 48..48+t). Release
+    // 1.4513 at 0.012 keeps the air right and drops the film: the water and its surface must stay.
+    for (double t : {0.012, 0.06}) {
+        for (const auto &extra_args : sub002_tree_modes) {
+            SCOPED_TRACE(fmt::format("thickness {} {}", t, extra_args.back()));
+            const auto [bsp, bspx, prt] = Sub002Compile("liquid_film",
+                Sub002MapText({Sub002Box({-128, -64, 0}, {0, 64, 48}, "*swater4"), Sub002Box({0, -64, 0}, {96, 64, 48}),
+                    Sub002Box({0, -48, 48}, {64, 48, 48 + t}, "*swater4")}),
+                extra_args);
+            const dmodelh2_t *world = &bsp.dmodels[0];
+            ASSERT_TRUE(prt.has_value());
+            Sub002ExpectFiniteVertices(bsp);
+
+            for (const qvec3d &water : {qvec3d{32, 0, 48 + t / 2}, qvec3d{8, -40, 48 + t / 2},
+                     qvec3d{56, 40, 48 + t / 2}, qvec3d{-64, 0, 24}, qvec3d{-64, 0, 47}}) {
+                SCOPED_TRACE(fmt::format("water {}", water));
+                EXPECT_EQ(CONTENTS_WATER, Sub002Contents(bsp, 0, water));
+            }
+            EXPECT_EQ(CONTENTS_SOLID, Sub002Contents(bsp, 0, {48, 0, 24})); // the bank
+
+            // the film's own slab past its outline, a unit above everything, and the room
+            std::vector<qvec3d> airs{{32, 56, 48 + t / 2}, {32, -56, 48 + t / 2}, {80, 0, 48 + t / 2},
+                {-64, 0, 48 + t / 2}, {32, 120, 48 + t / 2}, {32, 0, 49 + t}, {80, 0, 49}, {-64, 0, 49}};
+            for (const qvec3d &air : Sub002RoomAirGrid()) {
+                if (!(air[0] >= -128 && air[0] <= 96 && fabs(air[1]) <= 64 &&
+                        air[2] <= 48)) { // not in the pool or the bank
+                    airs.push_back(air);
+                }
+            }
+            for (const qvec3d &air : airs) {
+                SCOPED_TRACE(fmt::format("air {}", air));
+                EXPECT_EQ(CONTENTS_EMPTY, Sub002Contents(bsp, 0, air));
+            }
+
+            // the surfaces of the film and of the pool are drawn, and the bank beside the film
+            EXPECT_NE(nullptr, BSP_FindFaceAtPoint(&bsp, world, {32, 0, 48 + t}, {0, 0, 1}));
+            EXPECT_NE(nullptr, BSP_FindFaceAtPoint(&bsp, world, {8, -40, 48 + t}, {0, 0, 1}));
+            EXPECT_NE(nullptr, BSP_FindFaceAtPoint(&bsp, world, {-64, 0, 48}, {0, 0, 1}));
+            EXPECT_NE(nullptr, BSP_FindFaceAtPoint(&bsp, world, {80, 0, 48}, {0, 0, 1}));
+        }
+    }
+}
+
+TEST(testmapsQ1, sub002OpenWindowStillLeaks)
+{
+    // the other direction: a compiler that seals by filling is not a repair. The same window with
+    // no plate, and with a 0.012 plate that stops 12 units short of the window's edge, must both
+    // leak, and neither may be given a portal file.
+    const std::pair<const char *, std::vector<sub002_brush_t>> cases[] = {
+        {"open_window", {}}, {"short_plate", {Sub002Box({255.988, 112, 144}, {256, 180, 240})}}};
+    for (const auto &[name, brushes] : cases) {
+        for (const auto &extra_args : sub002_tree_modes) {
+            SCOPED_TRACE(fmt::format("{} {}", name, extra_args.back()));
+            const auto paths = Sub002Paths(name);
+            std::ofstream(paths.map) << Sub002MapText(brushes, sub002_east_t::WINDOW);
+            auto compile = [&]() { LoadTestmap(paths.map, paths.bsp, extra_args); };
+            EXPECT_THAT(compile,
+                testing::ThrowsMessage<std::exception>(testing::HasSubstr("Aborting because -leaktest was used.")));
+            EXPECT_FALSE(std::filesystem::exists(paths.prt));
+            EXPECT_TRUE(std::filesystem::exists(paths.pts));
+        }
+    }
+}
+
 TEST(testmapsQ1, leaktest)
 {
     auto l = []() {
