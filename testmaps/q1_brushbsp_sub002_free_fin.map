@@ -1,0 +1,80 @@
+// Game: Quake
+// Format: Standard
+// OPEN DEFECT, kept as its smallest reproducer; no test asserts it. A sealed room with a free-standing fin 0.012 units
+// thick (x 0..0.012, y -64..64, z 64..160). The fin is a whole brush thinner than 0.02 units: its side planes would cut
+// the 0.012 slab it lies in by a winding thinner than 0.02, which SplitBrush and CheckSplitBrush refuse, so the slab is
+// one leaf from wall to wall and floor to ceiling. The middle of that leaf is inside the fin, so all of it is solid: a
+// sheet that divides the room, and the half the player is not in is then filled as unreachable (half the room's air
+// reads solid in hull 0; no leak, exit 0). This is not LeafNode's rule: the build without it does the same. 0.18.1 is
+// correct; 2.0.0-alpha11 and releases 1.4502/1.4505 leave a smaller block of solid beside the fin. At 0.0201 units the
+// fin is carved and the room is right (the 0.06 fin of q1_brushbsp_leaf_guard_keeps_material.map is tested).
+// See "Known limits" in the README.
+{
+"classname" "worldspawn"
+"wad" "deprecated/free_wad.wad"
+{
+( 272 -64 0 ) ( 272 0 0 ) ( 272 0 -64 ) bolt9 0 0 0 1 1
+( -272 64 0 ) ( -272 0 0 ) ( -272 0 -64 ) bolt9 0 0 0 1 1
+( 64 272 0 ) ( 0 272 0 ) ( 0 272 -64 ) bolt9 0 0 0 1 1
+( -64 -272 0 ) ( 0 -272 0 ) ( 0 -272 -64 ) bolt9 0 0 0 1 1
+( 0 64 0 ) ( 0 0 0 ) ( -64 0 0 ) bolt9 0 0 0 1 1
+( 0 -64 -16 ) ( 0 0 -16 ) ( -64 0 -16 ) bolt9 0 0 0 1 1
+}
+{
+( 272 -64 0 ) ( 272 0 0 ) ( 272 0 -64 ) bolt9 0 0 0 1 1
+( -272 64 0 ) ( -272 0 0 ) ( -272 0 -64 ) bolt9 0 0 0 1 1
+( 64 272 0 ) ( 0 272 0 ) ( 0 272 -64 ) bolt9 0 0 0 1 1
+( -64 -272 0 ) ( 0 -272 0 ) ( 0 -272 -64 ) bolt9 0 0 0 1 1
+( 0 64 272 ) ( 0 0 272 ) ( -64 0 272 ) bolt9 0 0 0 1 1
+( 0 -64 256 ) ( 0 0 256 ) ( -64 0 256 ) bolt9 0 0 0 1 1
+}
+{
+( -256 -64 0 ) ( -256 0 0 ) ( -256 0 -64 ) bolt9 0 0 0 1 1
+( -272 64 0 ) ( -272 0 0 ) ( -272 0 -64 ) bolt9 0 0 0 1 1
+( 64 272 0 ) ( 0 272 0 ) ( 0 272 -64 ) bolt9 0 0 0 1 1
+( -64 -272 0 ) ( 0 -272 0 ) ( 0 -272 -64 ) bolt9 0 0 0 1 1
+( 0 64 272 ) ( 0 0 272 ) ( -64 0 272 ) bolt9 0 0 0 1 1
+( 0 -64 -16 ) ( 0 0 -16 ) ( -64 0 -16 ) bolt9 0 0 0 1 1
+}
+{
+( 272 -64 0 ) ( 272 0 0 ) ( 272 0 -64 ) bolt9 0 0 0 1 1
+( -272 64 0 ) ( -272 0 0 ) ( -272 0 -64 ) bolt9 0 0 0 1 1
+( 64 -256 0 ) ( 0 -256 0 ) ( 0 -256 -64 ) bolt9 0 0 0 1 1
+( -64 -272 0 ) ( 0 -272 0 ) ( 0 -272 -64 ) bolt9 0 0 0 1 1
+( 0 64 272 ) ( 0 0 272 ) ( -64 0 272 ) bolt9 0 0 0 1 1
+( 0 -64 -16 ) ( 0 0 -16 ) ( -64 0 -16 ) bolt9 0 0 0 1 1
+}
+{
+( 272 -64 0 ) ( 272 0 0 ) ( 272 0 -64 ) bolt9 0 0 0 1 1
+( -272 64 0 ) ( -272 0 0 ) ( -272 0 -64 ) bolt9 0 0 0 1 1
+( 64 272 0 ) ( 0 272 0 ) ( 0 272 -64 ) bolt9 0 0 0 1 1
+( -64 256 0 ) ( 0 256 0 ) ( 0 256 -64 ) bolt9 0 0 0 1 1
+( 0 64 272 ) ( 0 0 272 ) ( -64 0 272 ) bolt9 0 0 0 1 1
+( 0 -64 -16 ) ( 0 0 -16 ) ( -64 0 -16 ) bolt9 0 0 0 1 1
+}
+{
+( 272 -64 0 ) ( 272 0 0 ) ( 272 0 -64 ) bolt9 0 0 0 1 1
+( 256 64 0 ) ( 256 0 0 ) ( 256 0 -64 ) bolt9 0 0 0 1 1
+( 64 272 0 ) ( 0 272 0 ) ( 0 272 -64 ) bolt9 0 0 0 1 1
+( -64 -272 0 ) ( 0 -272 0 ) ( 0 -272 -64 ) bolt9 0 0 0 1 1
+( 0 64 272 ) ( 0 0 272 ) ( -64 0 272 ) bolt9 0 0 0 1 1
+( 0 -64 -16 ) ( 0 0 -16 ) ( -64 0 -16 ) bolt9 0 0 0 1 1
+}
+{
+( 0.012 -64 0 ) ( 0.012 0 0 ) ( 0.012 0 -64 ) bolt9 0 0 0 1 1
+( 0 64 0 ) ( 0 0 0 ) ( 0 0 -64 ) bolt9 0 0 0 1 1
+( 64 64 0 ) ( 0 64 0 ) ( 0 64 -64 ) bolt9 0 0 0 1 1
+( -64 -64 0 ) ( 0 -64 0 ) ( 0 -64 -64 ) bolt9 0 0 0 1 1
+( 0 64 160 ) ( 0 0 160 ) ( -64 0 160 ) bolt9 0 0 0 1 1
+( 0 -64 64 ) ( 0 0 64 ) ( -64 0 64 ) bolt9 0 0 0 1 1
+}
+}
+{
+"classname" "info_player_start"
+"origin" "-200 -200 40"
+}
+{
+"classname" "light"
+"origin" "-200 -200 200"
+"light" "300"
+}

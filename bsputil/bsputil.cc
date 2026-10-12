@@ -43,6 +43,30 @@
 #include <string>
 #include <fstream>
 #include <fmt/ostream.h>
+#include <cmath>
+
+/*
+=================
+SvgHeightShade
+
+Brightness of an --svg face whose highest point is at `z`, within the height range
+[low_z, high_z] of everything drawn: 0.5 at the bottom, 1 at the top.
+
+A flat drawing (high_z == low_z) has nothing to grade, and the plain ratio is 0/0 there; every
+face is then at the top of the range and is drawn at full brightness. The result is always
+finite and within [0.5, 1].
+=================
+*/
+float SvgHeightShade(float z, float low_z, float high_z)
+{
+    float z_scale = 1.0f;
+
+    if (std::isfinite(z) && std::isfinite(low_z) && std::isfinite(high_z) && high_z > low_z) {
+        z_scale = std::clamp((z - low_z) / (high_z - low_z), 0.0f, 1.0f);
+    }
+
+    return 0.5f + (z_scale * 0.5f);
+}
 
 // bsputil_settings
 
@@ -871,7 +895,12 @@ int bsputil_main(int _argc, const char **_argv)
             size_t total_faces = 0;
             auto ents = EntData_Parse(bsp);
 
-            auto addSubModel = [&bsp, &faces, &total_bounds, &total_faces](int32_t index, qvec3f origin) {
+            // a face with a non-finite corner (or a model with a non-finite origin) has no place in
+            // the drawing; left in, it would turn the image's size and every colour into NaN.
+            size_t nonfinite_faces = 0;
+
+            auto addSubModel = [&bsp, &faces, &total_bounds, &total_faces, &nonfinite_faces](
+                                   int32_t index, qvec3f origin) {
                 auto &model = bsp.dmodels[index];
                 rendered_faces_t f{{}, origin};
 
@@ -896,8 +925,19 @@ int bsputil_main(int _argc, const char **_argv)
 
                     auto norm = Face_Normal(&bsp, &face);
 
-                    if (qv::dot(qvec3d(0, 0, 1), norm) <= DEFAULT_ON_EPSILON)
+                    if (!(qv::dot(qvec3d(0, 0, 1), norm) > DEFAULT_ON_EPSILON))
                         continue;
+
+                    bool finite = true;
+                    for (auto pt : Face_Points(&bsp, &face)) {
+                        for (auto v : origin + pt) {
+                            finite = finite && std::isfinite(v);
+                        }
+                    }
+                    if (!finite) {
+                        nonfinite_faces++;
+                        continue;
+                    }
 
                     face_ids.push_back(i);
                 }
@@ -946,6 +986,15 @@ int bsputil_main(int _argc, const char **_argv)
                     entity.get_vector("origin", origin);
 
                 addSubModel(model, origin);
+            }
+
+            if (nonfinite_faces) {
+                logging::print("WARNING: --svg: skipped {} faces with non-finite coordinates\n", nonfinite_faces);
+            }
+
+            if (faces.empty()) {
+                // nothing to draw: an empty image, not one sized by an inverted bounding box
+                total_bounds = aabb3f{qvec3f{}, qvec3f{}};
             }
 
             total_bounds = total_bounds.grow(32);
@@ -1005,7 +1054,8 @@ int bsputil_main(int _argc, const char **_argv)
                 auto face = faces[face_index.model].faces[face_index.face];
                 auto pts = Face_Points(&bsp, face);
                 std::string pts_str;
-                float nz = xo;
+                // the face's highest point (every drawn face has at least three, all finite)
+                float nz = std::numeric_limits<float>::lowest();
 
                 for (auto &pt : pts) {
                     fmt::format_to(std::back_inserter(pts_str), "{},{} ",
@@ -1014,8 +1064,7 @@ int bsputil_main(int _argc, const char **_argv)
                     nz = std::max(nz, pt[2] + faces[face_index.model].origin[2]);
                 }
 
-                float z_scale = (nz - low_z) / (high_z - low_z);
-                float d = (0.5 + (z_scale * 0.5));
+                float d = SvgHeightShade(nz, low_z, high_z);
                 qvec3b color{255, 255, 255};
 
                 const char *tex = Face_TextureName(&bsp, face);

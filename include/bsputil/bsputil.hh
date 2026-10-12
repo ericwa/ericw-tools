@@ -54,6 +54,10 @@ public:
     }
 };
 
+// brightness (0.5 to 1, always finite) of an --svg face whose highest point is at z, within the
+// height range [low_z, high_z] of the drawing; 1 when the range is flat.
+float SvgHeightShade(float z, float low_z, float high_z);
+
 struct bsputil_settings : public settings::common_settings
 {
 private:

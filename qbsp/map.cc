@@ -1027,6 +1027,36 @@ static std::optional<mapface_t> ParseBrushFace(const mapfile::brush_side_t &inpu
 #ifdef QBSP3
 /*
 =================
+BevelIsExistingSide
+
+True when `bevel`, an edge bevel built from the brush edge p0-p1, is the plane of `side`.
+
+Comparing the two plane equations is not enough. `dist` is measured from the origin, so two
+planes whose normals differ by dn (within NORMAL_EPSILON) differ in `dist` by up to dn * |p| at
+a brush around p: a few thousand units out that exceeds DIST_EPSILON, although the planes are the
+same plane across the whole brush. A face that is parallel to a world axis only up to the
+rounding of its plane points produces exactly that from its own edges. Such a bevel, added as
+another side, clips the face's winding away in the clip hulls (and the face clips the bevel's)
+and leaves the expanded brush open.
+
+So the planes are also compared where the brush is: with equal normals, the side must pass
+through both ends of the edge that the bevel was built from.
+=================
+*/
+static bool BevelIsExistingSide(
+    const qbsp_plane_t &side, const qplane3d &bevel, const qvec3d &p0, const qvec3d &p1)
+{
+    if (qv::epsilonEqual(side, bevel)) {
+        return true;
+    }
+    if (!qv::epsilonEqual(side.get_normal(), bevel.normal, NORMAL_EPSILON)) {
+        return false;
+    }
+    return fabs(side.distance_to(p0)) <= DIST_EPSILON && fabs(side.distance_to(p1)) <= DIST_EPSILON;
+}
+
+/*
+=================
 AddBrushBevels
 
 Adds any additional planes necessary to allow the brush to be expanded
@@ -1096,7 +1126,10 @@ inline void AddBrushBevels(mapentity_t &e, mapbrush_t &b)
 
         for (size_t j = 0; j < b.faces[i].winding.size(); j++) {
             size_t k = (j + 1) % b.faces[i].winding.size();
-            qvec3d vec = b.faces[i].winding[j] - b.faces[i].winding[k];
+            // copies: adding a bevel below can reallocate b.faces
+            const qvec3d edge_start = b.faces[i].winding[j];
+            const qvec3d edge_end = b.faces[i].winding[k];
+            qvec3d vec = edge_start - edge_end;
 
             if (qv::normalizeInPlace(vec) < 0.5) {
                 continue;
@@ -1127,13 +1160,13 @@ inline void AddBrushBevels(mapentity_t &e, mapbrush_t &b)
                     if (sin_of_angle < ANGLEEPSILON) {
                         continue;
                     }
-                    plane.dist = qv::dot(b.faces[i].winding[j], plane.normal);
+                    plane.dist = qv::dot(edge_start, plane.normal);
 
                     // if all the points on all the sides are
                     // behind this plane, it is a proper edge bevel
                     for (k = 0; k < b.faces.size(); k++) {
                         // if this plane has allready been used, skip it
-                        if (qv::epsilonEqual(b.faces[k].get_plane(), plane)) {
+                        if (BevelIsExistingSide(b.faces[k].get_plane(), plane, edge_start, edge_end)) {
                             break;
                         }
 
