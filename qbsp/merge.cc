@@ -83,7 +83,7 @@ static std::unique_ptr<face_t> TryMerge(const face_t *f1, const face_t *f2)
         return nullptr;
 
     // find a common edge
-    p1 = p2 = NULL; // stop compiler warning
+    p1 = p2 = {}; // stop compiler warning
     j = 0; //
 
     for (i = 0; i < f1->w.size(); i++) {
